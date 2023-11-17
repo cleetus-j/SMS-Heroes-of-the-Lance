@@ -172,13 +172,13 @@ _RAM_DCE0_ db
 
 .enum $DCF2 export
 _RAM_DCF2_ dsb $20
-_RAM_DD12_ db
+_RAM_DD12_MUS_ENA db
 _RAM_DD13_ db
 _RAM_DD14_ db
 _RAM_DD15_ db
 _RAM_DD16_ db
 _RAM_DD17_ db
-_RAM_DD18_ db
+_RAM_DD18_SOUND_NOTE db
 _RAM_DD19_ db
 .ende
 
@@ -215,10 +215,10 @@ _RAM_DE06_ db
 .ende
 
 .enum $DE22 export
-_RAM_DE22_ db
+_RAM_DE22_RESET db
 _RAM_DE23_CONSOLE_REGION db
-_RAM_DE24_ db
-_RAM_DE25_ db
+_RAM_DE24_NTSC_COMP db
+_RAM_DE25_MUSIC_COUNTER db
 _RAM_DE26_ db
 .ende
 
@@ -255,7 +255,7 @@ _RAM_DE50_ db
 _RAM_DE51_ db
 _RAM_DE52_ROOM_NR db
 _RAM_DE53_COMPASS db
-_RAM_DE54_ db
+_RAM_DE54_HOLD_PLYR db
 _RAM_DE55_WATERFALL db
 _RAM_DE56_ db
 _RAM_DE57_ db
@@ -282,7 +282,7 @@ _RAM_DE6F_ dw
 _RAM_DE71_ db
 _RAM_DE72_ dw
 _RAM_DE74_ dw
-_RAM_DE76_ db
+_RAM_DE76_CR_DMGLINK db
 _RAM_DE77_ dw
 _RAM_DE79_ db
 _RAM_DE7A_ dsb $16
@@ -298,9 +298,9 @@ _RAM_DE98_ dw
 _RAM_DE9A_ db
 _RAM_DE9B_ db
 _RAM_DE9C_PLYR_BLOCK db
-_RAM_DE9D_ db
+_RAM_DE9D_TIMER db
 _RAM_DE9E_ db
-_RAM_DE9F_ db
+_RAM_DE9F_TIMER db
 _RAM_DEA0_ db
 _RAM_DEA1_ dw
 _RAM_DEA3_ dw
@@ -342,8 +342,8 @@ _RAM_DEEE_ db
 _RAM_DEEF_ db
 _RAM_DEF0_ db
 _RAM_DEF1_ db
-_RAM_DEF2_ db
-_RAM_DEF3_ db
+_RAM_DEF2_HOLD_PLYR db
+_RAM_DEF3_ENEMY_MOV_ENA db
 _RAM_DEF4_ db
 .ende
 
@@ -401,16 +401,16 @@ _LABEL_38_:
 	push af
 	in a, (Port_VDPStatus)
 	rla
-	jr c, ++
-	ld a, (_RAM_DE9F_)
+	jr c, ++	;JUMP AHEAD IF WE ARE IN VBLANK.
+	ld a, (_RAM_DE9F_TIMER)	;IF THIS IS NOT ZERO, THE BACKGROUNDS IN THE INTRO PICTURE ARE BROKEN AND THE MAIN MENU IS NOT CLEARED, EXCEPT FOR THE TEXT TILES.
 	and a
-	jr z, +
-	ld a, $08
+	jr z, +			;SETTING THIS TO NZ WILL DO THE SAME AS THE ABOVE LONGER COMMENT.
+	ld a, $08		;0000 1000
 	out (Port_VDPAddress), a
-	ld a, $88
-	out (Port_VDPAddress), a
+	ld a, $88		;1000 1000
+	out (Port_VDPAddress), a	;WRITE 8 TO THE SCROLL REGISTER, SO WE SCROLL THE SCREEN A WEE BIT.
 +:
-	ld a, (_RAM_DE25_)
+	ld a, (_RAM_DE25_MUSIC_COUNTER)
 	and a
 	jr nz, +
 	call +++
@@ -420,7 +420,7 @@ _LABEL_38_:
 	reti
 
 ; Data from 59 to 63 (11 bytes)
-.dsb 11, $00
+.dsb 11, $00	;11
 
 _LABEL_64_:
 	dec a
@@ -437,28 +437,31 @@ _LABEL_66_:
 	pop af
 	retn
 
-++:
-	ld a, (_RAM_DE9D_)
-	inc a
-	ld (_RAM_DE9D_), a
-	ld a, $01
+++:	;WE JUMP HERE IF WE ARE IN VBLANK.
+	ld a, (_RAM_DE9D_TIMER)
+	INC A			;THE STRANGE THING IS, THAT NO MATTER IF THIS IS INCREASED, DECREASED, IT WORKS THE SAME. iT DOES NOT MATTER, IF YOU INCREASE THIS WITH MORE THAN JUST ONE. THE ENGINE DOES NOT CARE.
+	ld (_RAM_DE9D_TIMER), a	;INCREASE THIS TIMER, IT IS USED EVERYWHERE IN THE GAME, AND THE CODE WON'T WORK WITHOUT IT AT ALL.
+	ld a, $01	;$01
 	ld (_RAM_DE26_), a
 	xor a
-	ld (_RAM_DE26_), a
+	ld (_RAM_DE26_), a	;WELL, THIS DOES NOT AFFECT THE GAMEPLAY MUCH. COMMENTED THE XOR OUT, AND THE GAME WENT AS IT WAS STILL THERE.
+				;EVEN COMPLETELY COMMENTING THEM OUT WILL NOT DO ANYTHING.
+				;ANYWAYS, THE VBLANK JUST UPDATES THIS COUNTER, AND THATS IT.
+;.DSB 7,$00
 	pop af
 	ei
 	reti
 
-+++:
-	ld a, (_RAM_FFFF_)
-	push af
-	ld a, $18
-	ld (_RAM_FFFF_), a
-	dec a
-	ld (_RAM_DE26_), a
-	call _LABEL_62645_
-	pop af
-	ld (_RAM_FFFF_), a
++++:	;AND ALSO HERE FOR $DE25
+	ld a, (_RAM_FFFF_)	;GET THE CURRENT ROM PAGE.
+	push af			;SAVE IT ON THE STACK.
+	ld a, $18		;BANK 24, THIS IS THE MUSIC.
+	ld (_RAM_FFFF_), a	;DO A BANKSWITCH.
+	dec a			;DOES ABSOLUTELY NOTHING.
+	ld (_RAM_DE26_), a	;MUSIC BANK -1? DOES NOT REALLY DO MUCH, THE RAM VALUE IS ONLY USED AROUND THIS CODE.
+	call _LABEL_62645_SOUND_ENGINE	;CALL THE SOUND ENGINE TO UPDATE.
+	pop af			;GET BACK THE LAST BANK
+	ld (_RAM_FFFF_), a	;AND SWITCH BACK.
 	ret
 
 ; Data from A0 to AA (11 bytes)
@@ -521,7 +524,7 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	ld hl, _DATA_AB_		;FIRST 32 BYTES ARE AN ALL BLACK PALETTE.
 	call _LABEL_4CF_LOAD2PALS	;RESET ALL PALS.
 	xor a
-	ld (_RAM_DE9F_), a
+	ld (_RAM_DE9F_TIMER), a
 	ld (_RAM_DE9E_), a
 	ld bc, $0001
 	ld a, (_RAM_DE23_CONSOLE_REGION)
@@ -815,12 +818,12 @@ _LABEL_552_CHECK_AB_BUTTONS:
 	ld c, a
 	ld a, (_RAM_DE97_)
 	and a
-	jr z, +
+	jr z, +	;if this is NZ, THEN THE GAMEPAD WON'T GET READ.
 	ld a, c
 	ld (_RAM_DE9B_), a
 	ld a, (_RAM_DE9A_)
 	ld c, a
-+:
++:	;NO BUTTON WAS PUSHED
 	ld a, (_RAM_DE92_)
 	and $30
 	ld b, a
@@ -841,12 +844,12 @@ _LABEL_552_CHECK_AB_BUTTONS:
 _LABEL_59B_MAIN:
 	ei
 	xor a
-	ld (_RAM_DE9D_), a
+	ld (_RAM_DE9D_TIMER), a
 -:
-	ld a, (_RAM_DE9D_)
+	ld a, (_RAM_DE9D_TIMER)
 	and a
 	jr z, -
-	call _LABEL_5F4_
+	call _LABEL_5F4_RESET
 	ld a, (_RAM_DE97_)
 	and a
 	jr z, +
@@ -855,7 +858,7 @@ _LABEL_59B_MAIN:
 	ret
 
 +:
-	ld a, (_RAM_DE9F_)
+	ld a, (_RAM_DE9F_TIMER)
 	ld b, a
 	ld a, (_RAM_DE9E_)
 	and b
@@ -864,41 +867,41 @@ _LABEL_59B_MAIN:
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
-	ld a, (_RAM_DE25_)
+	ld a, (_RAM_DE25_MUSIC_COUNTER)
 	ld d, a
 	ld a, $01
-	ld (_RAM_DE25_), a
+	ld (_RAM_DE25_MUSIC_COUNTER), a
 	call _LABEL_612_
 	xor a
-	ld (_RAM_DE9D_), a
+	ld (_RAM_DE9D_TIMER), a
 -:
-	ld a, (_RAM_DE9D_)
+	ld a, (_RAM_DE9D_TIMER)
 	and a
 	jr z, -
 	ld a, (_RAM_DE47_)
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
-	call _LABEL_5F4_
+	call _LABEL_5F4_RESET
 ; Data from 5E8 to 5F3 (12 bytes)
 .dsb 12, $FF
 
-_LABEL_5F4_:
-	in a, (Port_IOPort2)
-	and $10
+_LABEL_5F4_RESET:	;I REMEMBER THIS FOR NOW, THIS HANDLES THE RESET.
+	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
+	and $10			;MASK OUT ALL OTHER BUTTONS.
 	ld c, a
-	ld a, (_RAM_DE22_)
+	ld a, (_RAM_DE22_RESET)
 	sub c
 	ret z
 	ld a, c
-	ld (_RAM_DE22_), a
+	ld (_RAM_DE22_RESET), a
 	bit 4, a
 	ret nz
 	xor a
-	ld (_RAM_DE9E_), a
-	ld hl, _DATA_AB_
-	call _LABEL_4CF_LOAD2PALS
-	jp _LABEL_200_ENTRY
+	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
+	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
+	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
+	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
 
 _LABEL_612_:
 	ld hl, _DATA_61B_
@@ -1052,7 +1055,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	;NOP
 	;NOP
 	ld a, $08	;08
-	ld (_RAM_DE9F_), a
+	ld (_RAM_DE9F_TIMER), a
 	xor a
 	ld (_RAM_DE9E_), a
 	ld a, (_RAM_DE97_)
@@ -1159,7 +1162,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld a, (hl)
 	and a
 	jp nz, _LABEL_924_
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jr nz, +
 	ld b, $08
@@ -1180,16 +1183,16 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld a, $C0
 	ld (_RAM_DE6D_), a
 +:
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jp z, _LABEL_8B9_
 	inc a
-	ld (_RAM_DEF2_), a
+	ld (_RAM_DEF2_HOLD_PLYR), a
 	cp $02
 	jr nz, +
 	ld a, $FF
 	ld (_RAM_D907_), a
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 +:
 	and $03
 	jp nz, _LABEL_924_
@@ -1280,7 +1283,7 @@ _LABEL_8B9_:
 	xor a
 	ld hl, $0000
 	ld (_RAM_DE74_), hl
-	ld (_RAM_DE76_), a
+	ld (_RAM_DE76_CR_DMGLINK), a
 	ld a, $18
 	ld (_RAM_FFFF_), a
 	ld a, $03
@@ -1292,7 +1295,7 @@ _LABEL_8B9_:
 	ld (_RAM_FFFF_), a
 	call _LABEL_35A6_
 	ld hl, $38C8
-	ld de, _DATA_A7C2_
+	ld de, _DATA_A7C2_SCORE_SCR_TEXT
 	call _LABEL_35A6_
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_61FA_
@@ -1401,7 +1404,7 @@ _LABEL_924_:
 	jr ++
 
 +:
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	call z, _LABEL_374B_
 	call _LABEL_53A3_
@@ -4193,7 +4196,7 @@ _LABEL_334C_DECOMPRESS_ART:	;$14 OR $01 AT FIRST. 0001 0100 OR 0000 0001
 	add hl, hl	;0010
 	add hl, hl	;0100
 	add hl, hl	;0000 1000	WE ROLL SOME BYTES IN L.
-	ld de, _DATA_64000_
+	ld de, _DATA_64000_COMP_GFX
 	add hl, de	;64008
 	ld de, _RAM_D120_
 	ld bc, $0008
@@ -4496,7 +4499,7 @@ _LABEL_3520_CHAR_SHOW:	;THIS SHOWS THE COMPANIONS, AND SHOWS BIOS, PICTURES AND 
 	jr z, +
 	call _LABEL_35A6_
 +:
-	ld de, _DATA_A73A_TEXT	
+	ld de, _DATA_A73A_TEXT_CHARSTAT	
 	call _LABEL_35A6_	;PRINTS THE PRESS BUTTON TEXT.
 -:
 	call _LABEL_59B_MAIN
@@ -4775,7 +4778,7 @@ _LABEL_36B9_:
 
 _LABEL_374B_:
 	call _LABEL_552_CHECK_AB_BUTTONS
-	ld a, (_RAM_DE54_)
+	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	jr z, +
 	xor a
@@ -4859,7 +4862,7 @@ _LABEL_37C8_:
 	jp z, _LABEL_3B77_
 	cp $0F
 	jp nz, _LABEL_3876_
-	ld a, (_RAM_DE54_)
+	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	jr z, _LABEL_3839_
 	ld a, (ix+0)
@@ -4871,7 +4874,7 @@ _LABEL_37C8_:
 +:
 	pop hl
 	xor a
-	ld (_RAM_DE54_), a
+	ld (_RAM_DE54_HOLD_PLYR), a
 	pop hl
 	pop de
 	pop bc
@@ -4978,7 +4981,7 @@ _LABEL_3887_:
 +:
 	ld e, (ix+2)
 	ld d, (ix+3)
-	ld a, (_RAM_DE54_)
+	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	jr z, +
 	sra h
@@ -4994,7 +4997,7 @@ _LABEL_3887_:
 	add hl, bc
 	ld (ix+0), l
 	ld (ix+1), h
-	ld a, (_RAM_DE54_)
+	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	ret nz
 	ld de, (_RAM_DE34_)
@@ -5141,7 +5144,7 @@ _LABEL_3953_:
 	cp $FD
 	jr nz, +
 	ld a, $01
-	ld (_RAM_DEF2_), a
+	ld (_RAM_DEF2_HOLD_PLYR), a
 	ld b, $08
 	ld hl, _RAM_DBB4_
 	ld de, $0027
@@ -5355,7 +5358,7 @@ _LABEL_3B77_:
 	and $04
 	jr z, +
 	ld a, $FF
-	ld (_RAM_DE54_), a
+	ld (_RAM_DE54_HOLD_PLYR), a
 +:
 	ld a, (hl)
 	and $10
@@ -5411,7 +5414,7 @@ _LABEL_3B77_:
 +:
 	ld (_RAM_DE34_), hl
 	pop hl
-	ld a, (_RAM_DE54_)
+	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	jp z, _LABEL_726_
 	ld hl, (_RAM_D900_)
@@ -5566,7 +5569,7 @@ _LABEL_3CCF_:
 	ret c
 	cp $13
 	jp z, _LABEL_3DFD_
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 	cp $1E
 	jr c, ++
 	ld a, (ix+9)
@@ -5698,7 +5701,7 @@ _DATA_3DE7_:
 ; 11th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3DFD_:
 	xor a
-	ld (_RAM_DEF3_), a
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
 	ld (_RAM_D920_), a
 	ld a, (_RAM_DEF4_)
 	and a
@@ -5781,7 +5784,7 @@ _LABEL_3E5E_:
 	add hl, bc
 	jp nc, ++
 _LABEL_3EA0_:
-	ld a, (_RAM_DEF3_)
+	ld a, (_RAM_DEF3_ENEMY_MOV_ENA)
 	and a
 	jr z, +
 	call _LABEL_3F5A_
@@ -5826,7 +5829,7 @@ _LABEL_3EF2_:
 	ld (ix+10), $01
 	ld (ix+11), $00
 +:
-	ld a, (_RAM_DEF3_)
+	ld a, (_RAM_DEF3_ENEMY_MOV_ENA)
 	and a
 	jr z, +
 	call _LABEL_3F5A_
@@ -6571,7 +6574,7 @@ _LABEL_54ED_:
 	ld (ix+4), $01
 +:
 	xor a
-	ld (_RAM_DEF3_), a
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
 	ld a, (ix+8)
 	sub c
 	ld (ix+8), $00
@@ -6605,7 +6608,7 @@ _LABEL_54ED_:
 	ret
 
 _LABEL_5573_:
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jp nz, _LABEL_5442_
 	ld a, (_RAM_D90A_)
@@ -7314,10 +7317,10 @@ _LABEL_5C0C_:
 	ld (_RAM_DE34_), a
 	ld a, $FF
 	ld (_RAM_DEE5_), a
-	ld a, (_RAM_DE9F_)
+	ld a, (_RAM_DE9F_TIMER)
 	ld (_RAM_DEA0_), a
 	xor a
-	ld (_RAM_DE9F_), a
+	ld (_RAM_DE9F_TIMER), a
 	ld (_RAM_DE9E_), a
 	call _LABEL_59B_MAIN
 	call _LABEL_63B_CLEAR_SAT
@@ -7349,7 +7352,7 @@ _LABEL_5C0C_:
 
 _LABEL_5C65_:
 	ld hl, $3888
-	ld de, _DATA_A871_
+	ld de, _DATA_A871_MENUNHUD
 	call _LABEL_35A6_
 	ld hl, $3888
 	ld de, $016C
@@ -7615,7 +7618,7 @@ _LABEL_61FA_:
 	inc iy
 	djnz -
 	ld hl, (_RAM_DE74_)
-	ld a, (_RAM_DE76_)
+	ld a, (_RAM_DE76_CR_DMGLINK)
 	ld c, a
 	ld de, _RAM_D100_
 	call _LABEL_6E09_
@@ -7789,7 +7792,7 @@ _LABEL_6A6C_:
 	ld (_RAM_DEE5_), a
 	ld (_RAM_DE9E_), a
 	ld a, (_RAM_DEA0_)
-	ld (_RAM_DE9F_), a
+	ld (_RAM_DE9F_TIMER), a
 	ret
 
 _LABEL_6AAE_:
@@ -7984,9 +7987,9 @@ _LABEL_6DC9_:
 	ld hl, (_RAM_DE74_)
 	add hl, de
 	ld (_RAM_DE74_), hl
-	ld a, (_RAM_DE76_)
+	ld a, (_RAM_DE76_CR_DMGLINK)
 	adc a, $00
-	ld (_RAM_DE76_), a
+	ld (_RAM_DE76_CR_DMGLINK), a
 	pop de
 	pop hl
 	ret
@@ -8132,9 +8135,9 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 	ld hl, (_RAM_DE5B_)
 	ld a, h
 	or l
-	ld de, _DATA_12306_	;THIS IS THE NON-COMBAT TILES ON THE COMPASS.
+	ld de, _DATA_12306_HUD_LPART	;THIS IS THE NON-COMBAT TILES ON THE COMPASS.
 	jr z, +
-	ld de, _DATA_12550_	;COMMENT IT OUT, AND THE COMBAT TEXT WONT APPEAR.
+	ld de, _DATA_12550_COMPASS_ON_MAP	;COMMENT IT OUT, AND THE COMBAT TEXT WONT APPEAR.
 +:
 	ld hl, $3D46
 	call _LABEL_4BB_VDP_RAM_WRITE
@@ -8944,9 +8947,9 @@ _LABEL_7771_:
 	ld de, $2710
 	add hl, de
 	ld (_RAM_DE74_), hl
-	ld a, (_RAM_DE76_)
+	ld a, (_RAM_DE76_CR_DMGLINK)
 	adc a, $00
-	ld (_RAM_DE76_), a
+	ld (_RAM_DE76_CR_DMGLINK), a
 	ld hl, (_RAM_DE3C_)
 	ld (_RAM_DE3E_), hl
 	ld a, $08
@@ -9065,7 +9068,7 @@ _LABEL_7830_:
 
 _LABEL_7851_:
 	push bc
-	ld a, (_RAM_DEF2_)
+	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jp nz, _LABEL_76D1_
 	ld a, (_RAM_DEF4_)
@@ -9621,7 +9624,7 @@ _LABEL_7E9A_:
 	halt
 	halt
 	halt
-	ld hl, _RAM_DE9D_
+	ld hl, _RAM_DE9D_TIMER
 	ld bc, $0000
 	halt
 	ld a, (hl)
@@ -9653,21 +9656,22 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld h, a
 	ld (_RAM_DE5B_), hl
 	ld (_RAM_DE74_), hl
-	ld (_RAM_DE76_), a
-	ld (_RAM_DE96_), a
-	ld (_RAM_DE56_), a
+	ld (_RAM_DE76_CR_DMGLINK), a	;THIS SEEMS TO BE THE "LINK" BETWEEN CARAMON AND RAISTLIN. IF THIS IS ZERO, THE TWO WON'T GET DAMAGED TOGETHER.
+;.DSB 3,$00
+	ld (_RAM_DE96_), a	;NOT NOTICEABLE.
+	ld (_RAM_DE56_), a	;THIS NEITHER.
 	ld (_RAM_DE55_WATERFALL), a
 	ld (_RAM_DEE5_), a
 	ld (_RAM_DEEE_), a
-	ld (_RAM_DEF1_), a
-	ld (_RAM_DE54_), a
-	ld (_RAM_DEF4_), a
-	ld (_RAM_DEF3_), a
-	ld (_RAM_DEF2_), a
+	ld (_RAM_DEF1_), a		;BOTH DOES NOTHING IMMEDIATE.
+	ld (_RAM_DE54_HOLD_PLYR), a	;IF THIS IS NOT ZERO, THE PLAYER CHARACTER WON'T BE ABLE TO MOVE.
+	ld (_RAM_DEF4_), a		;DOES SOME DAMAGE RELATED THING.
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a	;NON-ZERO VALUE WILL PREVENT ENEMIES FROM MOVING.
+	ld (_RAM_DEF2_HOLD_PLYR), a	;THIS ONE ALSO STOPS THE PLAYER IN PLACE.
 	ld (_RAM_DEF0_), a
-	ld (_RAM_DE71_), a
-	inc a
-	ld (_RAM_DEBB_DEBUG), a
+	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT.
+	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
+	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
 	ld a, (_RAM_DE6D_)
 	ld (_RAM_DE6C_), a
 	xor a
@@ -9697,7 +9701,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 .BANK 1 SLOT 1
 .ORG $0000
 
-; Data from 7FF0 to 7FFF (16 bytes)
+; Data from 7FF0 to 7FFF (16 bytes)	THIS IS THE TMR SEGA PART.
 .db $54 $4D $52 $20 $53 $45 $47 $41 $20 $20 $CA $20 $03 $90 $20 $40
 
 .BANK 2
@@ -9707,7 +9711,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 .incbin "HOTL_mod_DATA_8000_.inc"
 
 ; Data from A73A to A7C1 (136 bytes)
-_DATA_A73A_TEXT:
+_DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
 .db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
 .dsb 12, $20
 .db $4D $49 $4E $20 $20 $20 $20 $20 $20 $20 $4D $41 $58 $0D $53 $74
@@ -9719,7 +9723,8 @@ _DATA_A73A_TEXT:
 .db $20 $20 $20 $20 $20 $53 $43 $4F $52 $45 $0D $0D
 
 ; Data from A7C2 to A870 (175 bytes)
-_DATA_A7C2_:
+_DATA_A7C2_SCORE_SCR_TEXT:	;MONSTERS KILLED, AND OTHER TEXT. USED ON THE SCORE SCREEN, AND ENDING\GAME OVER.
+;.DSB 175,$00
 .db $20 $20 $20 $20 $4D $6F $6E $73 $74 $65 $72 $73 $20 $6B $69 $6C
 .db $6C $65 $64 $3A $0D $0D $42 $61 $61 $7A $20 $20 $20 $20 $20 $20
 .db $20 $20 $42 $6F $7A $61 $6B $0D $54 $72 $6F $6C $6C $20 $20 $20
@@ -9733,7 +9738,8 @@ _DATA_A7C2_:
 .db $6E $74 $73 $20 $66 $6F $72 $20 $69 $74 $65 $6D $73 $3A $FF
 
 ; Data from A871 to AC6B (1019 bytes)
-_DATA_A871_:
+_DATA_A871_MENUNHUD:	;THIS IS RELATED SOMEHOW TO THE INGAME MENU, WHEN YOU OPEN IT UP, COMMENTING IT OUT WILL GLITH THE HUD OUT, AND THE MENU AS WELL.
+;.DSB 1019,$00
 .db $20 $20 $4D $41 $49 $4E $20 $4D $45 $4E $55 $0D $48 $65 $72 $6F
 .db $20 $73 $65 $6C $65 $63 $74 $0D $4D $61 $67 $69 $63 $20 $75 $73
 .db $65 $72 $20 $73 $70 $65 $6C $6C $73 $0D $43 $6C $65 $72 $69 $63
@@ -9827,6 +9833,7 @@ _DATA_ACFC_:
 
 ; Data from AD32 to AEF1 (448 bytes)
 _DATA_AD32_:
+;.DSB 448,$00
 .db $0D $0D $0D $59 $6F $75 $20 $68 $65 $61 $72 $20 $61 $6C $61 $72
 .db $6D $0D $0D $62 $65 $6C $6C $73 $20 $69 $6E $20 $74 $68 $65 $20
 .db $64 $69 $73 $74 $61 $6E $63 $65 $FF $43 $4C $45 $52 $49 $43 $41
@@ -9860,7 +9867,7 @@ _DATA_AD32_:
 _DATA_AEF2_:
 .incbin "HOTL_mod_DATA_AEF2_.inc"
 
-.BANK 3
+.BANK 3		;THIS SEEMS TO BE THE LEVEL BACKGROUND. MAYBE FOR ALL LEVELS?
 .ORG $0000
 
 ; Data from C000 to FFFF (16384 bytes)
@@ -9870,7 +9877,8 @@ _DATA_AEF2_:
 .ORG $0000
 
 ; Data from 10000 to 121BF (8640 bytes)
-.incbin "HOTL_mod_DATA_10000_.inc"
+;.DSB 8640,$00
+.incbin "HOTL_mod_DATA_10000_.inc"	;DOES NOT REALLY MAKE ANY DIFFERENCE IF THIS IS COMMENTED OUT.
 
 ; Data from 121C0 to 12305 (326 bytes)
 _DATA_121C0_HUD_TILEMAP:
@@ -9897,7 +9905,8 @@ _DATA_121C0_HUD_TILEMAP:
 .db $8A $00 $8B $00 $8B $00
 
 ; Data from 12306 to 1247F (378 bytes)
-_DATA_12306_:
+_DATA_12306_HUD_LPART:	;THIS IS THE TILEMAP OF ONE PART OF THE HUD. THE LOWER PART OF THE COMPASS, AND THE PORTRAITS AS WELL.
+;.dsb 378,$00
 .db $90 $02 $8B $00 $8B $00 $90 $00 $8B $00 $8B $00 $8D $00 $91 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $92 $00 $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00
@@ -9925,6 +9934,7 @@ _DATA_12306_:
 
 ; Data from 12480 to 1254F (208 bytes)
 _DATA_12480_LIFEBAR_TILES:
+;.dsb 208,$00
 .db $F0 $00 $F1 $00 $F2 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
@@ -9940,7 +9950,8 @@ _DATA_12480_LIFEBAR_TILES:
 .db $F8 $00 $F9 $00 $FA $00 $FB $00 $FC $00 $FD $00 $FE $00 $FF $00
 
 ; Data from 12550 to 125BF (112 bytes)
-_DATA_12550_:
+_DATA_12550_COMPASS_ON_MAP:
+;.dsb 112,$00
 .db $00 $01 $01 $01 $02 $01 $03 $01 $89 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
@@ -9948,9 +9959,9 @@ _DATA_12550_:
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
 .db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-
 ; Data from 125C0 to 13FFF (6720 bytes)
-_DATA_125C0_HUD_DATA:
+_DATA_125C0_HUD_DATA:	;HUD AND PORTRAITS.
+;.dsb 6720,$00
 .incbin "HOTL_mod_DATA_125C0_.inc"
 
 .BANK 5
@@ -9959,23 +9970,24 @@ _DATA_125C0_HUD_DATA:
 ; Data from 14000 to 17FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_14000_.inc"
 
-.BANK 6
+.BANK 6		;THIS IS ALSO LEVEL GRAPHICS, FOR THE FIRST LEVEL MOST LIKELY.
 .ORG $0000
 
 ; Data from 18000 to 1BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_18000_.inc"
 
-.BANK 7
+.BANK 7		;ARCHWAY GRAPHICS, AND THE ENDBOSS' TILES.
 .ORG $0000
 
 ; Data from 1C000 to 1FFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_1C000_.inc"
 
-.BANK 8
+.BANK 8		;THIS SEEMS TO BE SOME SPRITE COORDINATE BANK OR SOMETHING SIMILAR.
 .ORG $0000
 
 ; Data from 20000 to 20077 (120 bytes)
-_DATA_20000_:
+_DATA_20000_:	;MESSES UP SPRITES REALLY BAD, SO THIS MIGHT BE SOME SPRITE MAP, OR A COLLECTION OF POINTES, I DON'T KNOW.
+;.DSB 120,$FF
 .db $84 $80 $00 $00 $00 $00 $94 $80 $BE $81 $08 $00 $98 $8A $D2 $8B
 .db $08 $00 $40 $96 $7A $97 $08 $00 $74 $A3 $26 $A4 $08 $00 $E8 $A9
 .db $0A $AB $08 $00 $64 $B5 $86 $B6 $08 $00 $00 $80 $42 $81 $09 $00
@@ -9986,108 +9998,108 @@ _DATA_20000_:
 .db $09 $00 $00 $80 $0A $80 $0A $00
 
 ; Data from 20078 to 2007B (4 bytes)
-_DATA_20078_:
+_DATA_20078_:	;IF THIS IS COMMENTED OUT, THEN THE COLLISION DETECTION IS GETTING MESSY.
 .db $EC $80 $EE $81
 
 ; Data from 2007C to 23FFF (16260 bytes)
-_DATA_2007C_:
+_DATA_2007C_:	;THIS MIGHT BE SOME SPRITE COORDINATES, AND SPRITE MAPS, AS THE PLAYER DOES NOT SHOW, AND ENEMIES ARE SHOWING AS GARBLED SPRITES.
 .incbin "HOTL_mod_DATA_2007C_.inc"
 
-.BANK 9
+.BANK 9		;USED, BUT NOT SURE FOR WHAT PART OF THE ENGINE.
 .ORG $0000
 
 ; Data from 24000 to 27FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_24000_.inc"
 
-.BANK 10
+.BANK 10	;NO IDEA YET, BUT MAYBE SOME TILEMAPS.
 .ORG $0000
 
 ; Data from 28000 to 2BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_28000_.inc"
 
-.BANK 11
+.BANK 11	;GOLDMOON.
 .ORG $0000
 
 ; Data from 2C000 to 2FFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_2C000_.inc"
 
-.BANK 12
+.BANK 12	;STURM AND CARAMON.
 .ORG $0000
 
 ; Data from 30000 to 33FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_30000_.inc"
 
-.BANK 13
+.BANK 13	;CARAMON.
 .ORG $0000
 
 ; Data from 34000 to 37FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_34000_.inc"
 
-.BANK 14
+.BANK 14	;RAISTLIN AND TANIS.
 .ORG $0000
 
 ; Data from 38000 to 3BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_38000_.inc"
 
-.BANK 15
+.BANK 15	;TANIS AND TASSLEHOFF.
 .ORG $0000
 
 ; Data from 3C000 to 3FFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_3C000_.inc"
 
-.BANK 16
+.BANK 16	;TASSLEHOFF AND RIVERWIND.
 .ORG $0000
 
 ; Data from 40000 to 43FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_40000_.inc"
 
-.BANK 17
+.BANK 17	;RIVERWIND AND FLINT.
 .ORG $0000
 
 ; Data from 44000 to 47FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_44000_.inc"
 
-.BANK 18
+.BANK 18	;FLINT, GARGOYLE WITH THE SWORD, GARGOYLE WITH MAGIC.
 .ORG $0000
 
 ; Data from 48000 to 4BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_48000_.inc"
 
-.BANK 19
+.BANK 19	;TROLL ENEMY GFX, SOME SMOKE, GARGOYLE ENEMY, AND OTHER UNCOMPRESSED GRAPHICS.
 .ORG $0000
 
 ; Data from 4C000 to 4FFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_4C000_.inc"
 
-.BANK 20
+.BANK 20	;SPIDER GRAPHICS, THE GHOST HUMAN AND THE REGULAR HUMAN ENEMY.
 .ORG $0000
 
 ; Data from 50000 to 53FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_50000_.inc"
 
-.BANK 21
+.BANK 21	;THIS IS THE END BOSS' MOVING PARTS, THE SMALLER HATCHLING'S AND THE SPIDER'S GRAPHICS, AND OTHER TILE STUFF.
 .ORG $0000
 
 ; Data from 54000 to 57FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_54000_.inc"
 
-.BANK 22
+.BANK 22	;THIS BANK HAS GRAPHICS FOR THE MAGIC MISSILES, AND FALLING TRAPS, AND SOME OTHER DATA.
 .ORG $0000
 
 ; Data from 58000 to 5BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_58000_.inc"
 
-.BANK 23
+.BANK 23	;THIS HAS THE WEB HOLD GRAPHICS FOR SOME ENEMIES, AND SOME OTHER DATA, I DON'T KNOW YET.
 .ORG $0000
 
 ; Data from 5C000 to 5FFFF (16384 bytes)
-.incbin "HOTL_mod_DATA_5C000_.inc"
+;.incbin "HOTL_mod_DATA_5C000_.inc"
 
-.BANK 24
+.BANK 24	;THIS IS THE SOUND ENGINE'S BANK, AND THE MUSIC AND SOUND IS HERE AS WELL.
 .ORG $0000
 
 ; Data from 60000 to 600E5 (230 bytes)
-_DATA_60000_:
+_DATA_60000_:	;THESE MAY BE THE INSTRUMENT DATAS.
 .dsb 34, $00
 .db $E4 $0F $00 $0F $29 $0E $5D $0D $9C $0C $E7 $0B $3C $0B $9B $0A
 .db $02 $0A $73 $09 $EB $08 $6B $08 $F2 $07 $80 $07 $14 $07 $AE $06
@@ -10106,6 +10118,7 @@ _DATA_60000_:
 ; 11th entry of Pointer Table from 6064E (indexed by unknown)
 ; Data from 600E6 to 60126 (65 bytes)
 _DATA_600E6_:
+;DSB 65,$00
 .db $13 $1E $01 $00 $01 $0C $0C $0C $0B $0B $0B $0A $0A $0A $09 $09
 .db $09 $08 $08 $08 $08 $07 $07 $07 $07 $07 $07 $06 $06 $06 $06 $05
 .db $05 $04 $00 $00 $00 $FF $01 $FE $02 $00 $02 $FE $02 $FF $01 $02
@@ -10284,7 +10297,8 @@ _DATA_60BE2_:
 
 ; 1st entry of Pointer Table from 6064E (indexed by unknown)
 ; Data from 61276 to 6153D (712 bytes)
-_DATA_61276_:
+_DATA_61276_:	;THE TITLE SCREEN, AND THE GAME OVER MUSIC USES THIS DATA.
+;.dsb 712,$00
 .db $83 $37 $01 $30 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
 .db $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33
 .db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30
@@ -10334,6 +10348,7 @@ _DATA_61276_:
 ; 4th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
 ; Data from 6153E to 6190F (978 bytes)
 _DATA_6153E_:
+;.DSB 978,$FF
 .db $82 $33 $00 $30 $3C $00 $31 $00 $74 $2E $08 $32 $07 $00 $00 $00
 .db $01 $33 $00 $30 $3F $00 $0B $00 $A5 $30 $07 $00 $08 $37 $07 $00
 .db $01 $35 $07 $00 $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00
@@ -10603,8 +10618,8 @@ _DATA_6224F_:
 .db $45 $0A $45 $0A $49 $0A $49 $0B $FF
 
 _LABEL_623E8_PREP_MUS_BANK:
-	ld hl, _RAM_DD12_
-	ld de, _RAM_DD12_ + 1
+	ld hl, _RAM_DD12_MUS_ENA
+	ld de, _RAM_DD12_MUS_ENA + 1
 	ld (hl), $00
 	ld bc, $010F
 	ldir
@@ -10650,7 +10665,7 @@ _LABEL_6242B_SET_MUS:
 	dec a
 	call _LABEL_624D0_
 	ld a, $01
-	ld (_RAM_DD12_), a
+	ld (_RAM_DD12_MUS_ENA), a
 	ld a, (_RAM_DD13_)
 	dec a
 	add a, a
@@ -10742,7 +10757,7 @@ _LABEL_624D0_:
 	add ix, de
 	djnz -
 	ld (_RAM_DD16_), a
-	ld (_RAM_DD12_), a
+	ld (_RAM_DD12_MUS_ENA), a
 	ret
 
 _LABEL_62502_:
@@ -10930,25 +10945,25 @@ _LABEL_6263B_:
 	jp nz, _LABEL_6259C_
 	ret
 
-_LABEL_62645_:
+_LABEL_62645_SOUND_ENGINE:
 	push af
 	push bc
 	push de
 	push hl
 	push ix
-	push iy
-	ld a, (_RAM_DE23_CONSOLE_REGION)
+	push iy				;SAVE ALL REGISTERS ON STACK.
+	ld a, (_RAM_DE23_CONSOLE_REGION)	;CHECK THE CONSOLE REGION.
 	and a
-	jr z, _LABEL_62660_
-	ld hl, _RAM_DE24_
+	jr z, _LABEL_62660_SOUND_MAIN			;JUMP THERE IF CONSOLE IS PAL REGION.
+	ld hl, _RAM_DE24_NTSC_COMP			;OTHERWISE IT'S NTSC.
 	inc (hl)
 	ld a, (hl)
-	cp $06
-	jr nz, _LABEL_62660_
-	ld (hl), $00
-	jr +
+	cp $06				;SO, IT SEEMS WE COMPENSATE FOR EVERY SIXT FRAME, SINCE PAL IS 50HZ.
+	jr nz, _LABEL_62660_SOUND_MAIN		;IF WE ARE NOT IN THE SIXTH FRAME, THEN WE NEED TO DO THE OTHER FIVE.
+	ld (hl), $00			;WE WERE IN THE SIXTH, RESET THE EXTRA COUNTER.
+	jr +				;AND EXIT THE ROUTINE THERE.
 
-_LABEL_62660_:
+_LABEL_62660_SOUND_MAIN:		;MAIN PART OF THE SOUND ENGINE.
 	call _LABEL_6286E_
 	ld iy, _RAM_DD32_
 	ld ix, _RAM_DD42_
@@ -10967,16 +10982,16 @@ _LABEL_62660_:
 	pop de
 	pop bc
 	pop af
-	ret
+	ret				;RESTORE THE REGISTER VALUES, AND GO ON.
 
 ++:
 	ld iy, _RAM_DD22_
 	ld ix, $DD42
 	ld a, (iy+16)
-	ld (_RAM_DD18_), a
+	ld (_RAM_DD18_SOUND_NOTE), a
 	ld a, (iy+17)
 	ld e, $80
-	call _LABEL_6270C_
+	call _LABEL_6270C_OUTPUT_SOUND
 	ld a, (iy+24)
 	and $0F
 	xor $9F
@@ -10984,10 +10999,10 @@ _LABEL_62660_:
 	ld bc, $001C
 	add ix, bc
 	ld a, (iy+18)
-	ld (_RAM_DD18_), a
+	ld (_RAM_DD18_SOUND_NOTE), a
 	ld a, (iy+19)
 	ld e, $A0
-	call _LABEL_6270C_
+	call _LABEL_6270C_OUTPUT_SOUND
 	ld a, (iy+25)
 	and $0F
 	xor $BF
@@ -10995,11 +11010,11 @@ _LABEL_62660_:
 	add ix, bc
 	ld e, $04
 	call _LABEL_6272F_
-	ld (_RAM_DD18_), a
+	ld (_RAM_DD18_SOUND_NOTE), a
 	ld e, $05
 	call _LABEL_6272F_
 	ld e, $C0
-	call _LABEL_6270C_
+	call _LABEL_6270C_OUTPUT_SOUND
 	ld e, $0A
 	call _LABEL_6272F_
 	and $0F
@@ -11026,9 +11041,9 @@ _LABEL_62660_:
 	out (Port_PSG), a
 	ret
 
-_LABEL_6270C_:
+_LABEL_6270C_OUTPUT_SOUND:
 	ld h, a
-	ld a, (_RAM_DD18_)
+	ld a, (_RAM_DD18_SOUND_NOTE)
 	ld l, a
 	srl h
 	rr l
@@ -11064,10 +11079,10 @@ _LABEL_6272F_:
 	ld a, d
 	ret
 
-_LABEL_62748_:
+_LABEL_62748_LOAD_NOTES:	;THIS LOOKS LIKE IT LOADS THE NOTES TO EACH CHANNEL, AND THEY RUN BEFORE A LEVER ACTAUALLY LOADS.
 	push ix
-	pop iy
-	ld a, (ix+21)
+	pop iy	;THESE NEEDED TO BE SAVED, THAT'S TRUE.
+	ld a, (ix+21)	;THIS IS DD42+21=DD57
 	and a
 	jr z, +
 	ld de, $0008
@@ -11079,16 +11094,19 @@ _LABEL_62748_:
 	ld d, (iy+18)
 	add hl, de
 	bit 7, (hl)
-	jr nz, +
+	jr Nz, +
 	inc de
 	inc de
+	;INC DE
+	;NOP
 	ld (iy+14), e
 	ld (iy+18), d
 	ret
 
-+:
++:	;THIS IS SOME NOTE HANDLING, I'M SURE. lATER ON, THE MUSIC FORMAT MIGHT BE ALSO DISASSEMBLED, BUT NOT FOR NOW.
 	ld a, (hl)
 	cp $94
+;.DSB 3,$00
 	jp z, _LABEL_627CC_
 	cp $95
 	jp z, _LABEL_627E1_
@@ -11129,15 +11147,15 @@ _LABEL_62748_:
 	ld a, (iy+18)
 	adc a, $00
 	ld (iy+18), a
-	jp _LABEL_62748_
+	jp _LABEL_62748_LOAD_NOTES
 
 _LABEL_627CC_:
 	ld (iy+14), $00
 	ld (iy+18), $00
 	dec (ix+11)
-	jp nz, _LABEL_62748_
+	jp nz, _LABEL_62748_LOAD_NOTES
 	ld (ix+21), $00
-	jp _LABEL_62748_
+	jp _LABEL_62748_LOAD_NOTES
 
 _LABEL_627E1_:
 	inc hl
@@ -11160,7 +11178,7 @@ _LABEL_627E1_:
 	ld (ix+18), a
 	ld (ix+22), $00
 	ld (ix+26), $00
-	jp _LABEL_62748_
+	jp _LABEL_62748_LOAD_NOTES
 
 _LABEL_62810_:
 	dec (iy+15)
@@ -11171,14 +11189,14 @@ _LABEL_62810_:
 	ld a, (iy+18)
 	adc a, $00
 	ld (iy+18), a
-	jp _LABEL_62748_
+	jp _LABEL_62748_LOAD_NOTES
 
 +:
 	ld a, (iy+16)
 	ld (iy+14), a
 	ld a, (iy+19)
 	ld (iy+18), a
-	jp _LABEL_62748_
+	jp _LABEL_62748_LOAD_NOTES
 
 _LABEL_62837_:
 	ld a, (iy+14)
@@ -11194,43 +11212,47 @@ _LABEL_62837_:
 	inc hl
 	ld a, (hl)
 	ld (iy+15), a
-	jp _LABEL_62748_
+	jp _LABEL_62748_LOAD_NOTES
 
 _LABEL_6285B_:
 	pop bc
 	pop bc
 	ld a, (_RAM_DD13_)
 	call _LABEL_6242B_SET_MUS
-	jp _LABEL_62660_
+	jp _LABEL_62660_SOUND_MAIN
 
 _LABEL_62866_:
 	pop bc
 	pop bc
 	call _LABEL_624D0_
-	jp _LABEL_62660_
+	jp _LABEL_62660_SOUND_MAIN
 
-_LABEL_6286E_:
-	ld a, (_RAM_DD12_)
+_LABEL_6286E_:	;THIS IS THE FIRST THING WE DO AFTER THE MAIN SOUND ROUTINE IS ON.
+	ld a, (_RAM_DD12_MUS_ENA)
 	and a
-	ret z
-	ld ix, _RAM_DD42_
-	ld b, $04
---:
-	dec (ix+10)
-	jr nz, _LABEL_628B2_
+	ret z	;IF WE HAVE NOT ENABLED MUSIC\SOUND, THEN JUST RETURN.
+	ld ix, _RAM_DD42_	;THIS LOOKS LIKE THE BEGINNING OF THE SOUND VARIABLES.
+	ld b, $04		;HOW MANY SOUND CHANNELS WE HAVE.
+DECMSTIMER:		;WE DECREMENT THE MUSIC TIMERS HERE.
+	dec (ix+10)	;THIS IS DD4C, THE FIRST CHANNEL'S TIMER.
+	jr nz, _LABEL_628B2_CALC_CH_ADDRESS	;IF THE TIMER IS NOT EXPIRED, JUMP AHEAD AND GET THE OTHER CHANNEL'S ADDRESSES, AND DECREASE THEIR TIMER AS WELL WHEN THE LOOP IS BACK.
 -:
-	call _LABEL_62748_
+	call _LABEL_62748_LOAD_NOTES	;LOAD THE INIT. NOTES. THIS IS ALSO USED AT THE BEGINNING OF LEVELS, AS FAR AS I'VE NOTICED.
 	ld a, (hl)
 	and a
-	jr z, +
+	jr z, +	;EITHER Z OR NZ, DOES NOT REALLY MATTER FROM THE ENGINE'S STANDPOINT.
 	cp $7F
 	jr z, ++
+	;NOP
+	;NOP
+	;NOP
+	;NOP
 	add a, (iy+17)
-+:
++:	;DOES NOT MATTER, BUT THE BELOW IS STILL USED.
 	add a, a
 	ld e, a
 	ld d, $00
-	ld iy, _DATA_60000_
+	ld iy, _DATA_60000_	;MY GUESS FOR THIS IS THAT IT'S THE INSTRUMENTS THE MUSIC USES. AT THE MOMENT, I DON'T WANT TO 
 	add iy, de
 	ld e, (iy+0)
 	ld d, (iy+1)
@@ -11243,10 +11265,12 @@ _LABEL_6286E_:
 	ld (ix+10), a
 	ld (ix+6), $00
 	ld (ix+5), $01
-_LABEL_628B2_:
-	ld de, $001C
-	add ix, de
-	djnz --
+_LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
+	ld de, $001C	;I LIKE HOW THE ADDRESSES ARE SCATTERED AROUND, LIKE THESE.
+	add ix, de	;DD4C+1C=DD68, THIS IS THE SECOND CHANNEL'S TIMER.
+			;DD84 IS THE THIRD.
+			;DDA0 IS THE NOISE.
+	djnz DECMSTIMER
 	ret
 
 ++:
@@ -11254,38 +11278,40 @@ _LABEL_628B2_:
 	ld a, (hl)
 	and a
 	jr z, -
+	;NOP
+	;NOP
 	ld (ix+10), a
-	jr _LABEL_628B2_
+	jr _LABEL_628B2_CALC_CH_ADDRESS
 
 ; Data from 628C4 to 63FFF (5948 bytes)
-.incbin "HOTL_mod_DATA_628C4_.inc"
+.incbin "HOTL_mod_DATA_628C4_.inc"	;NO IDEA WHAT THIS IS. THE FIRST LEVEL DOES NOT USE IT, AND ITS NOT MUSIC EITHER, DESPITE BEING IN THAT BANK.
 
-.BANK 25
+.BANK 25	;COMPRESSED GRAPHICS BANK.
 .ORG $0000
 
 ; Data from 64000 to 67FFF (16384 bytes)
-_DATA_64000_:
+_DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. IF COMMENTED OUT, OBVIOUSLY THE COMPRESSED STUFF AT THE BEGINNING WON'T SHOW.
 .incbin "HOTL_mod_DATA_64000_.inc"
 
-.BANK 26
+.BANK 26	;THIS IS SOME TILEMAP BANK, CERTAIN COMPRESSED SCREENS TEXTS ARE NOT SHOWING PROPERLY WITHOUT IT.
 .ORG $0000
 
 ; Data from 68000 to 6BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_68000_.inc"
 
-.BANK 27
+.BANK 27	;THIS IS ALSO SOME TILEMAP BANK, THE COMPRESSED STUFF IS ALSO IN THIS ONE.
 .ORG $0000
 
 ; Data from 6C000 to 6FFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_6C000_.inc"
 
-.BANK 28
+.BANK 28	;SOME COMPRESSED DATA AGAIN, AND FINALLY LEVEL DATA.
 .ORG $0000
 
 ; Data from 70000 to 73FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_70000_.inc"
 
-.BANK 29
+.BANK 29	;TASSLEHOFF AND FLINT HAS SOME GRAPHICS IN THIS.
 .ORG $0000
 
 ; Data from 74000 to 77FFF (16384 bytes)
