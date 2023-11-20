@@ -275,17 +275,17 @@ _RAM_DE66_ db
 .enum $DE6A export
 _RAM_DE6A_ db
 _RAM_DE6B_ db
-_RAM_DE6C_ db
+_RAM_DE6C_NME_MOVE7BIT db
 _RAM_DE6D_ db
 _RAM_DE6E_ db
 _RAM_DE6F_ dw
 _RAM_DE71_ db
 _RAM_DE72_ dw
-_RAM_DE74_ dw
+_RAM_DE74_PT_FOR_CMBT dw
 _RAM_DE76_CR_DMGLINK db
-_RAM_DE77_ dw
+_RAM_DE77_PT_FOR_ITEMS dw
 _RAM_DE79_ db
-_RAM_DE7A_ dsb $16
+_RAM_DE7A_KILLCOUNT_ARRAY dsb $16
 _RAM_DE90_ db
 _RAM_DE91_ db
 _RAM_DE92_ db
@@ -336,8 +336,8 @@ _RAM_DEE6_ db
 _RAM_DEE7_ db
 _RAM_DEE8_ db
 _RAM_DEE9_ db
-_RAM_DEEA_ dw
-_RAM_DEEC_ dw
+_RAM_DEEA_GMOON_STAFF_CHRG dw
+_RAM_DEEC_RAIST_STFFCHRG dw
 _RAM_DEEE_ db
 _RAM_DEEF_ db
 _RAM_DEF0_ db
@@ -493,7 +493,7 @@ _DATA_AB_:
 
 _LABEL_200_ENTRY:	;Entry for the program, but nothing as a main loop or anything.
 	ld sp, $DFF0
-	call _LABEL_7E9A_	;DO SOME REGION CHECK AND THINGS.
+	call _LABEL_7E9A_REGION_CHKSETUP	;DO SOME REGION CHECK AND THINGS.
 _LABEL_206_ENTRY_AFTERCHECK:
 	di
 	ld hl, _RAM_DE29_
@@ -1282,7 +1282,7 @@ _LABEL_8B9_:
 	call _LABEL_6B42_
 	xor a
 	ld hl, $0000
-	ld (_RAM_DE74_), hl
+	ld (_RAM_DE74_PT_FOR_CMBT), hl
 	ld (_RAM_DE76_CR_DMGLINK), a
 	ld a, $18
 	ld (_RAM_FFFF_), a
@@ -1293,13 +1293,13 @@ _LABEL_8B9_:
 	ld de, _DATA_AEF2_
 	ld a, $1F
 	ld (_RAM_FFFF_), a
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 	ld hl, $38C8
 	ld de, _DATA_A7C2_SCORE_SCR_TEXT
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 	call _LABEL_6F3B__UPD_HUD
-	call _LABEL_61FA_
-	call _LABEL_62B1_
+	call _LABEL_61FA_DRAW_SCORESCREEN
+	call _LABEL_62B1_SCOREMENU_CONT_LOOP
 -:
 	call _LABEL_552_CHECK_AB_BUTTONS
 	ld a, (_RAM_DE91_)
@@ -4497,10 +4497,10 @@ _LABEL_3520_CHAR_SHOW:	;THIS SHOWS THE COMPANIONS, AND SHOWS BIOS, PICTURES AND 
 	ld a, d
 	or e
 	jr z, +
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 +:
 	ld de, _DATA_A73A_TEXT_CHARSTAT	
-	call _LABEL_35A6_	;PRINTS THE PRESS BUTTON TEXT.
+	call _LABEL_35A6_RANDOM	;PRINTS THE PRESS BUTTON TEXT.
 -:
 	call _LABEL_59B_MAIN
 	call _LABEL_552_CHECK_AB_BUTTONS	;CHECK FOR ANY AB BUTTON PRESS.
@@ -4544,7 +4544,7 @@ _LABEL_3582_:
 	ld (hl), $FF
 	ex de, hl
 	ld de, _RAM_DE66_
-_LABEL_35A6_:	;HL 3C00 DE $FF
+_LABEL_35A6_RANDOM:	;HL 3C00 DE $FF
 	ld a, r	;GET A VALUE FROM THE R REGISTER...
 	jp po, +
 	di
@@ -4630,7 +4630,7 @@ _LABEL_3615_:
 	ld a, (de)
 	ld h, a
 	inc de
-	jr _LABEL_35A6_
+	jr _LABEL_35A6_RANDOM
 
 _LABEL_361D_:
 	ld l, c
@@ -4644,7 +4644,7 @@ _LABEL_3624_:
 	ld bc, $0040
 +:
 	add hl, bc
-	jp _LABEL_35A6_
+	jp _LABEL_35A6_RANDOM
 
 _LABEL_362D_:
 	ld l, a
@@ -5843,7 +5843,7 @@ _LABEL_3EF2_:
 	jp _LABEL_3F7E_
 
 _LABEL_3F18_:
-	ld a, (_RAM_DE6C_)
+	ld a, (_RAM_DE6C_NME_MOVE7BIT)
 	bit 7, a
 	jr nz, _LABEL_3F5A_
 	ld a, (ix+4)
@@ -6363,7 +6363,7 @@ _LABEL_53A3_:
 	cp $0F
 	ret z
 ++:
-	ld a, (_RAM_DE6C_)
+	ld a, (_RAM_DE6C_NME_MOVE7BIT)
 	bit 6, a
 	ret nz
 	ld hl, (_RAM_D900_)
@@ -7152,8 +7152,9 @@ _LABEL_5999_:
 .db $16 $00 $C2 $C4 $59 $57 $78 $32 $E8 $DE $7A $32 $E9 $DE $C3 $53
 .db $60 $CD $DE $59 $DA $DA $5A $3E $01 $18 $B4
 
-_LABEL_59CE_:
-	ld hl, (_RAM_DEEC_)
+_LABEL_59CE_:	;IF THIS RET BELOW IS THERE, THE GAME WILL THINK RAISTLIN'S STAFF HAS NO CHARGE.
+	;RET
+	ld hl, (_RAM_DEEC_RAIST_STFFCHRG)
 	push de
 	ld e, a
 	ld d, $00
@@ -7161,11 +7162,11 @@ _LABEL_59CE_:
 	sbc hl, de
 	pop de
 	ret c
-	ld (_RAM_DEEC_), hl
+	ld (_RAM_DEEC_RAIST_STFFCHRG), hl
 	ret
 
 _LABEL_59DE_:
-	ld hl, (_RAM_DEEA_)
+	ld hl, (_RAM_DEEA_GMOON_STAFF_CHRG)
 	push de
 	ld e, a
 	ld d, $00
@@ -7173,7 +7174,7 @@ _LABEL_59DE_:
 	sbc hl, de
 	pop de
 	ret c
-	ld (_RAM_DEEA_), hl
+	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl
 	ret
 
 ; Data from 59EE to 5AD4 (231 bytes)
@@ -7216,9 +7217,9 @@ _LABEL_5ADA_:
 	pop de
 	ld hl, $3908
 	push bc
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 	ei
-	call _LABEL_62B1_
+	call _LABEL_62B1_SCOREMENU_CONT_LOOP
 	pop bc
 	ld a, b
 	and a
@@ -7258,9 +7259,9 @@ _LABEL_5BA7_:
 	pop de
 	ld hl, $3908
 _LABEL_5BB5_:
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 ---:
-	call _LABEL_62B1_
+	call _LABEL_62B1_SCOREMENU_CONT_LOOP
 	jp _LABEL_6A6C_
 
 _LABEL_5BBE_:
@@ -7272,7 +7273,7 @@ _LABEL_5BBE_:
 	jr nz, ++
 	ld de, _DATA_AC6C_
 	ld hl, $3908
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 --:
 	ld hl, _RAM_DBB4_
 	ld b, $08
@@ -7353,7 +7354,7 @@ _LABEL_5C0C_:
 _LABEL_5C65_:
 	ld hl, $3888
 	ld de, _DATA_A871_MENUNHUD
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 	ld hl, $3888
 	ld de, $016C
 	ld b, $0B
@@ -7596,37 +7597,37 @@ _LABEL_6053_:
 .db $88 $38 $11 $6C $01 $06 $0B $0E $97 $DD $21 $00 $C0 $CD $E6 $6A
 .db $CD $FA $61 $3E $07 $32 $4F $C0 $CD $B1 $62 $C3 $53 $60
 
-_LABEL_61FA_:
-	ld b, $0A
-	ld ix, _RAM_DE7A_
-	ld iy, _DATA_6E7F_
+_LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN.
+	ld b, $0A	;THERE ARE TEN MONSTER TYPES. CHANGING THIS NUMBER WILL LIMIT HOW MANY NUMBERS ARE DRAWN.
+	ld ix, _RAM_DE7A_KILLCOUNT_ARRAY	;GET THE ARRAY.
+	ld iy, _DATA_6E7F_SCORE_PALETTE		;THIS IS THE PALETTE FOR THE SCREEN.
 -:
 	ld l, (ix+0)
 	ld h, (ix+1)
 	ld c, $00
-	ld de, _RAM_D100_
+	ld de, _RAM_D100_	;THIS IS A TILEMAP IN RAM, THE FORMAT MIGHT BE A LITTLE DIFFERENT, DUNNO.
 	push bc
-	call _LABEL_6E09_
+	call _LABEL_6E09_SCORESCRN_PRINT	;THIS PRINTS THE NUMBER OF KILLS ON THE SCORE SCREEN.
 	ld de, _RAM_D103_
 	ld l, (iy+0)
 	ld h, (iy+1)
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM	;HM, SOME RANDOM NUMBER GENERATING HERE, COMMENTING THIS OUT DOES NOT DO MANY THINGS HERE OF COURSE.
 	pop bc
 	inc ix
 	inc ix
 	inc iy
 	inc iy
-	djnz -
-	ld hl, (_RAM_DE74_)
-	ld a, (_RAM_DE76_CR_DMGLINK)
+	djnz -	;LOOP THE AMOUNT OF B. THIS WILL PRINT THE KILLCOUNT ON THE SCREEN AFTER THE MONSTER TYPES.
+	ld hl, (_RAM_DE74_PT_FOR_CMBT)	;THIS IS THE POINTS FOR COMBAT VALUE.
+	ld a, (_RAM_DE76_CR_DMGLINK)	;HM, WHAT DOES THIS HAVE TO DO WITH THIS? CHANGING THIS NUMBER WILL MESS THE SCREEN UP REALLY BAD.
 	ld c, a
 	ld de, _RAM_D100_
-	call _LABEL_6E09_
+	call _LABEL_6E09_SCORESCRN_PRINT	;THIS WILL PRINT THE 'POINTS FOR COMBAT' POINTS.
 	ld de, _RAM_D101_
-	ld hl, $3B72
-	call _LABEL_35A6_
+	ld hl, $3B72				;A POINT ON THE TILEMAP, FOUR TILES BEFORE THE 'POINTS FOR COMBAT ' SCORE NUMBER, SO THE SCORE NUMBER IS FOUR CHARS LONG.
+	call _LABEL_35A6_RANDOM
 	ld de, $0000
-	ld (_RAM_DE77_), de
+	ld (_RAM_DE77_PT_FOR_ITEMS), de
 	xor a
 	ld (_RAM_DE79_), a
 	ld b, $08
@@ -7678,25 +7679,25 @@ _LABEL_61FA_:
 	add hl, de
 	ex de, hl
 +:
-	ld (_RAM_DE77_), de
-	ld hl, (_RAM_DE77_)
+	ld (_RAM_DE77_PT_FOR_ITEMS), de
+	ld hl, (_RAM_DE77_PT_FOR_ITEMS)
 	ld a, (_RAM_DE79_)
 	ld c, a
 	ld de, _RAM_D100_
-	call _LABEL_6E09_
+	call _LABEL_6E09_SCORESCRN_PRINT	;THIS PRINT THE SCORE AT THE 'POINTS FOR ITEMS' LINE ON THE SCORE SCREEN.
 	ld de, _RAM_D101_
 	ld hl, $3BB2
-	call _LABEL_35A6_
+	call _LABEL_35A6_RANDOM
 	ret
 
-_LABEL_62B1_:
-	call _LABEL_59B_MAIN
-	call _LABEL_552_CHECK_AB_BUTTONS
+_LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKING THE AB BUTTONS, AND CHECKING FOR HOLDING THE BUTTONS. THIS IS USED AT THE GAME OVER AND SCORE SCREENS.
+	call _LABEL_59B_MAIN	;THIS WORKS WITHOUT THIS.
+	call _LABEL_552_CHECK_AB_BUTTONS	;CHECK IF WE HAVE PRESSED THE A OR B BUTTON.
 	ld a, (_RAM_DE94_GAMEPAD)
 	ld b, a
 	ld a, (_RAM_DE95_GAMEPAD)
 	or b
-	jr z, _LABEL_62B1_
+	jr z, _LABEL_62B1_SCOREMENU_CONT_LOOP			;IF WE HAVE NOT PRESSED EITHER, THEN LOOP BACK.
 	ret
 
 ; Data from 62C2 to 6572 (689 bytes)
@@ -7984,9 +7985,9 @@ _LABEL_6DC9_:
 	ld e, (hl)
 	inc hl
 	ld d, (hl)
-	ld hl, (_RAM_DE74_)
+	ld hl, (_RAM_DE74_PT_FOR_CMBT)
 	add hl, de
-	ld (_RAM_DE74_), hl
+	ld (_RAM_DE74_PT_FOR_CMBT), hl
 	ld a, (_RAM_DE76_CR_DMGLINK)
 	adc a, $00
 	ld (_RAM_DE76_CR_DMGLINK), a
@@ -7999,7 +8000,7 @@ _DATA_6DF3_:
 .db $52 $00 $AF $00 $0D $02 $3F $02 $78 $00 $1C $00 $0E $00 $3C $00
 .db $3B $01 $58 $02 $D0 $07
 
-_LABEL_6E09_:
+_LABEL_6E09_SCORESCRN_PRINT:
 	ld a, $20
 	ld (de), a
 	ld a, c
@@ -8080,7 +8081,7 @@ _LABEL_6E76_:
 	ret
 
 ; Data from 6E7F to 6E92 (20 bytes)
-_DATA_6E7F_:
+_DATA_6E7F_SCORE_PALETTE:
 .db $58 $39 $76 $39 $98 $39 $B6 $39 $D8 $39 $F6 $39 $18 $3A $36 $3A
 .db $58 $3A $76 $3A
 
@@ -8431,7 +8432,7 @@ _LABEL_7117_ENABLE_DEBUG:
 	ld hl, $3C00
 	ld de, _DATA_6F05_	;THIS IS AN $FF.
 	di
-	call _LABEL_35A6_	;NO IDEA YET, IT DOES NOT DO ANYTHING NOTICEABLE.
+	call _LABEL_35A6_RANDOM	;NO IDEA YET, IT DOES NOT DO ANYTHING NOTICEABLE.
 	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NR WHERE THE PARTY IS.
 	ld hl, $3CA0	;THIS IS THE TILEMAP VALUE FOR THE ROOM NR DISPLAY.
 	call _LABEL_3582_
@@ -8943,10 +8944,10 @@ _LABEL_7771_:
 	ld (ix+9), $00
 	ld a, $02
 	ld (_RAM_DEF4_), a
-	ld hl, (_RAM_DE74_)
+	ld hl, (_RAM_DE74_PT_FOR_CMBT)
 	ld de, $2710
 	add hl, de
-	ld (_RAM_DE74_), hl
+	ld (_RAM_DE74_PT_FOR_CMBT), hl
 	ld a, (_RAM_DE76_CR_DMGLINK)
 	adc a, $00
 	ld (_RAM_DE76_CR_DMGLINK), a
@@ -9176,7 +9177,7 @@ _LABEL_790E_:
 	ld a, (_RAM_DBB1_)
 	cp $01
 	jr nz, ++
-	ld a, (_RAM_DEEA_)
+	ld a, (_RAM_DEEA_GMOON_STAFF_CHRG)
 	cp $C8
 	jr z, ++
 	add a, $04
@@ -9184,7 +9185,7 @@ _LABEL_790E_:
 	jr c, +
 	ld a, $C8
 +:
-	ld (_RAM_DEEA_), a
+	ld (_RAM_DEEA_GMOON_STAFF_CHRG), a
 	ld (ix+9), $00
 	jp _LABEL_76D1_
 
@@ -9595,6 +9596,7 @@ _DATA_7D6C_PLYRSTATS:
 .db $06
 
 _LABEL_7E74_:
+	
 	call _LABEL_6573_
 	ld de, $DBB5
 	add hl, de
@@ -9613,12 +9615,12 @@ _LABEL_7E74_:
 	ret
 
 ; Data from 7E8F to 7E99 (11 bytes)
-_DATA_7E8F_:
+_DATA_7E8F_VDPREGVALS:
 .db $36 $E0 $FF $FF $FF $FF $FB $00 $06 $00 $FF
 
-_LABEL_7E9A_:
+_LABEL_7E9A_REGION_CHKSETUP:
 	di
-	ld hl, _DATA_7E8F_
+	ld hl, _DATA_7E8F_VDPREGVALS
 	call _LABEL_61F_WRITE_VDP_REG	;WE WRITE THE INITIAL VDP REGISTERS, GET A DEFAULT VDP STATE.
 	ei
 	halt
@@ -9635,9 +9637,9 @@ _LABEL_7E9A_:
 	di
 	ld a, b
 	cp $0D
-	jp nc, _LABEL_7E9A_
+	jp nc, _LABEL_7E9A_REGION_CHKSETUP
 	cp $08
-	jp c, _LABEL_7E9A_	;USELESS COMPARISON,WE'LL BRANCH BACK ANYWAYS.
+	jp c, _LABEL_7E9A_REGION_CHKSETUP	;USELESS COMPARISON,WE'LL BRANCH BACK ANYWAYS.
 	ld h, b
 	ld l, c
 	ld de, $0A41
@@ -9655,13 +9657,13 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld l, a
 	ld h, a
 	ld (_RAM_DE5B_), hl
-	ld (_RAM_DE74_), hl
+	ld (_RAM_DE74_PT_FOR_CMBT), hl
 	ld (_RAM_DE76_CR_DMGLINK), a	;THIS SEEMS TO BE THE "LINK" BETWEEN CARAMON AND RAISTLIN. IF THIS IS ZERO, THE TWO WON'T GET DAMAGED TOGETHER.
 ;.DSB 3,$00
 	ld (_RAM_DE96_), a	;NOT NOTICEABLE.
 	ld (_RAM_DE56_), a	;THIS NEITHER.
 	ld (_RAM_DE55_WATERFALL), a
-	ld (_RAM_DEE5_), a
+	ld (_RAM_DEE5_), a		;NO EFFECT AS NOW.
 	ld (_RAM_DEEE_), a
 	ld (_RAM_DEF1_), a		;BOTH DOES NOTHING IMMEDIATE.
 	ld (_RAM_DE54_HOLD_PLYR), a	;IF THIS IS NOT ZERO, THE PLAYER CHARACTER WON'T BE ABLE TO MOVE.
@@ -9673,26 +9675,26 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
 	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
 	ld a, (_RAM_DE6D_)
-	ld (_RAM_DE6C_), a
+	ld (_RAM_DE6C_NME_MOVE7BIT), a	;BIT 7 WILL STOP ENEMIES FROM MOVING. BIT 6 DOES NOTHING YET.
 	xor a
 	ld (_RAM_DE6D_), a
 	ld a, $FF
 	ld (_RAM_DEE6_), a
-	ld (_RAM_DEE8_), a
-	ld hl, _RAM_DE7A_
-	ld de, _RAM_DE7A_ + 1
+	ld (_RAM_DEE8_), a		;NOT SEEM TO BE USED AT THIS TIME, but it is used.
+	ld hl, _RAM_DE7A_KILLCOUNT_ARRAY
+	ld de, _RAM_DE7A_KILLCOUNT_ARRAY + 1
 	ld bc, $0015
 	ld (hl), $00
-	ldir
+	ldir		;SO, THIS INITS THE MONSTER KILLCOUNT ARRAY, THAT IS SHOWN AT THE SCORE\GAME OVER SCREEN IN THE MENU.		
 	ld hl, _RAM_DCF2_
 	ld de, _RAM_DCF2_ + 1
 	ld bc, $001F
-	ld (hl), $00
+	ld (hl), $00	;THIS RAM PART IS WRITTEN WITH NULLS ONLY SO FAR.
 	ldir
 	ld hl, $0064
-	ld (_RAM_DEEC_), hl
+	ld (_RAM_DEEC_RAIST_STFFCHRG), hl	;GIVE 100 CHARGES TO RAISTLIN'S STAFF.
 	add hl, hl
-	ld (_RAM_DEEA_), hl
+	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl	;GIVE 200 CHARGES TO GOLDMOON'S STAFF.
 	ret
 
 ; Data from 7F3A to 7FEF (182 bytes)
