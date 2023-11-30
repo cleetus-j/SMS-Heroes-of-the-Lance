@@ -102,7 +102,7 @@ _RAM_D601_ db
 .ende
 
 .enum $D900 export
-_RAM_D900_ db
+_RAM_D900_CHARA_COORD db
 _RAM_D901_ db
 _RAM_D902_ dw
 _RAM_D904_ db
@@ -232,26 +232,26 @@ _RAM_DE2E_ db
 _RAM_DE2F_ dw
 _RAM_DE31_ db
 _RAM_DE32_ dw
-_RAM_DE34_ dw
+_RAM_DE34_SCRN_SCROLL dw
 _RAM_DE36_ dw
 _RAM_DE38_ dw
-_RAM_DE3A_ db
+_RAM_DE3A_COLUMN_00_01 db
 _RAM_DE3B_ db
 _RAM_DE3C_ dw
-_RAM_DE3E_ dw
+_RAM_DE3E_MAX_LVL_LEN dw
 _RAM_DE40_ dw
 _RAM_DE42_ dw
 _RAM_DE44_ db
 _RAM_DE45_ db
-_RAM_DE46_ db
+_RAM_DE46_SCROLLBG db
 _RAM_DE47_ db
 _RAM_DE48_ db
 _RAM_DE49_ db
-_RAM_DE4A_ dw
+_RAM_DE4A_COLUMN_NR_SCROLL dw
 _RAM_DE4C_ dw
-_RAM_DE4E_ db
+_RAM_DE4E_SCROLL_DIR db	;1 IS RIGHT, 2 IS LEFT.
 _RAM_DE4F_ db
-_RAM_DE50_ db
+_RAM_DE50_COLUMN_DRW_NR db
 _RAM_DE51_ db
 _RAM_DE52_ROOM_NR db
 _RAM_DE53_COMPASS db
@@ -284,7 +284,7 @@ _RAM_DE72_ dw
 _RAM_DE74_PT_FOR_CMBT dw
 _RAM_DE76_CR_DMGLINK db
 _RAM_DE77_PT_FOR_ITEMS dw
-_RAM_DE79_ db
+_RAM_DE79_KILLCNT_ARRAY db
 _RAM_DE7A_KILLCOUNT_ARRAY dsb $16
 _RAM_DE90_ db
 _RAM_DE91_ db
@@ -1028,7 +1028,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
 	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;THIS CAN BE DISABLED, THE GAME WORKS THE SAME EITHER WAY.
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	ld (ix+9), $01
 	ld (ix+7), $06	;06
 	ld (ix+0), $64
@@ -1041,7 +1041,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld (ix+19), $00	;THESE PARAMETERS HAVE TO BE MAPPED LATER, SO TODO
 	ld hl, $0000
 	ld (_RAM_DE3C_), hl
-	ld (_RAM_DE3E_), hl	;THESE DON'T DO ANYTHING NOTICEABLE
+	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;THESE DON'T DO ANYTHING NOTICEABLE
 	xor a
 	ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
 -:
@@ -1185,7 +1185,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 +:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
-	jp z, _LABEL_8B9_
+	jp z, _LABEL_8B9_GAME_OVER
 	inc a
 	ld (_RAM_DEF2_HOLD_PLYR), a
 	cp $02
@@ -1276,47 +1276,47 @@ _DATA_8A8_:
 .db $04 $00 $FA $0A $1E $0A $00 $00 $04 $00 $FA $0A $1E $0A $01 $00
 .db $FF
 
-_LABEL_8B9_:
+_LABEL_8B9_GAME_OVER:	;THIS GETS CALLED, WHEN ALL CHARS ARE DEAD\PERMADEAD.
 	call _LABEL_5C0C_
 	di
 	call _LABEL_6B42_
 	xor a
 	ld hl, $0000
-	ld (_RAM_DE74_PT_FOR_CMBT), hl
-	ld (_RAM_DE76_CR_DMGLINK), a
-	ld a, $18
-	ld (_RAM_FFFF_), a
-	ld a, $03
+	ld (_RAM_DE74_PT_FOR_CMBT), hl	;SET NO POINTS FOR COMBAT. HOW RUDE.
+	ld (_RAM_DE76_CR_DMGLINK), a	;DISABLE THE DAMAGE LINK BETWEEN RAISTLIN AND CARAMON.
+	ld a, $18			
+	ld (_RAM_FFFF_), a		;SET BANK 24. (MUSIC)
+	ld a, $03			;SET THE GAME OVER MUSIC.
 	ld c, $01
-	call _LABEL_6242B_SET_MUS
-	ld hl, $3808
-	ld de, _DATA_AEF2_
+	call _LABEL_6242B_SET_MUS	;PLAY THE GAME OVER TUNE.
+	ld hl, $3808			;TILEMAP ON THE SCREEN. IF YOU OPEN A TILEMAP MONITOR IN AN EMULATOR, YOU CAN SEE THIS VALUE DIRECTLY CORRELATES WITH THE TILE\TEXT POSITION ON THE SCREEN LATER.
+	ld de, _DATA_AEF2_		;THIS IS A BLOCK OF TEXT AND OTHER DATA. BASICALLY THE CODE SETS UP THIS REGISTER TO POINT TO THE 'YOU'VE FAILED' MESSAGE.
 	ld a, $1F
-	ld (_RAM_FFFF_), a
-	call _LABEL_35A6_RANDOM
-	ld hl, $38C8
-	ld de, _DATA_A7C2_SCORE_SCR_TEXT
-	call _LABEL_35A6_RANDOM
-	call _LABEL_6F3B__UPD_HUD
-	call _LABEL_61FA_DRAW_SCORESCREEN
-	call _LABEL_62B1_SCOREMENU_CONT_LOOP
+	ld (_RAM_FFFF_), a		;BANKSWITCH TO THE BANK THAT HAS THIS DATA.
+	call _LABEL_35A6_RANDOM		;PLOT TEXT TO LOCATION.
+	ld hl, $38C8			;NEXT LOCATION FOR THE TABLE OF POINTS.
+	ld de, _DATA_A7C2_SCORE_SCR_TEXT	;SCORE SCREEN PART, WHERE THE MONSTERS AND OTHERS ARE LISTED.
+	call _LABEL_35A6_RANDOM		;PLOT TEXT AGAIN.
+	call _LABEL_6F3B__UPD_HUD	;UPDATE HUD.
+	call _LABEL_61FA_DRAW_SCORESCREEN	;THIS PRINTS THE NUMBERS AND SCORES ON THE SCORE SCREEN. DOES NOT DRAW THE WHOLE SCREEN THOUGH.
+	call _LABEL_62B1_SCOREMENU_CONT_LOOP	;WAIT FOR A BUTTON PRESS.
 -:
 	call _LABEL_552_CHECK_AB_BUTTONS
 	ld a, (_RAM_DE91_)
 	and $30
-	jp z, _LABEL_206_ENTRY_AFTERCHECK
+	jp z, _LABEL_206_ENTRY_AFTERCHECK	;RETURN TO THE BEGINNING OF THE CODE. YEAH, NO CONTINUES.
 	call _LABEL_59B_MAIN
 	jr -
 
 ; Data from 906 to 923 (30 bytes)
 .db $F3 $CD $42 $6B $3E $18 $32 $FF $FF $3E $04 $0E $01 $CD $2B $A4
 .db $21 $08 $38 $11 $25 $AF $3E $01 $32 $56 $DE $C3 $DC $08
-
+;.dsb 27,$00
 _LABEL_924_:
 	ld a, (_RAM_DEF4_)
 	cp $01
-	jr nz, +
-	ld hl, (_RAM_D900_)
+	jr nz, +	;IF THIS IS NOT ZERO, JUMP.
+	ld hl, (_RAM_D900_CHARA_COORD)	;THIS IS SOME CHARACTER COORDINATE ON SCREEN, AND WHAT THEY DO, LIKE JUMP OR SOMETHING.
 	ld de, $0220
 	and a
 	sbc hl, de
@@ -1325,9 +1325,9 @@ _LABEL_924_:
 	call _LABEL_5689_
 	ld c, $08
 	call _LABEL_57CC_
-+:
++:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
 	ld a, (_RAM_DEF4_)
-	cp $02
+	cp $02			
 	jr nz, +
 	ld a, (_RAM_DE57_)
 	inc a
@@ -1349,7 +1349,7 @@ _LABEL_924_:
 	call _LABEL_3AAF_
 	pop af
 	ld (_RAM_D904_), a
-+:
++:				;THIS IS $02, THEN STONES FALL ON THE CHARACTER'S HEAD, LIKE IN THE ENDING.
 	ld a, (_RAM_DEF0_)
 	sub $01
 	adc a, $00
@@ -1370,14 +1370,15 @@ _LABEL_924_:
 	call _LABEL_2DE2_
 	ld hl, _DATA_314_
 	ld (_RAM_DEB9_), hl
-	call _LABEL_A95_
+;.dsb 9,$00
+	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_A10_
 	ld b, $0D
 	call _LABEL_2EC8_
 	ld hl, _DATA_335_
 	ld (_RAM_DEB9_), hl
-	call _LABEL_A95_
+	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
 	call _LABEL_2ECE_
 	call _LABEL_A10_
@@ -1385,7 +1386,7 @@ _LABEL_924_:
 	call _LABEL_2ECE_
 	ld hl, _DATA_356_
 	ld (_RAM_DEB9_), hl
-	call _LABEL_A95_
+	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
 	call _LABEL_2ECE_
 	call _LABEL_A10_
@@ -1394,7 +1395,7 @@ _LABEL_924_:
 	call _LABEL_2C1A_
 	ld hl, _DATA_377_
 	ld (_RAM_DEB9_), hl
-	call _LABEL_A95_
+	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_3238_
 	ld a, (_RAM_DE96_)
 	and a
@@ -1490,10 +1491,10 @@ _LABEL_A10_:
 	ld (_RAM_DEA9_), hl
 ++:
 	call _LABEL_59B_MAIN
-	call _LABEL_2FB7_
+	call _LABEL_2FB7_DRAWSPRITES
 	pop hl
 	ld (_RAM_DEA9_), hl
-	ld a, (_RAM_DE46_)
+	ld a, (_RAM_DE46_SCROLLBG)
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
@@ -1503,17 +1504,19 @@ _LABEL_A10_:
 	call _LABEL_62D_WRITE_VDP_REG
 	ret
 
-_LABEL_A95_:
-	ld a, (_RAM_DE46_)
+_LABEL_A95_UPDATE_SCREEN:	
+	;ret
+	ld a, (_RAM_DE46_SCROLLBG)
 	ld (_RAM_DE47_), a
+;.dsb 3,$00
 	ld a, (_RAM_DE48_)
-	ld (_RAM_DE49_), a
-	call +
-	call _LABEL_314E_
-	call _LABEL_2C54_
-	call _LABEL_59B_MAIN
-	call _LABEL_2FB7_
-	ld a, (_RAM_DE46_)
+	ld (_RAM_DE49_), a	;SAVE SCROLL VALUES, MAYBE FOR THE SCREEN DBL BUFFER SYSTEM.
+	call +			;THIS IS THE SCREEN BORDER CHECK, WITHOUT THIS, THE SCREEN WILL NOT SCROLL ANYWHERE, AND NO BOUNDARIES WILL BE CHECKED EITHER.
+	call _LABEL_314E_FINE_CHAR_MVMNT	;THIS IS THE FINE CHARACTER MOVEMENT. IF YOU COMMENT THIS OUT, IT UPDATES SPRITES MUCH LESS, AND IT BECOMES REALLY JANKY, OR SOMETHING ON A ZX SPECTRUM, BUT THE GAME WORKS FINE.
+	call _LABEL_2C54_CHARA_ANIM	;CHARA ANIMATION. IT GETS THE PATTERNS FOR THE ANIMATED SPRITE, AND WHAT TO LOAD LATER.
+	call _LABEL_59B_MAIN	;WOW, IF THIS IS COMMENTED OUT, THE GAME RUNS MUCH FASTER, BUT THE GFX WILL BE MESSED UP A BIT. I GUESS THE VDP WRITES ARE TOO FAST.
+	call _LABEL_2FB7_DRAWSPRITES	;NO IMMEDIATELY VISIBLE EFFECT.
+	ld a, (_RAM_DE46_SCROLLBG)
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
@@ -1525,7 +1528,7 @@ _LABEL_A95_:
 	ld b, a
 	ld a, (_RAM_DE49_)
 	cp b
-	ld a, (_RAM_DE46_)
+	ld a, (_RAM_DE46_SCROLLBG)
 	ld b, a
 	ld a, (_RAM_DE47_)
 	cp b
@@ -1538,33 +1541,36 @@ _LABEL_A95_:
 	jr nz, +
 	and a
 	jr z, ++
-	call _LABEL_B39_
+	call _LABEL_B39_CHECK_MAP_RIGHT_BORDER
 	ld a, (_RAM_DE44_)
 	cp $02
-	call nc, _LABEL_B39_
+	call nc, _LABEL_B39_CHECK_MAP_RIGHT_BORDER
 	ld a, (_RAM_DE44_)
 	cp $03
-	call nc, _LABEL_B39_
+	call nc, _LABEL_B39_CHECK_MAP_RIGHT_BORDER
 	jr ++
 
 +:
-	call _LABEL_B47_
+	call _LABEL_B47_CHECK_MAP_LEFT_BORDER
 	ld a, (_RAM_DE44_)
 	cp $FF
-	call c, _LABEL_B47_
+	call c, _LABEL_B47_CHECK_MAP_LEFT_BORDER
 	ld a, (_RAM_DE44_)
 	cp $FE
-	call c, _LABEL_B47_
+	call c, _LABEL_B47_CHECK_MAP_LEFT_BORDER
 ++:
 	ld a, (_RAM_DE45_)
 	bit 7, a
-	jr nz, +
+	jr Nz, +	;CHANGING THIS DOES NOTHING NOTICEABLE.
 	and a
+	;NOP
+	;NOP
+	;NOP
 	ret z
 	call ++
 	ld a, (_RAM_DE45_)
 	cp $02
-	call nc, ++
+	call Nc, ++
 	ld a, (_RAM_DE45_)
 	cp $03
 	call nc, ++
@@ -1580,20 +1586,22 @@ _LABEL_A95_:
 	call c, +++
 	ret
 
-_LABEL_B39_:
-	ld hl, (_RAM_DE34_)
-	ld de, (_RAM_DE3E_)
-	and a
-	sbc hl, de
-	ret nc
-	jp _LABEL_FCB_
+_LABEL_B39_CHECK_MAP_RIGHT_BORDER:
+	ld hl, (_RAM_DE34_SCRN_SCROLL)	;CAMERA POSITION ON THE STAGE AGAIN.
+	ld de, (_RAM_DE3E_MAX_LVL_LEN)		;MAXIMUM LEVEL LENGTH, AS IT SEEMS.
+	and a				;LOSE THE CARRY.
+	sbc hl, de			;SUBTRACT THE LEVEL END POINT FROM THE CAMERA POSITION. IF THE CAMERA POS IS LOWER THAN THE LEVEL'S ENDPOINT, THEN LET IT SCROLL TO THE RIGHT, OTHERWISE DON'T.
+	ret nc		;IF THIS IS SET TO C, THE SCREEN WILL NOT SCROLL TO THE RIGHT.
+	jp _LABEL_FCB_SCRL_RIGHT
 
-_LABEL_B47_:
-	ld hl, (_RAM_DE34_)
-	ld a, l
-	or h
-	ret z
-	jp _LABEL_FFC_
+_LABEL_B47_CHECK_MAP_LEFT_BORDER:
+;THIS LOOKS AT THE LEFTMOST BORDER OF THE LEVEL\SCENE\SCREEN WE ARE ON. THIS PREVENTS THE PLAYER TO SCROLL OUTSIDE THE LEVEL, OR IF THE RET Z IS CHANGED TO AN NZ, TO SCROLL TO THE LEFT AT ALL.
+	ld hl, (_RAM_DE34_SCRN_SCROLL) ;GET THIS SCROLL VALUE. THIS IS LIKE THE CAMERA POSITION, WHERE WE LOOK AT THE STAGE.
+	ld a, l	;THIS IS THE FINER SCROLL VALUE I THINK.
+	or h	;THIS OR WILL BE EITHER ZERO, OR ANYTING ELSE. IF THESE ARE NOT NULL, WE CAN STILL SCROLL THE SCREEN TO THE LEFT. IF IT IS, WE RETURN, AND NO SCROLL WILL HAPPEN.
+	ret z	;IF THIS IS NZ, THE SCREEN WILL NOT SCROLL LEFT, JUST RIGHT.
+	;THIS CAN BE COMMENTED OUT AS WELL, THE GAME WILL NOT SCROLL WITH THE ZERO VALUE TO THE LEFT ANYWAY, MAYBE JUST AN EXTRA CHECK FROM THE PROGRAMMER.
+	Jp _LABEL_FFC_SCRL_LEFT
 
 ++:
 	ld hl, (_RAM_DE36_)
@@ -1611,11 +1619,6 @@ _LABEL_B47_:
 	jp _LABEL_106D_
 
 ; Data from B67 to B96 (48 bytes)
-;_DATA_B67_DEMO_INPUT:
-;.db $01 $00 $16 $01 $05 $00 $1A $02 $04 $08 $18 $01 $04 $00 $00 $FE
-;.db $E8 $DE $08 $00 $FE $E9 $DE $02 $0C $11 $05 $00 $40 $02 $00 $FE
-;.db $BC $DE $01 $00 $FE $BD $DE $00 $0F $00 $1E $12 $0A $00 $00 $FF
-
 _DATA_B67_DEMO_INPUT:
 .db $01 $00 $16 $01 $05 $00 $1A $02 $04 $08 $18 $01 $04 $00 $00 $FE
 .db $E8 $DE $08 $00 $FE $E9 $DE $02 $0C $11 $05 $00 $40 $02 $00 $FE
@@ -1626,29 +1629,34 @@ _DATA_B97_:
 .db $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01
 .db $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01
 
-_LABEL_BB7_:
+
+
+_LABEL_BB7_CLR_SCREEN:
+;THIS CLEARS HALF THE SCREEN, WHERE THE GAME IS, AND REMOVES SPRITES AS WELL BASED ON THE IN-RAM SAT TABLE.
+;THE ROUTINE CAN TAKE A NICE BEATING BEFORE THE GAME GETS VISIBLY GLITCHED DURING SCREEN TRANSITIONS.
 	call _LABEL_59B_MAIN
+	xor a				;0
+	out (Port_VDPAddress), a
+	ld a, $7F			;0111 1111	SET UP A VRAM WRITE TO 3F00, THIS WILL WRITE TO THE SAT IN VRAM.
+	out (Port_VDPAddress), a
+	ld hl, _DATA_AB_		
+	ld a, $D0			
+	out (Port_VDPData), a		;SO WE DISABLE ALL SPRITES THIS WAY, THE MANUAL TELLS THAT D0 WILL TELL THE CONSOLE NOT TO LOOK AFTER FURTHER SPRITES TO DRAW.
+	ld a, $E0			;1110 0000
+	ld bc, $2000 | Port_VDPData	;SO WE'LL WRITE 32 TIMES TO THE VDP DATA PORT.
+	out (Port_VDPAddress), a
+	ld a, $77			;0111 1111	$3FE0 SAT TABLE ENTRY, 14TH SPRITE.
+	out (Port_VDPAddress), a
+	otir				;CLEAR 32 SPRITE ENTRIES AFTER THE 14TH SPRITE.
 	xor a
 	out (Port_VDPAddress), a
-	ld a, $7F
+	ld a, $78			;0111 1000 $3800 THIS IS THE TILES.
 	out (Port_VDPAddress), a
-	ld hl, _DATA_AB_
-	ld a, $D0
-	out (Port_VDPData), a
-	ld a, $E0
-	ld bc, $2000 | Port_VDPData
-	out (Port_VDPAddress), a
-	ld a, $77
-	out (Port_VDPAddress), a
-	otir
-	xor a
-	out (Port_VDPAddress), a
-	ld a, $78
-	out (Port_VDPAddress), a
-	ld e, $18
+	ld e,$18
 	ld c, Port_VDPData
 _LABEL_BE0_:
 	ld hl, _DATA_B97_
+;.dsb 40,$00
 	outi
 	outi
 	outi
@@ -1693,14 +1701,14 @@ _LABEL_BE0_:
 	dec e
 	jr nz, --
 	xor a
-	ld (_RAM_DE46_), a
+	ld (_RAM_DE46_SCROLLBG), a
 	ld hl, _DATA_473_
 	call _LABEL_61F_WRITE_VDP_REG
 	call _LABEL_59B_MAIN
 	ret
 
 _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and where to get data from.
-	call _LABEL_BB7_	;DOES NOTHING AS OF YET.
+	call _LABEL_BB7_CLR_SCREEN	;DOES NOTHING AS OF YET.
 	;NOP
 	;NOP
 	;NOP
@@ -1745,23 +1753,23 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and wh
 	ld de, $0100
 	and a
 	sbc hl, de	;$0400
-	ld (_RAM_DE3E_), hl	;save this value
+	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;save this value
 	push af			;save this one too on the stack
 	ld a, (_RAM_DEF4_)
 	cp $01
 	jr Nz, +
-	ld hl, (_RAM_DE3E_)
+	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
 	ld (_RAM_DE3C_), hl
 	ld hl, $0240
-	ld (_RAM_DE3E_), hl
+	ld (_RAM_DE3E_MAX_LVL_LEN), hl
 +:
 	pop af
-	ld de, (_RAM_DE34_)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	and a
 	sbc hl, de
 	jr nc, +
-	ld hl, (_RAM_DE3E_)
-	ld (_RAM_DE34_), hl
+	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
+	ld (_RAM_DE34_SCRN_SCROLL), hl
 +:
 	pop hl
 	srl a
@@ -2125,7 +2133,10 @@ _LABEL_E17_:
 	call _LABEL_2EB1_
 	call _LABEL_2DE2_
 	call _LABEL_2C1A_
-	call _LABEL_2C54_
+	call _LABEL_2C54_CHARA_ANIM
+	;NOP
+	;NOP
+	;NOP
 	call _LABEL_59B_MAIN
 	di
 	ld hl, _RAM_C800_
@@ -2137,10 +2148,10 @@ _LABEL_E17_:
 	ld hl, $3800
 	call _LABEL_4BB_VDP_RAM_WRITE
 	ld de, (_RAM_DE2F_)
-	ld hl, (_RAM_DE34_)
+	ld hl, (_RAM_DE34_SCRN_SCROLL)
 	call _LABEL_7AE7_
 	ld a, l
-	ld (_RAM_DE50_), a
+	ld (_RAM_DE50_COLUMN_DRW_NR), a
 	add hl, de
 	ex de, hl
 	ld hl, (_RAM_DE36_)
@@ -2211,76 +2222,80 @@ _LABEL_F50_:
 	ld hl, _DATA_398_
 	call _LABEL_4CF_LOAD2PALS
 	ld hl, $0000
-	ld (_RAM_DE4A_), hl
+	ld (_RAM_DE4A_COLUMN_NR_SCROLL), hl
 	ld hl, $3800
 	ld (_RAM_DE4C_), hl
 	ld a, $08
-	ld (_RAM_DE46_), a
+	ld (_RAM_DE46_SCROLLBG), a
 	xor a
 	ld (_RAM_DE48_), a
 	ld (_RAM_DE3B_), a
-	ld (_RAM_DE3A_), a
+	ld (_RAM_DE3A_COLUMN_00_01), a
 	ld hl, _RAM_D12C_
 	ld (hl), $FF
 	ld (_RAM_DE38_), hl
 	ret
 
-_LABEL_FCB_:
+_LABEL_FCB_SCRL_RIGHT:	;THIS IS THE SCROLL RIGHT PART.
 	ld a, $01
-	ld (_RAM_DE4E_), a
-	ld hl, (_RAM_DE34_)
+	ld (_RAM_DE4E_SCROLL_DIR), a	
+	ld hl, (_RAM_DE34_SCRN_SCROLL)
 	inc hl
-	ld (_RAM_DE34_), hl
-	ld a, (_RAM_DE46_)
+	ld (_RAM_DE34_SCRN_SCROLL), hl	;INCREASE THIS SCROLL VALUE. (SINCE WE GO RIGHT.)
+	ld a, (_RAM_DE46_SCROLLBG)	;IF THIS IS NOT MODIFIED, THE BG WILL NOT SCROLL, BUT THE ENEMIES WILL.
 	dec a
-	ld (_RAM_DE46_), a
+	;nop
+	ld (_RAM_DE46_SCROLLBG), a
 	ld a, l
-	and $07
+	and $07	;0000 0111
 	ret nz
-	ld hl, (_RAM_DE4A_)
+	ld hl, (_RAM_DE4A_COLUMN_NR_SCROLL)	;THIS SEEMS TO BE A COLUMN VALUE, THESE ARE THE SLICES THE BG IS LOADED.
 	ld a, l
-	add a, $02
-	and $3F
+	add a, $02	;$02 MEANS ONE COLUMN OF TILES.
+	and $3F	;0011 1111 ;THIS IS SOME KIND OF MAX LENGHT. IT IS USED, BUT GETS BACK TO 0 ANYWAYS. 64 COLUMNS\ TWO SCREENFUL OF TILES.
+	;NOP
+	;NOP
 	ld l, a
-	ld (_RAM_DE4A_), hl
-	ld a, (_RAM_DE3A_)
+	ld (_RAM_DE4A_COLUMN_NR_SCROLL), hl
+	ld a, (_RAM_DE3A_COLUMN_00_01)
 	xor $01
-	ld (_RAM_DE3A_), a
+	ld (_RAM_DE3A_COLUMN_00_01), a	;THIS LOOKS LIKE SWITCHING BACK AND FORTH FROM $00 AND $01, LIKE SOME DOUBLE BUFFER THING WHICH COLUMN TO DRAW.
 	ret nz
-	ld hl, _RAM_DE50_
+	ld hl, _RAM_DE50_COLUMN_DRW_NR	;WHEN THE SCREEN SCROLLS, THIS TELLS THE GAME WHICH COLUMN TO DRAW, AND THESE ARE 16-PIXEL WIDE ONES.
 	inc (hl)
 	ret
 
-_LABEL_FFC_:
+_LABEL_FFC_SCRL_LEFT:	;THIS IS THE SCROLL LEFT PART. EVERYTHING IS THE SAME AS THE LEFT ONE, EXCEPT A FEW DETAILS.
 	ld a, $02
-	ld (_RAM_DE4E_), a
-	ld hl, (_RAM_DE34_)
+	ld (_RAM_DE4E_SCROLL_DIR), a
+	ld hl, (_RAM_DE34_SCRN_SCROLL)
 	dec hl
 	bit 7, h
 	ret nz
-	ld (_RAM_DE34_), hl
-	ld a, (_RAM_DE46_)
+	ld (_RAM_DE34_SCRN_SCROLL), hl
+	ld a, (_RAM_DE46_SCROLLBG)
 	inc a
-	ld (_RAM_DE46_), a
+	ld (_RAM_DE46_SCROLLBG), a
 	ld a, l
 	and $07
 	cp $07
 	ret nz
-	ld hl, (_RAM_DE4A_)
+	ld hl, (_RAM_DE4A_COLUMN_NR_SCROLL)
 	ld a, l
 	sub $02
 	and $3F
 	ld l, a
-	ld (_RAM_DE4A_), hl
-	ld a, (_RAM_DE3A_)
+	ld (_RAM_DE4A_COLUMN_NR_SCROLL), hl
+	ld a, (_RAM_DE3A_COLUMN_00_01)
 	xor $01
-	ld (_RAM_DE3A_), a
+	ld (_RAM_DE3A_COLUMN_00_01), a
 	ret z
-	ld hl, _RAM_DE50_
+	ld hl, _RAM_DE50_COLUMN_DRW_NR
 	dec (hl)
 	ret
 
 _LABEL_1032_:
+	;RET
 	ld a, $01
 	ld (_RAM_DE4F_), a
 	ld hl, (_RAM_DE36_)
@@ -2354,15 +2369,15 @@ _LABEL_106D_:
 _LABEL_10B1_:
 	ld a, (_RAM_DE2E_)
 	ld (_RAM_FFFF_), a
-	ld a, (_RAM_DE4E_)
+	ld a, (_RAM_DE4E_SCROLL_DIR)
 	cp $02
 	jp z, ++
 	ld hl, (_RAM_DE2F_)
-	ld de, (_RAM_DE50_)
+	ld de, (_RAM_DE50_COLUMN_DRW_NR)
 	add hl, de
 	ld de, $000F
 	add hl, de
-	ld a, (_RAM_DE3A_)
+	ld a, (_RAM_DE3A_COLUMN_00_01)
 	ld b, $C2
 	and a
 	jr z, +
@@ -2371,7 +2386,7 @@ _LABEL_10B1_:
 +:
 	push hl
 	ld hl, (_RAM_DE4C_)
-	ld de, (_RAM_DE4A_)
+	ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
 	ld a, e
 	add a, $3E
 	and $3F
@@ -2382,9 +2397,9 @@ _LABEL_10B1_:
 
 ++:
 	ld hl, (_RAM_DE2F_)
-	ld de, (_RAM_DE50_)
+	ld de, (_RAM_DE50_COLUMN_DRW_NR)
 	add hl, de
-	ld a, (_RAM_DE3A_)
+	ld a, (_RAM_DE3A_COLUMN_00_01)
 	ld b, $C0
 	and a
 	jr z, +
@@ -2392,7 +2407,7 @@ _LABEL_10B1_:
 +:
 	push hl
 	ld hl, (_RAM_DE4C_)
-	ld de, (_RAM_DE4A_)
+	ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
 	add hl, de
 	pop de
 	jp +++
@@ -3072,8 +3087,8 @@ _LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. T
 	ldir
 	ld hl, $0000
 	ld (_RAM_DE42_), hl
-	ld hl, _RAM_D900_
-	ld de, _RAM_D900_ + 1
+	ld hl, _RAM_D900_CHARA_COORD
+	ld de, _RAM_D900_CHARA_COORD + 1
 	ld bc, $014F
 	ld (hl), $00
 	ldir
@@ -3097,7 +3112,7 @@ _LABEL_2C1A_:
 	ld (_RAM_DEA9_), hl
 	ld hl, (_RAM_DE42_)
 	ld (_RAM_DE44_), hl
-	ld hl, _RAM_D900_
+	ld hl, _RAM_D900_CHARA_COORD
 	ld de, _RAM_DA50_
 	ld bc, $0150
 	ldir
@@ -3106,15 +3121,18 @@ _LABEL_2C1A_:
 ; Data from 2C46 to 2C53 (14 bytes)
 .db $AF $32 $B5 $DE $3E $D0 $32 $00 $D4 $C9 $CD $E2 $2D $C9
 
-_LABEL_2C54_:
-	ld hl, (_RAM_DEA9_)
+_LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF THE CODE.
+	ld hl, (_RAM_DEA9_)	;OKAY, THIS AGAIN.
 	ld (hl), $D0
 	ld (_RAM_DEAB_), hl
 	ld de, $0080
 	add hl, de
+	;NOP
 	ld (_RAM_DEAD_), hl
 	ld a, (_RAM_DEB5_)
 	xor $40
+	;NOP
+	;NOP
 	ld (_RAM_DEAF_), a
 	ld ix, _RAM_DA50_
 	ld b, $0C
@@ -3154,7 +3172,7 @@ _LABEL_2C54_:
 +++:
 	ld l, (ix+16)
 	ld h, (ix+17)
-	ld de, (_RAM_DE34_)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	and a
 	sbc hl, de
 	ld (_RAM_DEA1_), hl
@@ -3360,7 +3378,7 @@ _LABEL_2DE2_:
 	ld de, $0020
 	ld bc, $0004
 	exx
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	ld hl, _RAM_D000_
 	ld (_RAM_DEB7_), hl
 	ld b, $0C
@@ -3387,7 +3405,7 @@ _LABEL_2DE2_:
 	and a
 	ret z
 	ld c, a
-	ld hl, (_RAM_DE34_)
+	ld hl, (_RAM_DE34_SCRN_SCROLL)
 	ld de, $0040
 	and a
 	sbc hl, de
@@ -3674,15 +3692,15 @@ _LABEL_2EDF_:
 	ld (_RAM_DEB3_), hl
 	ret
 
-_LABEL_2FB7_:
+_LABEL_2FB7_DRAWSPRITES:	;THIS IS THE SPRITE DRAW ROUTINE.
 	xor a
 	ld d, a
-	out (Port_VDPAddress), a
+	out (Port_VDPAddress), a	;0000 0000
 	ld a, $7F
-	out (Port_VDPAddress), a
+	out (Port_VDPAddress), a	;0111 1111 THIS IS THE SAT'S ADDRESS.
 	ld bc, $4000 | Port_VDPData
 	ld e, b
-	ld hl, (_RAM_DEA9_)
+	ld hl, (_RAM_DEA9_)	;THIS MIGHT BE THE IN-RAM SAT.
 	outi
 	outi
 	outi
@@ -3746,12 +3764,12 @@ _LABEL_2FB7_:
 	outi
 	outi
 	outi
-	outi
+	outi	;THIS PLOTS THE X COORDS ON THE SPRITES.
 	inc a
 	out (Port_VDPAddress), a
 	dec a
 	out (Port_VDPAddress), a
-	add hl, de
+	add hl, de	;ADD 64 BYTES, BASICALLY WHAT'S THERE IN THE SAT TABLE AS "UNUSED" SPACE, THEN PLOT THE Y COORDINATES, AND THE REST.
 	outi
 	outi
 	outi
@@ -3880,11 +3898,11 @@ _LABEL_2FB7_:
 	outi
 	outi
 	outi
-	ret
+	ret		;THIS WILL DRAW ALL 64 SPRITES ON THE SCREEN, PRETTY NICE WITH ALL THE UNROLLED LOOPS, THEY HAD THE SPACE FOR IT.
 
-_LABEL_314E_:
-	ld ix, _RAM_DA50_
-	ld b, $0C
+_LABEL_314E_FINE_CHAR_MVMNT:
+	ld ix, _RAM_DA50_	;THIS LOOKS LIKE A VALUE FOR FINE CHAR MOVEMENT. IF THIS IS FROZEN, THE MOVEMENTS BECOME REALLY JAGGED.
+	ld b, $0C		;12, BUT NO IDEA YET WHAT IT AMOUNS TO.
 	ld de, $001C
 _LABEL_3157_:
 	exx
@@ -3974,7 +3992,7 @@ _LABEL_31D7_:
 	ret
 
 _LABEL_31DF_:
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	ld b, $0C
 -:
 	push bc
@@ -4023,7 +4041,7 @@ _LABEL_31DF_:
 _LABEL_3238_:
 	ld b, $0C
 	ld de, $001C
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 -:
 	ld a, (ix+0)
 	ld (ix+16), a
@@ -4075,7 +4093,7 @@ _LABEL_3262_:
 	ld l, a
 	ld c, l
 	ld b, h
-	ld de, (_RAM_DE34_)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	ld l, (ix+16)
 	ld h, (ix+17)
 	and a
@@ -4103,7 +4121,7 @@ _LABEL_32B8_:
 	jr z, _LABEL_333D_
 +:
 	exx
-	ld a, (_RAM_DE4A_)
+	ld a, (_RAM_DE4A_COLUMN_NR_SCROLL)
 	srl l
 	srl l
 	add a, l
@@ -4561,59 +4579,64 @@ _LABEL_35A6_RANDOM:	;HL 3C00 DE $FF
 	push af
 	ld a, $02	;BANKSWITCH.
 	ld (_RAM_FFFF_), a
-	call _LABEL_35C8_
+	call _LABEL_35C8_PLOT_CHARBIO
+	;NOP
+	;NOP
+	;NOP
 	pop af
 	ld (_RAM_FFFF_), a
 	ret
 
-_LABEL_35C8_:
+_LABEL_35C8_PLOT_CHARBIO:
 	ld a, (de)
 	inc de
 	cp $FF
-	ret z
+	ret z		;IT SEEMS THAT $FF MARKS THE END OF DRAW A PICTURE.
 	cp $FE
-	jr z, _LABEL_3615_
-	cp $0D
-	jr z, _LABEL_3624_
-	cp $0E
-	jr z, _LABEL_361D_
-	cp $41
+	jr z, _LABEL_3615_	;MESSES UP TEXT DRAWING ON THE CHARACTER INTRO, AND THE TEXT GETS DRAWN OVER THE CHAR. PICS.
+	cp $0D			;$0D IS THE END OF LINE TERMINATOR.
+	jr z, _LABEL_3624_NEWLINE	;THIS SHOULD BE THE NEWLINE SUB.
+	cp $0E			;EXTRA NEWLINE CHARACTER.
+	jr z, _LABEL_361D_	;NEWLINE SUB.
+	cp $41			;THIS LOOKS LIKE THE SPACE CHAR. IF THIS IS NOT CHECKED, THE SPACE BETWEEN WORDS ARE SLIGHTLY GLITCHED TILES.
 	jr c, +
-	cp $5B
-	jr nc, +
+	cp $5B			;THIS IS MOST PROBABLY THE UPPERCASE LETTER MARKER.
+	jr Nc, +		;IF THIS IS JUST C, THEN THE UPPERCASE LETTERS ARE NOT DRAWN.
 	sub $41
-	jr _LABEL_362D_
+	jr _LABEL_362D_DRAWTXT	;THIS PART DRAWS UPPERCASE LETTERS.
 
 +:
+;.DSB 4,$00
 	cp $61
-	jr c, +
+	jr c, +	;SPACE AND OTHER EXTRA CHARACTERS ARE NOT DRAWN IF THIS IS COMMENTED OUT.
 	cp $7B
-	jr nc, +
+	jr Nc, +	;ONLY PUCTUATION AND UPPERCASE CHARS ARE DRAWN IF THIS IS CARRY ONLY.
 	sub $41
-	jr _LABEL_362D_
+;.dsb 2,$00
+	jr _LABEL_362D_DRAWTXT	;THIS HANDLES THE LOWERCASE LETTERS.
 
 +:
 	cp $30
-	jr c, +
+	jr c, +	;THIS REMOVED SPACES, AND ADD OTHER CHARS INSTEAD. THE TEXT IS LEGIBLE, BUT JUST A BIT.
 	cp $3A
-	jr nc, +
-	add a, $10
-	jr _LABEL_362D_
+	jr nc, +	;DRAWS SPACE AT THE CHAR NAMES IN ALLCAPS.
+	add a, $10	;MESSES A LINE UP AS TASSLEHOFF'S SCREEN, BUT THAT'S ALL.
+	jr _LABEL_362D_DRAWTXT	;THIS DOES NOT SEEM TO DO ANYTHING AS OF YET.
 
 +:
-	ld hl, _DATA_3645_
+	ld hl, _DATA_3645_	;THIS HAS SOME TEXT DATA REGARDING SPACES, AND PUCTUATION, AND ONLY USED HERE.
 	push bc
 	ld b, a
 -:
 	ld a, (hl)
 	inc hl
 	cp $FF
-	jr z, ++
+	jr z, ++	;SKIPS PUNCTUATION AND SPACES, IF THIS IS SET TO NZ.
 	cp b
-	jr nz, +
+	jr Nz, +		;SKIPS PUNCTUATION, SPACES ARE REPLACED WITH ':' IF THIS IS Z.
 	ld a, (hl)
 	pop bc
-	jr _LABEL_362D_
+	jr _LABEL_362D_DRAWTXT	;THIS KILLS THE PROGRAM... THE CODE HANGS AFTER WRITING THE ALL UPPERCASE CHAR NAME.
 
 +:
 	inc hl
@@ -4621,7 +4644,7 @@ _LABEL_35C8_:
 
 ++:
 	pop bc
-	jr _LABEL_35C8_
+	jr _LABEL_35C8_PLOT_CHARBIO
 
 _LABEL_3615_:
 	ld a, (de)
@@ -4638,7 +4661,7 @@ _LABEL_361D_:
 	ld bc, $0042
 	jr +
 
-_LABEL_3624_:
+_LABEL_3624_NEWLINE:
 	ld l, c
 	ld h, b
 	ld bc, $0040
@@ -4646,7 +4669,7 @@ _LABEL_3624_:
 	add hl, bc
 	jp _LABEL_35A6_RANDOM
 
-_LABEL_362D_:
+_LABEL_362D_DRAWTXT:
 	ld l, a
 	ld a, (_RAM_DE62_)
 	add a, l
@@ -4660,7 +4683,7 @@ _LABEL_362D_:
 	ld a, h
 	or $08
 	out (Port_VDPData), a
-	jr _LABEL_35C8_
+	jr _LABEL_35C8_PLOT_CHARBIO
 
 ; Data from 3645 to 366B (39 bytes)
 _DATA_3645_:
@@ -4684,7 +4707,7 @@ _LABEL_369E_:
 	ld de, $001C
 	exx
 	ld b, $05
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	ld ix, _RAM_D91C_
 _LABEL_36B9_:
 	ld a, (ix+9)
@@ -4732,7 +4755,7 @@ _LABEL_36B9_:
 	exx
 	djnz _LABEL_36B9_
 	exx
-	ld bc, (_RAM_D900_)
+	ld bc, (_RAM_D900_CHARA_COORD)
 	sra h
 	rr l
 	sra h
@@ -4744,7 +4767,7 @@ _LABEL_36B9_:
 	ld b, h
 	xor a
 	ld (_RAM_DE42_), a
-	ld de, (_RAM_DE34_)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	ld hl, $0070
 	add hl, de
 	and a
@@ -4786,7 +4809,7 @@ _LABEL_374B_:
 	ld (_RAM_DE94_GAMEPAD), a
 	ld (_RAM_DE90_), a
 +:
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	ld a, (_RAM_DE95_GAMEPAD)
 	and a
 	jr z, _LABEL_3786_
@@ -4806,7 +4829,7 @@ _LABEL_374B_:
 +:
 	call _LABEL_5C07_
 _LABEL_3786_:
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	ld c, (ix+0)
 	ld b, (ix+1)
 	ld a, (ix+9)
@@ -4879,9 +4902,9 @@ _LABEL_37C8_:
 	pop de
 	pop bc
 	pop af
-	ld (_RAM_D900_), hl
+	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_), hl
-	ld (_RAM_DE34_), de
+	ld (_RAM_DE34_SCRN_SCROLL), de
 	ld (_RAM_DE52_ROOM_NR), bc
 	ld (_RAM_D904_), a
 	ld (ix+2), $74
@@ -5000,7 +5023,7 @@ _LABEL_3887_:
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	ret nz
-	ld de, (_RAM_DE34_)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	and a
 	sbc hl, de
 	ld a, h
@@ -5404,7 +5427,7 @@ _LABEL_3B77_:
 	add hl, hl
 	add hl, hl
 	add hl, hl
-	ld (_RAM_D900_), hl
+	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_), hl
 	ld de, $0080
 	and a
@@ -5412,13 +5435,13 @@ _LABEL_3B77_:
 	jr nc, +
 	ld hl, $0000
 +:
-	ld (_RAM_DE34_), hl
+	ld (_RAM_DE34_SCRN_SCROLL), hl
 	pop hl
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
 	jp z, _LABEL_726_
-	ld hl, (_RAM_D900_)
-	ld de, (_RAM_DE34_)
+	ld hl, (_RAM_D900_CHARA_COORD)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	ld bc, (_RAM_DE52_ROOM_NR)
 	ld a, (_RAM_D904_)
 	push af
@@ -5430,9 +5453,9 @@ _LABEL_3B77_:
 	ld bc, $0057
 	ld (_RAM_DE52_ROOM_NR), bc
 	ld de, $0000
-	ld (_RAM_DE34_), de
+	ld (_RAM_DE34_SCRN_SCROLL), de
 	ld hl, $0000
-	ld (_RAM_D900_), hl
+	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_), hl
 	ld a, $0F
 	ld (_RAM_D90A_), a
@@ -5458,7 +5481,7 @@ _LABEL_3C43_:
 	jp _LABEL_3786_
 
 _LABEL_3C54_:
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	call _LABEL_7AE7_
 	ld c, l
 	ld hl, (_RAM_DE60_)
@@ -5652,7 +5675,7 @@ _LABEL_3D99_:
 	ld h, (ix+1)
 	ld c, l
 	ld b, h
-	ld de, (_RAM_DE34_)
+	ld de, (_RAM_DE34_SCRN_SCROLL)
 	and a
 	sbc hl, de
 	jr c, +
@@ -5708,10 +5731,10 @@ _LABEL_3DFD_:
 	jr nz, +
 	ld a, $01
 	ld (_RAM_DEF4_), a
-	ld hl, (_RAM_DE3E_)
+	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
 	ld (_RAM_DE3C_), hl
 	ld hl, $0240
-	ld (_RAM_DE3E_), hl
+	ld (_RAM_DE3E_MAX_LVL_LEN), hl
 +:
 	ld (ix+10), $00
 	ld (ix+11), $00
@@ -5750,7 +5773,7 @@ _LABEL_3E59_:
 _LABEL_3E5E_:
 	ld l, (ix+0)
 	ld h, (ix+1)
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	and a
 	sbc hl, de
 	jr nc, +
@@ -5895,7 +5918,7 @@ _LABEL_3F67_:
 	ld (ix+4), $00
 	ld l, (ix+0)
 	ld h, (ix+1)
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	and a
 	sbc hl, de
 	ret c
@@ -6145,7 +6168,7 @@ _DATA_51FD_:
 .dw _DATA_51A3_ _DATA_51C7_ _DATA_51C7_
 
 _LABEL_5223_:
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	call _LABEL_7AE7_
 	ld c, l
 	ld ix, _RAM_DCE0_
@@ -6244,7 +6267,7 @@ _LABEL_5294_:
 _LABEL_52D5_:
 	cp $48
 	jp nz, _LABEL_531C_
-	ld hl, _RAM_D900_
+	ld hl, _RAM_D900_CHARA_COORD
 	ld de, _RAM_D100_
 	ld bc, $001C
 	ldir
@@ -6366,7 +6389,7 @@ _LABEL_53A3_:
 	ld a, (_RAM_DE6C_NME_MOVE7BIT)
 	bit 6, a
 	ret nz
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	ld de, $0008
 	add hl, de
 	call _LABEL_7AE7_
@@ -6387,13 +6410,13 @@ _LABEL_53A3_:
 	ld a, h
 	cp l
 	jr nc, -
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	ld (ix+11), $00
 	ld (ix+10), $0F
 	jp _LABEL_3786_
 
 +:
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	ld (_RAM_DE6F_), hl
 	ret
 
@@ -6452,7 +6475,7 @@ _LABEL_5442_:
 	ret
 
 ++:
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	ld e, (iy+0)
 	ld d, $00
 	ld a, (_RAM_D904_)
@@ -6567,7 +6590,7 @@ _LABEL_54ED_:
 	ld (ix+4), $00
 	ld l, (ix+0)
 	ld h, (ix+1)
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	and a
 	sbc hl, de
 	jr c, +
@@ -6650,7 +6673,7 @@ _LABEL_5573_:
 	ld l, (ix+0)
 	ld h, (ix+1)
 	and a
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	sbc hl, de
 	jr nc, +
 	ld de, $0000
@@ -6752,18 +6775,20 @@ _LABEL_5573_:
 	call _LABEL_2FF_
 	jp _LABEL_5442_
 
-_LABEL_5689_:
-	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
-	call _LABEL_6573_
+_LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. RET'D, AND YOU WILL BE INVINCIBLE.
+							;RAISTLIN WILL STILL GET HURT FOR SOME REASON.
+	;ret
+	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)		;READ FROM THE CHARA LIST. I GUESS WHICH ONE IS AT THE FRONT.
+	call _LABEL_6573_				;DO SOME MATH WITH IT.
 	ld de, _RAM_DBB5_GOLDMOON_HP
 	add hl, de
 	ld a, (hl)
 	sub c
-	jr z, +
+	jr z, +						;when the enemy attacks at first, this gets checked.
 	jp nc, _LABEL_579F_
 +:
 	push hl
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	call _LABEL_7AFE_
 	ld l, c
 	ld h, b
@@ -6794,7 +6819,7 @@ _LABEL_5689_:
 	add hl, hl
 	add hl, hl
 	add hl, hl
-	ld (_RAM_D900_), hl
+	ld (_RAM_D900_CHARA_COORD), hl
 ++:
 	pop hl
 	ld (hl), $00
@@ -6808,7 +6833,7 @@ _LABEL_5689_:
 	ldir
 	ld bc, $FFE0
 	add hl, bc
-	ld bc, (_RAM_D900_)
+	ld bc, (_RAM_D900_CHARA_COORD)
 	ld a, b
 	srl a
 	rr c
@@ -6908,7 +6933,7 @@ _LABEL_5689_:
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 	ld (hl), a
 	inc hl
-	ld de, (_RAM_D900_)
+	ld de, (_RAM_D900_CHARA_COORD)
 	ld (hl), e
 	inc hl
 	ld (hl), d
@@ -6925,7 +6950,7 @@ _LABEL_5689_:
 	ldir
 	ld (_RAM_DEC3_), a
 	ld hl, (_RAM_DE6F_)
-	ld (_RAM_D900_), hl
+	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_), hl
 	xor a
 	ld (_RAM_D90A_), a
@@ -6934,16 +6959,17 @@ _LABEL_5689_:
 	ret
 
 _LABEL_579F_:
-	ld (hl), a
-	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
+	ld (hl), a	;$DBB5			;Get the health.
+	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;get the first companion in the list.
 	and a
-	ret nz
-	ld a, (hl)
-	cp $05
-	ret nc
+	ret nz	;Goldmoon is marked with zero, we return if the selected first companion is not her.
+	;What I don't understand is, that the HP loading could be done AFTER we determine if we check the right character's health or not.
+	ld a, (hl)	;Else if we are with her, continue here.
+	cp $05		;So, the Game has a mechanic, that once Goldmoon has low health, Riverwind will take her place, and she'll be saved. This not always works though.
+	ret nc		;If her health is not low enough, just return.
 	ld a, (_RAM_DEF4_)
 	and a
-	ret nz
+	ret nz		;If this is not zero, stones will fall on the character's heads constantly.
 	ld a, (_RAM_DCA5_)
 	and a
 	ret z
@@ -7134,7 +7160,7 @@ _LABEL_597A_:
 	ld e, $14
 	ld l, $20
 	ld h, $14
-	ld ix, _RAM_D900_
+	ld ix, _RAM_D900_CHARA_COORD
 	call _LABEL_3AAF_
 	ld a, (_RAM_DEE5_)
 	and a
@@ -7313,19 +7339,22 @@ _LABEL_5C07_:
 	jr _LABEL_5C65_
 
 _LABEL_5C0C_:
-	ld a, (_RAM_DE34_)
-	and $F0
-	ld (_RAM_DE34_), a
+	ld a, (_RAM_DE34_SCRN_SCROLL)
+	and $ff;$F0	;1111 1111 0000 0000
+	ld (_RAM_DE34_SCRN_SCROLL), a		;THIS SEEMS TO DO SOME RESET FOR THE SCROLLING. CHANGING THIS RAM VALUE WILL SCROLL THE SCREEN IN A GIVEN DIRECTION.
+	;IT DOES NOT DO MUCH, COMMENTING THIS OUT WILL NOT CHANGE ANYTHING NOTICEABLE.
 	ld a, $FF
-	ld (_RAM_DEE5_), a
+	ld (_RAM_DEE5_), a	;THIS VARIABLE IS STILL NOT CLEAR WHAT DOES IT DO.
 	ld a, (_RAM_DE9F_TIMER)
-	ld (_RAM_DEA0_), a
+	ld (_RAM_DEA0_), a	;SAVE THE MAIN TIMER'S VALUE.
+
+;.DSB 9,$00
 	xor a
-	ld (_RAM_DE9F_TIMER), a
-	ld (_RAM_DE9E_), a
-	call _LABEL_59B_MAIN
-	call _LABEL_63B_CLEAR_SAT
-	call _LABEL_BB7_
+	ld (_RAM_DE9F_TIMER), a	;RESET THIS TIMER. IF THIS IS COMMENTED OUT, THE SCREEN WILL GLITCH OUT.
+	ld (_RAM_DE9E_), a	;DOES NOTHING YET.
+	call _LABEL_59B_MAIN	;IT EVEN WORKS WITHOUT THIS ONE.
+	call _LABEL_63B_CLEAR_SAT	;EVEN THIS ONE CAN YOU COMMENT OUT.
+	call _LABEL_BB7_CLR_SCREEN	;THIS DOES SOME TILEMAP THINGS, I'LL CHECK THIS NOW.
 	ld hl, $2960
 	di
 	call _LABEL_4BB_VDP_RAM_WRITE
@@ -7597,7 +7626,7 @@ _LABEL_6053_:
 .db $88 $38 $11 $6C $01 $06 $0B $0E $97 $DD $21 $00 $C0 $CD $E6 $6A
 .db $CD $FA $61 $3E $07 $32 $4F $C0 $CD $B1 $62 $C3 $53 $60
 
-_LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN.
+_LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN. I GUESS THERE IS ANOTHER PART WHERE THE TITLE PART(THE SCORE, GAME OVER OF WIN TEXT IS CHANGED, SINCE THE ENDING IS BASICALLY JUST THIS SCREEN WITH A DIFFERENT HEADER.)
 	ld b, $0A	;THERE ARE TEN MONSTER TYPES. CHANGING THIS NUMBER WILL LIMIT HOW MANY NUMBERS ARE DRAWN.
 	ld ix, _RAM_DE7A_KILLCOUNT_ARRAY	;GET THE ARRAY.
 	ld iy, _DATA_6E7F_SCORE_PALETTE		;THIS IS THE PALETTE FOR THE SCREEN.
@@ -7608,7 +7637,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	ld de, _RAM_D100_	;THIS IS A TILEMAP IN RAM, THE FORMAT MIGHT BE A LITTLE DIFFERENT, DUNNO.
 	push bc
 	call _LABEL_6E09_SCORESCRN_PRINT	;THIS PRINTS THE NUMBER OF KILLS ON THE SCORE SCREEN.
-	ld de, _RAM_D103_
+	ld de,_RAM_D103_
 	ld l, (iy+0)
 	ld h, (iy+1)
 	call _LABEL_35A6_RANDOM	;HM, SOME RANDOM NUMBER GENERATING HERE, COMMENTING THIS OUT DOES NOT DO MANY THINGS HERE OF COURSE.
@@ -7627,9 +7656,9 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	ld hl, $3B72				;A POINT ON THE TILEMAP, FOUR TILES BEFORE THE 'POINTS FOR COMBAT ' SCORE NUMBER, SO THE SCORE NUMBER IS FOUR CHARS LONG.
 	call _LABEL_35A6_RANDOM
 	ld de, $0000
-	ld (_RAM_DE77_PT_FOR_ITEMS), de
+	ld (_RAM_DE77_PT_FOR_ITEMS), de		;POINTS FOR ITEMS MEMORY LOCATION.
 	xor a
-	ld (_RAM_DE79_), a
+	ld (_RAM_DE79_KILLCNT_ARRAY), a
 	ld b, $08
 	ld ix, _RAM_DBA0_PLYR_STATS
 --:
@@ -7640,7 +7669,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 -:
 	ld a, (ix+0)
 	add a, a
-	ld hl, _DATA_6E93_
+	ld hl, _DATA_6E93_SCR_SCRN_DATA
 	add a, l
 	ld l, a
 	ld a, h
@@ -7651,10 +7680,11 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	ld h, (hl)
 	ld l, a
 	add hl, de
-	jr nc, +
-	ld a, (_RAM_DE79_)
-	inc a
-	ld (_RAM_DE79_), a
+	jr Nc, +
+	ld a, (_RAM_DE79_KILLCNT_ARRAY)	;THIS IS ALSO THE KILLCOUNT ARRAY -1 BYTE.
+	INC a	
+	;NOP
+	ld (_RAM_DE79_KILLCNT_ARRAY), a
 +:
 	ex de, hl
 	inc ix
@@ -7681,7 +7711,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 +:
 	ld (_RAM_DE77_PT_FOR_ITEMS), de
 	ld hl, (_RAM_DE77_PT_FOR_ITEMS)
-	ld a, (_RAM_DE79_)
+	ld a, (_RAM_DE79_KILLCNT_ARRAY)
 	ld c, a
 	ld de, _RAM_D100_
 	call _LABEL_6E09_SCORESCRN_PRINT	;THIS PRINT THE SCORE AT THE 'POINTS FOR ITEMS' LINE ON THE SCORE SCREEN.
@@ -7747,14 +7777,14 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 .db $C9
 
 _LABEL_6573_:
-	add a, a
-	add a, a
-	add a, a
-	ld l, a
-	add a, a
-	add a, a
-	add a, l
-	ld l, a
+	add a, a ;2X
+	add a, a	;4X
+	add a, a	;8X
+	ld l, a		;SAVE IT FOR LATER.
+	add a, a	;16
+	add a, a	;32
+	add a, l	;32X+8X
+	ld l, a		;LOAD IT BACK.
 	ld a, $00
 	adc a, $00
 	ld h, a
@@ -7772,7 +7802,7 @@ _LABEL_6A6C_:
 	jr _LABEL_6A6C_
 
 +:
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	ld de, $0078
 	and a
 	sbc hl, de
@@ -7782,7 +7812,7 @@ _LABEL_6A6C_:
 	ld a, l
 	and $F0
 	ld l, a
-	ld (_RAM_DE34_), hl
+	ld (_RAM_DE34_SCRN_SCROLL), hl
 	xor a
 	ld (_RAM_DE42_), a
 	ld (_RAM_DE44_), a
@@ -8000,7 +8030,9 @@ _DATA_6DF3_:
 .db $52 $00 $AF $00 $0D $02 $3F $02 $78 $00 $1C $00 $0E $00 $3C $00
 .db $3B $01 $58 $02 $D0 $07
 
-_LABEL_6E09_SCORESCRN_PRINT:
+_LABEL_6E09_SCORESCRN_PRINT:	;THIS PRINTS THE SCORE SCREEN'S NUMBERS.
+;THIS CALCULATES AND LOADS TILEMAP ADDRESSES, AND THEN THE ENGINE TAKES CARE OF THE REST, AND DISPLAYS THIS SCORE SCREEN'S VALUES AND ALL OF THAT.
+;NO NEED TO DISSECT THIS ANY FURTHER.
 	ld a, $20
 	ld (de), a
 	ld a, c
@@ -8034,7 +8066,8 @@ _LABEL_6E09_SCORESCRN_PRINT:
 	ld bc, $03E8
 	call +++
 	call ++
-	ld bc, $0064
+;.dsb 18,$00
+	ld bc,$0064
 	call +++
 	call ++
 	ld bc, $000A
@@ -8086,7 +8119,7 @@ _DATA_6E7F_SCORE_PALETTE:
 .db $58 $3A $76 $3A
 
 ; Data from 6E93 to 6F04 (114 bytes)
-_DATA_6E93_:
+_DATA_6E93_SCR_SCRN_DATA:
 .dsb 34, $00
 .db $88 $13 $64 $00 $64 $00 $64 $00 $64 $00 $64 $00 $0A $00 $0A $00
 .db $0A $00 $0A $00 $0A $00 $32 $00 $32 $00 $32 $00 $32 $00 $32
@@ -8152,7 +8185,7 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 	or $08
 	out (Port_VDPData), a
 	djnz -		;WRITE DATA INTO VRAM.
-	ld hl, (_RAM_D900_)	;IN RAM DETAILS FOR THE PLAYER, DIRECTION AND SUCH.
+	ld hl, (_RAM_D900_CHARA_COORD)	;IN RAM DETAILS FOR THE PLAYER, DIRECTION AND SUCH.
 	srl h
 	rr l
 	srl h
@@ -8442,7 +8475,7 @@ _LABEL_7117_ENABLE_DEBUG:
 	ret
 
 _LABEL_714D_:
-	ld hl, (_RAM_D900_)
+	ld hl, (_RAM_D900_CHARA_COORD)
 	srl h
 	rr l
 	srl h
@@ -8952,7 +8985,7 @@ _LABEL_7771_:
 	adc a, $00
 	ld (_RAM_DE76_CR_DMGLINK), a
 	ld hl, (_RAM_DE3C_)
-	ld (_RAM_DE3E_), hl
+	ld (_RAM_DE3E_MAX_LVL_LEN), hl
 	ld a, $08
 	ld hl, _RAM_C834_
 	ld de, _RAM_C824_
@@ -9085,7 +9118,7 @@ _LABEL_7851_:
 	ld a, (_RAM_D90A_)
 	cp $11
 	jp z, _LABEL_78F3_
-	ld a, (_RAM_D900_)
+	ld a, (_RAM_D900_CHARA_COORD)
 	add a, $0E
 	ld l, a
 	ld a, (_RAM_D901_)
