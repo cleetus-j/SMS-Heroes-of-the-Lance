@@ -163,7 +163,7 @@ _RAM_DBE2_ dsb $e
 .ende
 
 .enum $DCA5 export
-_RAM_DCA5_ db
+_RAM_DCA5_RIVERWIND_HP db
 .ende
 
 .enum $DCE0 export
@@ -4914,7 +4914,7 @@ _LABEL_37C8_:
 	ld (ix+10), $00
 	ld (ix+11), $00
 	ld (ix+7), $00
-	call _LABEL_5B9D_
+	call _LABEL_5B9D_ALARMBELLS_TXT_SCRN
 	jp _LABEL_726_
 
 _LABEL_3839_:
@@ -6222,7 +6222,7 @@ _LABEL_522E_:
 ++:
 	ld (hl), $00
 	call _LABEL_799A_
-	jp _LABEL_5BA2_
+	jp _LABEL_5BA2_TASSLEHOFF_TRAP_SCRN
 
 +++:
 	dec hl
@@ -6785,7 +6785,7 @@ _LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. R
 	ld a, (hl)
 	sub c
 	jr z, +						;when the enemy attacks at first, this gets checked.
-	jp nc, _LABEL_579F_
+	jp nc, _LABEL_579F_GOLDMOON_PROT_HP_CHECK
 +:
 	push hl
 	ld de, (_RAM_D900_CHARA_COORD)
@@ -6958,8 +6958,8 @@ _LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. R
 	ld (_RAM_D90B_), a
 	ret
 
-_LABEL_579F_:
-	ld (hl), a	;$DBB5			;Get the health.
+_LABEL_579F_GOLDMOON_PROT_HP_CHECK:
+	ld (hl), a	;$DBB5			;Get Goldmoon's health.
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;get the first companion in the list.
 	and a
 	ret nz	;Goldmoon is marked with zero, we return if the selected first companion is not her.
@@ -6967,26 +6967,26 @@ _LABEL_579F_:
 	ld a, (hl)	;Else if we are with her, continue here.
 	cp $05		;So, the Game has a mechanic, that once Goldmoon has low health, Riverwind will take her place, and she'll be saved. This not always works though.
 	ret nc		;If her health is not low enough, just return.
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_) ;If this $02, then stones will fall on the Companions heads constantly. If it's just $01, I can't seem to notice any difference.
 	and a
-	ret nz		;If this is not zero, stones will fall on the character's heads constantly.
-	ld a, (_RAM_DCA5_)
+	ret nz		;This will be mapped later, with more clear code.
+	ld a, (_RAM_DCA5_RIVERWIND_HP)	;Get Riverwind's health.
 	and a
-	ret z
-	ld hl, _RAM_DEBD_
+	ret z				;If he's dead, then he can't protect Goldmoon, so we return.
+	ld hl, _RAM_DEBD_		;He's alive, so we continue.
 -:
-	ld a, (hl)
-	cp $06
-	jr z, +
-	inc hl
-	jr -
+	ld a, (hl)			;Check the HUD portraits\player list.
+	cp $06				;Check for Riverwind.
+	jr z, +				;Is it him? Jump ahead.
+	inc hl				;It's not him? Increase the HL address, look at other party members.
+	jr -				;Jump back, and continue with the search.
 
 +:
-	ld (hl), $00
-	ld a, $06
-	ld (_RAM_DEBC_INRAM_HUD_PORTRAITS), a
-	call _LABEL_6F3B__UPD_HUD
-	call _LABEL_5BA7_
+	ld (hl), $00			;$00 Represents Goldmoon in the party list. Put her where Riverwind was.
+	ld a, $06			;Get his ID.
+	ld (_RAM_DEBC_INRAM_HUD_PORTRAITS), a	;And load as the first Companion in the List.
+	call _LABEL_6F3B__UPD_HUD	;Update the HUD to represent the new status for the player.
+	call _LABEL_5BA7_RIVERWIND_PROT_SCRN
 	ret
 
 _LABEL_57CC_:
@@ -7268,16 +7268,16 @@ _DATA_5B2E_:
 .db $23 $23 $23 $7E $A1 $77 $18 $04 $23 $23 $23 $23 $23 $10 $E8 $3A
 .db $52 $DE $FE $0F $C2 $53 $60 $3E $01 $32 $71 $DE $C3 $53 $60
 
-_LABEL_5B9D_:
-	ld de, _DATA_AD32_
+_LABEL_5B9D_ALARMBELLS_TXT_SCRN:		;This draws the "You hear Alarm Bells in the Distance" screen.
+	ld de, _DATA_AD32_ALARMBELLS_TXT
 	jr +
 
-_LABEL_5BA2_:
-	ld de, _DATA_ACD2_
+_LABEL_5BA2_TASSLEHOFF_TRAP_SCRN:
+	ld de, _DATA_ACD2_TASSLEHOFF_TRAP_TXT	;Tasslehoff's trap removal text.
 	jr +
 
-_LABEL_5BA7_:
-	ld de, _DATA_ACFC_
+_LABEL_5BA7_RIVERWIND_PROT_SCRN:	;This should be the screen that tells you Riverwind will step forward to protect Goldmoon.
+	ld de, _DATA_ACFC_RIVERWIND_PROT_TXT	;This is the text for it.
 +:
 	push de
 	call _LABEL_5C0C_
@@ -9854,20 +9854,20 @@ _DATA_AC9C_:
 .db $70 $61 $72 $74 $79 $FF
 
 ; Data from ACD2 to ACFB (42 bytes)
-_DATA_ACD2_:
+_DATA_ACD2_TASSLEHOFF_TRAP_TXT:
 .db $0D $0D $0D $54 $61 $73 $73 $6C $65 $68 $6F $66 $66 $20 $6C $6F
 .db $63 $61 $74 $65 $73 $0D $0D $61 $6E $64 $20 $72 $65 $6D $6F $76
 .db $65 $73 $20 $61 $20 $74 $72 $61 $70 $FF
 
 ; Data from ACFC to AD31 (54 bytes)
-_DATA_ACFC_:
+_DATA_ACFC_RIVERWIND_PROT_TXT:
 .db $0D $0D $0D $52 $69 $76 $65 $72 $77 $69 $6E $64 $20 $6D $6F $76
 .db $65 $73 $20 $74 $6F $0D $0D $74 $68 $65 $20 $66 $72 $6F $6E $74
 .db $20 $74 $6F $0D $0D $70 $72 $6F $74 $65 $63 $74 $20 $47 $6F $6C
 .db $64 $6D $6F $6F $6E $FF
 
 ; Data from AD32 to AEF1 (448 bytes)
-_DATA_AD32_:
+_DATA_AD32_ALARMBELLS_TXT:
 ;.DSB 448,$00
 .db $0D $0D $0D $59 $6F $75 $20 $68 $65 $61 $72 $20 $61 $6C $61 $72
 .db $6D $0D $0D $62 $65 $6C $6C $73 $20 $69 $6E $20 $74 $68 $65 $20
