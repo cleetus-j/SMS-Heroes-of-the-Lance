@@ -25,6 +25,7 @@ _RAM_C020_ db
 
 .enum $C040 export
 _RAM_C040_SELECTED_MENUITEMINRAM_PAL dsb $f	;This is also used to check what menu item was selected in the ingame menu. Strange.
+_RAM_C04E_ DB
 _RAM_C04F_LAST_ENTERED_MENU db
 _RAM_C050_ dsb $10
 .ende
@@ -56,9 +57,17 @@ _RAM_C5FE_ dw
 .enum $C6FE export
 _RAM_C6FE_ dw
 .ende
+.enum $C700 export
+_RAM_C700_ db
+.ende
+
+.enum $C720 export
+_RAM_C720_ db
+.ende
 
 .enum $C7FE export
-_RAM_C7FE_ dw
+_RAM_C7FE_ db
+_RAM_C7FF_ db
 _RAM_C800_ dsb $24
 _RAM_C824_ dsb $10
 _RAM_C834_ dsb $4
@@ -312,7 +321,7 @@ _RAM_DE76_CR_DMGLINK db
 _RAM_DE77_PT_FOR_ITEMS dw
 _RAM_DE79_KILLCNT_ARRAY db
 _RAM_DE7A_KILLCOUNT_ARRAY dsb $16
-_RAM_DE90_ db
+_RAM_DE90_GAMEPAD db
 _RAM_DE91_ db
 _RAM_DE92_ db
 _RAM_DE93_ db
@@ -884,7 +893,7 @@ _LABEL_552_CHECK_AB_BUTTONS:
 	ld (_RAM_DE92_), a
 	xor b
 	and c
-	ld (_RAM_DE90_), a
+	ld (_RAM_DE90_GAMEPAD), a
 	ld c, a
 	and $10
 	ld (_RAM_DE94_GAMEPAD), a
@@ -5403,7 +5412,7 @@ _LABEL_374B_:
 	xor a
 	ld (_RAM_DE95_GAMEPAD), a
 	ld (_RAM_DE94_GAMEPAD), a
-	ld (_RAM_DE90_), a
+	ld (_RAM_DE90_GAMEPAD), a
 +:
 	ld ix, _RAM_D900_CHARA_COORD
 	ld a, (_RAM_DE95_GAMEPAD)
@@ -5532,7 +5541,7 @@ _LABEL_3839_:
 	ld (ix+3), $00
 	ld (ix+19), $00
 	xor a
-	ld (_RAM_DE90_), a
+	ld (_RAM_DE90_GAMEPAD), a
 	ld a, $06
 	ld (_RAM_DE96_), a
 _LABEL_3876_:
@@ -5546,7 +5555,7 @@ _LABEL_3887_:
 	ld a, (ix+10)
 	cp $04
 	jr nc, ++
-	ld a, (_RAM_DE90_)
+	ld a, (_RAM_DE90_GAMEPAD)
 	ld e, a
 	ld a, (_RAM_DE93_)
 	cp e
@@ -5559,7 +5568,7 @@ _LABEL_3887_:
 	jr z, +
 	ld (ix+10), $05
 	ld (ix+11), $00
-	ld a, (_RAM_DE90_)
+	ld a, (_RAM_DE90_GAMEPAD)
 	jp _LABEL_3786_
 
 +:
@@ -5642,7 +5651,7 @@ _LABEL_3887_:
 
 _LABEL_3938_:
 	ld (ix+7), $00
-	ld a, (_RAM_DE90_)
+	ld a, (_RAM_DE90_GAMEPAD)
 	ld (_RAM_DE93_), a
 	call _LABEL_3C89_
 	ld a, (_RAM_DE91_)
@@ -6119,7 +6128,7 @@ _LABEL_3C54_:
 	ret
 
 _LABEL_3C89_:
-	ld a, (_RAM_DE90_)
+	ld a, (_RAM_DE90_GAMEPAD)
 	ld e, a
 	and $0A
 	srl a
@@ -7772,9 +7781,38 @@ _LABEL_5999_GMSTAFF_DECMANA:	;This will be used when the Blue Staff's power is n
 	jr -
 
 ; Data from 59A3 to 59CD (43 bytes)
-.db $06 $08 $3E $02 $18 $04 $06 $07 $3E $02 $57 $3A $BC $DE $A7 $7A
-.db $16 $00 $C2 $C4 $59 $57 $78 $32 $E8 $DE $7A $32 $E9 $DE $C3 $53
-.db $60 $CD $DE $59 $DA $DA $5A $3E $01 $18 $B4
+;.db $06 $08 $3E $02 $18 $04 $06 $07 $3E $02 $57 $3A $BC $DE $A7 $7A
+;.db $16 $00 $C2 $C4 $59 $57 $78 $32 $E8 $DE $7A $32 $E9 $DE $C3 $53
+;.db $60 $CD $DE $59 $DA $DA $5A $3E $01 $18 $B4
+
+
+_LABEL_59A3_:	
+		ld b, $08
+		ld a, $02
+		jr +
+	
+_LABEL_59A9_:	
+		ld b, $07
+		ld a, $02
++:	
+		ld d, a
+		ld a, ( _RAM_DEBC_INRAM_HUD_PORTRAITS)
+		and a
+		ld a, d
+		ld d, $00
+		jp nz, +
+		ld d, a
+		ld a, b
+		ld (_RAM_DEE8_), a
+		ld a, d
+		ld (_RAM_DEE9_), a
+		jp  _LABEL_6053_WAIT4BUTTN
+	
++:	
+		call  _LABEL_59DE_DEPLETE_GMSTAFF
+		jp c, _LABEL_5ADA_
+		ld a, $01
+		jr _LABEL_5982_
 
 _LABEL_59CE_DEPLETE_MAGIUS_STF:	;IF THIS RET BELOW IS THERE, THE GAME WILL THINK RAISTLIN'S STAFF HAS NO CHARGE.
 	ld hl, (_RAM_DEEC_RAIST_STFFCHRG)
@@ -7801,21 +7839,166 @@ _LABEL_59DE_DEPLETE_GMSTAFF:			;This really looks like when you use the Blue Cry
 	ret
 
 ; Data from 59EE to 5AD4 (231 bytes)
-.db $3E $05 $01 $06 $16 $18 $05 $3E $01 $01 $01 $08 $C5 $CD $DE $59
-.db $C1 $DA $DA $5A $C5 $CD $A2 $5A $C1 $78 $CD $52 $06 $81 $4F $CD
-.db $83 $5A $5E $23 $56 $7B $A7 $CA $53 $60 $7A $A7 $CA $53 $60 $81
-.db $BB $38 $01 $7B $77 $F3 $CD $3B $6F $FB $C3 $53 $60 $3E $05 $CD
-.db $DE $59 $DA $DA $5A $CD $A2 $5A $CD $83 $5A $7E $A7 $CA $53 $60
-.db $57 $23 $7E $A7 $C2 $53 $60 $7A $CB $3F $CB $3F $77 $01 $05 $00
-.db $09 $11 $07 $00 $EB $19 $01 $07 $00 $ED $B0 $3A $FF $C7 $6F $26
-.db $00 $11 $BC $DE $19 $7E $87 $87 $5F $16 $00 $21 $F2 $DC $19 $36
-.db $00 $23 $36 $00 $23 $36 $00 $23 $36 $00 $CD $7C $71 $F3 $CD $3B
-.db $6F $FB $C3 $53 $60 $3A $FF $C7 $6F $26 $00 $D5 $11 $BC $DE $19
-.db $7E $87 $87 $87 $5F $87 $87 $83 $5F $3E $00 $CE $00 $57 $21 $B4
-.db $DB $19 $D1 $C9 $AF $32 $FF $C7 $11 $A2 $01 $DD $21 $00 $C7 $F3
-.db $D5 $DD $E5 $CD $F1 $5E $DD $E1 $D1 $FB $D5 $DD $E5 $CD $64 $5E
-.db $06 $0C $CD $58 $5E $DD $E1 $D1 $3A $94 $DE $A7 $28 $EC $3A $FF
-.db $C7 $F3 $CD $C6 $5E $FB $C9
+;.db $3E $05 $01 $06 $16 $18 $05 $3E $01 $01 $01 $08 $C5 $CD $DE $59
+;.db $C1 $DA $DA $5A $C5 $CD $A2 $5A $C1 $78 $CD $52 $06 $81 $4F $CD
+;.db $83 $5A $5E $23 $56 $7B $A7 $CA $53 $60 $7A $A7 $CA $53 $60 $81
+;.db $BB $38 $01 $7B $77 $F3 $CD $3B $6F $FB $C3 $53 $60 $3E $05 $CD
+;.db $DE $59 $DA $DA $5A $CD $A2 $5A $CD $83 $5A $7E $A7 $CA $53 $60
+;.db $57 $23 $7E $A7 $C2 $53 $60 $7A $CB $3F $CB $3F $77 $01 $05 $00
+;.db $09 $11 $07 $00 $EB $19 $01 $07 $00 $ED $B0 $3A $FF $C7 $6F $26
+;.db $00 $11 $BC $DE $19 $7E $87 $87 $5F $16 $00 $21 $F2 $DC $19 $36
+;.db $00 $23 $36 $00 $23 $36 $00 $23 $36 $00 $CD $7C $71 $F3 $CD $3B
+;.db $6F $FB $C3 $53 $60 $3A $FF $C7 $6F $26 $00 $D5 $11 $BC $DE $19
+;.db $7E $87 $87 $87 $5F $87 $87 $83 $5F $3E $00 $CE $00 $57 $21 $B4
+;.db $DB $19 $D1 $C9 $AF $32 $FF $C7 $11 $A2 $01 $DD $21 $00 $C7 $F3
+;.db $D5 $DD $E5 $CD $F1 $5E $DD $E1 $D1 $FB $D5 $DD $E5 $CD $64 $5E
+;.db $06 $0C $CD $58 $5E $DD $E1 $D1 $3A $94 $DE $A7 $28 $EC $3A $FF
+;.db $C7 $F3 $CD $C6 $5E $FB $C9
+
+
+_LABEL_59EE_:	
+		ld a, $05
+		ld bc, $1606
+		jr +
+	
+_LABEL_59F5_:	
+		ld a, $01
+		ld bc, $0801
++:	
+		push bc
+		call  _LABEL_59DE_DEPLETE_GMSTAFF
+		pop bc
+		jp c, _LABEL_5ADA_
+		push bc
+		call _LABEL_5AA2_
+		pop bc
+		ld a, b
+		call _LABEL_652_
+		add a, c
+		ld c, a
+		call _LABEL_5A83_
+		ld e, (hl)
+		inc hl
+		ld d, (hl)
+		ld a, e
+		and a
+		jp z,  _LABEL_6053_WAIT4BUTTN
+		ld a, d
+		and a
+		jp z,  _LABEL_6053_WAIT4BUTTN
+		add a, c
+		cp e
+		jr c, +
+		ld a, e
++:	
+		ld (hl), a
+		di
+		call _LABEL_6F3B_
+		ei
+		jp  _LABEL_6053_WAIT4BUTTN
+	
+_LABEL_5A2B_:	
+		ld a, $05
+		call  _LABEL_59DE_DEPLETE_GMSTAFF
+		jp c, _LABEL_5ADA_
+		call _LABEL_5AA2_
+		call _LABEL_5A83_
+		ld a, (hl)
+		and a
+		jp z,  _LABEL_6053_WAIT4BUTTN
+		ld d, a
+		inc hl
+		ld a, (hl)
+		and a
+		jp nz,  _LABEL_6053_WAIT4BUTTN
+		ld a, d
+		srl a
+		srl a
+		ld (hl), a
+		ld bc, $0005
+		add hl, bc
+		ld de, $0007
+		ex de, hl
+		add hl, de
+		ld bc, $0007
+		ldir
+		ld a, (_RAM_C7FF_)
+		ld l, a
+		ld h, $00
+		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS
+		add hl, de
+		ld a, (hl)
+		add a, a
+		add a, a
+		ld e, a
+		ld d, $00
+		ld hl, $DCF2
+		add hl, de
+		ld (hl), $00
+		inc hl
+		ld (hl), $00
+		inc hl
+		ld (hl), $00
+		inc hl
+		ld (hl), $00
+		call _LABEL_717C_
+		di
+		call _LABEL_6F3B_
+		ei
+		jp  _LABEL_6053_WAIT4BUTTN
+	
+_LABEL_5A83_:	
+		ld a, (_RAM_C7FF_)
+		ld l, a
+		ld h, $00
+		push de
+		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS
+		add hl, de
+		ld a, (hl)
+		add a, a
+		add a, a
+		add a, a
+		ld e, a
+		add a, a
+		add a, a
+		add a, e
+		ld e, a
+		ld a, $00
+		adc a, $00
+		ld d, a
+		ld hl, _RAM_DBB4_
+		add hl, de
+		pop de
+		ret
+	
+_LABEL_5AA2_:	
+		xor a
+		ld (_RAM_C7FF_), a
+		ld de, $01A2
+		ld ix, _RAM_C700_
+		di
+		push de
+		push ix
+		call _LABEL_5EF1_
+		pop ix
+		pop de
+		ei
+-:	
+		push de
+		push ix
+		call _LABEL_5E64_
+		ld b, $0C
+		call _LABEL_5E58_
+		pop ix
+		pop de
+		ld a, (_RAM_DE94_)
+		and a
+		jr z, -
+		ld a, (_RAM_C7FF_)
+		di
+		call _LABEL_5EC6_
+		ei
+		ret
 
 _LABEL_5AD5_MAGIUS_STF_NOPWR:
 	ld de, _DATA_5B2E_MG_STF_NOPWR_TXT	;"The Staff of Magius has no power at present" text.
@@ -7992,7 +8175,7 @@ _LABEL_5C65_ENTER_INGAME_MENU:	;This is the entry point for the ingame menu, at 
 	ld a, (_RAM_C04F_LAST_ENTERED_MENU)		;Menu position we last entered.
 	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Copy it to the active menupoint ram value, so the game remembers where it came from.
 	ld iy, _DATA_6CAD_PALETTES	;We do some palette loading as well, i'm not sure how many bytes in that array is actially used. There are some text near it, the name of the Companions, but I can't be sure yet.
-_LABEL_5C89_:
+_LABEL_5C89_:		;We use some fellthrough stuff.
 	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 	push iy
 	pop hl
@@ -8016,14 +8199,14 @@ _LABEL_5C89_:
 	ld c, $37
 	ld ix, _RAM_C000_RAM_START
 	push iy
-	call _LABEL_6AE6_MENU_TXTDRAW
+	call _LABEL_6AE6_MENU_TXTDRAW	;I may be say this is getting the menu item number, and draws the white txt as well. The 'MAIN MENU' txt is also recolored to yellow. I don't know if this is intended.
 	pop iy
 	pop bc
-_LABEL_5CB2_:
+_LABEL_5CB2_PROCESSMNU_SELECT:
 	push bc
 	push iy
 	call _LABEL_59B_MAIN
-	call _LABEL_552_CHECK_AB_BUTTONS
+	call _LABEL_552_CHECK_AB_BUTTONS	;We have drawn the menu, and now running the main loop, and will wait for the player to push a button.
 	pop iy
 	pop bc
 	ld a, (_RAM_DE94_GAMEPAD)
@@ -8039,7 +8222,7 @@ _LABEL_5CB2_:
 	jr z, ++
 	push iy
 	pop hl
--:
+-:		;We go back a menu item.
 	ld a, (hl)
 	inc hl
 	ld d, (hl)
@@ -8059,9 +8242,9 @@ _LABEL_5CB2_:
 	jp (hl)
 
 ++:
-	ld a, (_RAM_DE90_)
-	bit 3, a
-	jr z, +
+	ld a, (_RAM_DE90_GAMEPAD)
+	bit 3, a	;Test if bit 3 is set. This is for the UP Button.
+	jr z, +		;Jump if it is.
 	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 	and a
 	jp z, +
@@ -8071,9 +8254,9 @@ _LABEL_5CB2_:
 	jr ++
 
 +:
-	ld a, (_RAM_DE90_)
-	bit 2, a
-	jp z, _LABEL_5CB2_
+	ld a, (_RAM_DE90_GAMEPAD)
+	bit 2, a			;This is the DOWN button.
+	jp z, _LABEL_5CB2_PROCESSMNU_SELECT		;Jump if we've pushed it, and the menu selector has to go where we wanted to.
 	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 	inc a
 	ld d, a
@@ -8090,9 +8273,9 @@ _LABEL_5CB2_:
 	inc hl
 	ld a, (hl)
 	or e
-	jp z, _LABEL_5CB2_
+	jp z, _LABEL_5CB2_PROCESSMNU_SELECT	;We've pressed up, so we process the above, get the previous menu item, and go to it.
 	ld a, d
-	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a
+	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Moving up and down in the menu executes this part.
 	dec a
 ++:
 	add a, a
@@ -8121,24 +8304,171 @@ _LABEL_5CB2_:
 	jp _LABEL_5C89_
 
 ; Data from 5D43 to 5E57 (277 bytes)
-.db $AF $32 $4F $C0 $CD $46 $60 $CD $42 $6B $21 $C8 $38 $11 $4A $A7
-.db $CD $A6 $35 $AF $32 $FF $C7 $DD $21 $00 $C7 $11 $A2 $01 $D5 $DD
-.db $E5 $F3 $CD $F1 $5E $FB $DD $E1 $D1 $CD $6D $6B $CD $64 $5E $3A
-.db $90 $DE $CB $6F $28 $0B $3A $FF $C7 $F3 $CD $C6 $5E $FB $C3 $53
-.db $60 $CD $6D $6B $06 $0C $CD $58 $5E $3A $94 $DE $A7 $28 $DD $3A
-.db $FF $C7 $6F $26 $00 $01 $BC $DE $09 $7E $CD $73 $65 $01 $B5 $DB
-.db $09 $7E $A7 $28 $C7 $3A $FF $C7 $32 $FE $C7 $A7 $20 $0D $3A $0A
-.db $D9 $FE $0F $20 $06 $3A $54 $DE $A7 $28 $B1 $AF $32 $FF $C7 $DD
-.db $21 $20 $C7 $11 $AC $01 $D5 $DD $E5 $F3 $CD $F1 $5E $FB $DD $E1
-.db $D1 $CD $64 $5E $3A $90 $DE $CB $6F $28 $13 $3A $FE $C7 $47 $3A
-.db $FF $C7 $B8 $CA $49 $5E $F3 $CD $C6 $5E $FB $C3 $49 $5E $06 $0C
-.db $CD $58 $5E $3A $94 $DE $A7 $28 $D8 $3A $FF $C7 $47 $3A $FE $C7
-.db $B8 $28 $43 $68 $26 $00 $01 $BC $DE $09 $7E $CD $73 $65 $01 $B5
-.db $DB $09 $7E $A7 $28 $BB $3A $FF $C7 $A7 $20 $0D $3A $0A $D9 $FE
-.db $0F $20 $06 $3A $54 $DE $A7 $28 $A8 $3A $FE $C7 $21 $BC $DE $4F
-.db $06 $00 $5D $54 $09 $EB $3A $FF $C7 $4F $09 $4E $1A $77 $79 $12
-.db $CD $3B $6F $C3 $53 $60 $3A $FE $C7 $DD $21 $00 $C7 $F3 $CD $C6
-.db $5E $FB $C3 $53 $60
+;.db $AF $32 $4F $C0 $CD $46 $60 $CD $42 $6B $21 $C8 $38 $11 $4A $A7
+;.db $CD $A6 $35 $AF $32 $FF $C7 $DD $21 $00 $C7 $11 $A2 $01 $D5 $DD
+;.db $E5 $F3 $CD $F1 $5E $FB $DD $E1 $D1 $CD $6D $6B $CD $64 $5E $3A
+;.db $90 $DE $CB $6F $28 $0B $3A $FF $C7 $F3 $CD $C6 $5E $FB $C3 $53
+;.db $60 $CD $6D $6B $06 $0C $CD $58 $5E $3A $94 $DE $A7 $28 $DD $3A
+;.db $FF $C7 $6F $26 $00 $01 $BC $DE $09 $7E $CD $73 $65 $01 $B5 $DB
+;.db $09 $7E $A7 $28 $C7 $3A $FF $C7 $32 $FE $C7 $A7 $20 $0D $3A $0A
+;.db $D9 $FE $0F $20 $06 $3A $54 $DE $A7 $28 $B1 $AF $32 $FF $C7 $DD
+;.db $21 $20 $C7 $11 $AC $01 $D5 $DD $E5 $F3 $CD $F1 $5E $FB $DD $E1
+;.db $D1 $CD $64 $5E $3A $90 $DE $CB $6F $28 $13 $3A $FE $C7 $47 $3A
+;.db $FF $C7 $B8 $CA $49 $5E $F3 $CD $C6 $5E $FB $C3 $49 $5E $06 $0C
+;.db $CD $58 $5E $3A $94 $DE $A7 $28 $D8 $3A $FF $C7 $47 $3A $FE $C7
+;.db $B8 $28 $43 $68 $26 $00 $01 $BC $DE $09 $7E $CD $73 $65 $01 $B5
+;.db $DB $09 $7E $A7 $28 $BB $3A $FF $C7 $A7 $20 $0D $3A $0A $D9 $FE
+;.db $0F $20 $06 $3A $54 $DE $A7 $28 $A8 $3A $FE $C7 $21 $BC $DE $4F
+;.db $06 $00 $5D $54 $09 $EB $3A $FF $C7 $4F $09 $4E $1A $77 $79 $12
+;.db $CD $3B $6F $C3 $53 $60 $3A $FE $C7 $DD $21 $00 $C7 $F3 $CD $C6
+;.db $5E $FB $C3 $53 $60
+
+_LABEL_5D43_:	
+		xor a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		call _LABEL_6046_
+		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
+		ld hl, $38C8
+		ld de, _DATA_A74A_
+		call _LABEL_35A6_RANDOM
+		xor a
+		ld (_RAM_C7FF_), a
+		ld ix, _RAM_C700_
+		ld de, $01A2
+		push de
+		push ix
+		di
+		call _LABEL_5EF1_
+		ei
+		pop ix
+		pop de
+		call _LABEL_6B6D_
+_LABEL_5D6F_:	
+		call _LABEL_5E64_
+		ld a, (_RAM_DE90_GAMEPAD)
+		bit 5, a
+		jr z, +
+		ld a, (_RAM_C7FF_)
+		di
+		call _LABEL_5EC6_
+		ei
+		jp _LABEL_6053_WAIT4BUTTN
+	
++:	
+		call _LABEL_6B6D_
+		ld b, $0C
+		call _LABEL_5E58_
+		ld a, (_RAM_DE94_GAMEPAD)
+		and a
+		jr z, _LABEL_5D6F_
+		ld a, (_RAM_C7FF_)
+		ld l, a
+		ld h, $00
+		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
+		add hl, bc
+		ld a, (hl)
+		call _LABEL_6573_
+		ld bc, _RAM_DBB5_GOLDMOON_HP
+		add hl, bc
+		ld a, (hl)
+		and a
+		jr z, _LABEL_5D6F_
+		ld a, (_RAM_C7FF_)
+		ld (_RAM_C7FE_), a
+		and a
+		jr nz, +
+		ld a, (_RAM_D90A_)
+		cp $0F
+		jr nz, +
+		ld a, (_RAM_DE54_HOLD_PLYR)
+		and a
+		jr z, _LABEL_5D6F_
++:	
+		xor a
+		ld (_RAM_C7FF_), a
+		ld ix, _RAM_C720_
+		ld de, $01AC
+		push de
+		push ix
+		di
+		call _LABEL_5EF1_
+		ei
+		pop ix
+		pop de
+_LABEL_5DD4_:	
+		call _LABEL_5E64_
+		ld a, (_RAM_DE90_GAMEPAD)
+		bit 5, a
+		jr z, +
+		ld a, (_RAM_C7FE_)
+		ld b, a
+		ld a, (_RAM_C7FF_)
+		cp b
+		jp z, _LABEL_5E49_
+		di
+		call _LABEL_5EC6_
+		ei
+		jp _LABEL_5E49_
+	
++:	
+		ld b, $0C
+		call _LABEL_5E58_
+		ld a, (_RAM_DE94_GAMEPAD)
+		and a
+		jr z, _LABEL_5DD4_
+		ld a, (_RAM_C7FF_)
+		ld b, a
+		ld a, (_RAM_C7FE_)
+		cp b
+		jr z, _LABEL_5E49_
+		ld l, b
+		ld h, $00
+		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
+		add hl, bc
+		ld a, (hl)
+		call _LABEL_6573_
+		ld bc, _RAM_DBB5_GOLDMOON_HP
+		add hl, bc
+		ld a, (hl)
+		and a
+		jr z, _LABEL_5DD4_
+		ld a, (_RAM_C7FF_)
+		and a
+		jr nz, +
+		ld a, (_RAM_D90A_)
+		cp $0F
+		jr nz, +
+		ld a, (_RAM_DE54_HOLD_PLYR)
+		and a
+		jr z, _LABEL_5DD4_
++:	
+		ld a, (_RAM_C7FE_)
+		ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
+		ld c, a
+		ld b, $00
+		ld e, l
+		ld d, h
+		add hl, bc
+		ex de, hl
+		ld a, (_RAM_C7FF_)
+		ld c, a
+		add hl, bc
+		ld c, (hl)
+		ld a, (de)
+		ld (hl), a
+		ld a, c
+		ld (de), a
+		call _LABEL_6F3B__UPD_HUD
+		jp _LABEL_6053_WAIT4BUTTN
+	
+_LABEL_5E49_:	
+		ld a, (_RAM_C7FE_)
+		ld ix, _RAM_C700_
+		di
+		call _LABEL_5EC6_
+		ei
+		jp _LABEL_6053_WAIT4BUTTN
+	
 
 _LABEL_5E58_:
 	push bc
@@ -8152,38 +8482,303 @@ _LABEL_5E58_:
 	ret
 
 ; Data from 5E64 to 6045 (482 bytes)
-.db $D5 $CD $9B $05 $CD $52 $05 $D1 $3A $90 $DE $CB $6F $C0 $E6 $1F
-.db $CA $64 $5E $CB $67 $C0 $3A $FF $C7 $F3 $DD $E5 $D5 $CD $C6 $5E
-.db $D1 $DD $E1 $FB $3A $90 $DE $47 $3A $FF $C7 $CB $58 $28 $02 $D6
-.db $04 $CB $50 $28 $02 $C6 $04 $CB $48 $28 $09 $4F $E6 $04 $6F $79
-.db $3D $E6 $03 $B5 $CB $40 $28 $09 $4F $E6 $04 $6F $79 $3C $E6 $03
-.db $B5 $E6 $07 $32 $FF $C7 $D5 $DD $E5 $F3 $CD $F1 $5E $FB $DD $E1
-.db $D1 $C9 $21 $6B $70 $87 $85 $6F $7C $CE $00 $67 $7E $23 $66 $6F
-.db $23 $23 $11 $40 $00 $CD $DF $5E $CD $DF $5E $F3 $CD $BB $04 $FB
-.db $06 $06 $DD $7E $00 $D3 $BE $DD $23 $10 $F7 $19 $C9 $21 $6B $70
-.db $87 $85 $6F $7C $CE $00 $67 $7E $23 $66 $6F $23 $23 $06 $03 $FD
-.db $21 $98 $5F $E5 $CD $17 $5F $E1 $7D $C6 $40 $6F $7C $CE $00 $67
-.db $10 $F1 $C9 $CD $1D $5F $CD $1D $5F $C5 $D5 $E5 $CD $BD $04 $DB
-.db $BE $DD $77 $00 $DB $BE $DD $77 $01 $F3 $CD $BB $04 $FB $7B $D3
-.db $BE $DD $7E $01 $E6 $FE $B2 $D3 $BE $DD $6E $00 $DD $7E $01 $E6
-.db $01 $67 $29 $29 $29 $29 $29 $CD $BD $04 $DD $23 $DD $23 $06 $20
-.db $21 $00 $C8 $DB $BE $77 $23 $10 $FA $EB $29 $29 $29 $29 $29 $F3
-.db $CD $BB $04 $FB $11 $00 $C8 $06 $08 $1A $FD $B6 $00 $13 $D3 $BE
-.db $1A $FD $B6 $00 $13 $D3 $BE $1A $4F $FD $AE $00 $A1 $13 $D3 $BE
-.db $1A $4F $FD $AE $00 $A1 $13 $D3 $BE $FD $23 $10 $DC $E1 $D1 $C1
-.db $13 $23 $23 $C9 $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00
-.db $00 $00 $00 $00 $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0
-.db $C0 $C0 $C0 $C0 $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03
-.db $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00
-.db $00 $00 $00 $FF $03 $03 $03 $03 $03 $03 $03 $FF $CD $46 $60 $3A
-.db $4E $C0 $A7 $28 $3B $3D $28 $12 $3A $40 $C0 $A7 $CA $F5 $59 $3D
-.db $CA $CE $58 $3D $CA $EE $59 $C3 $37 $59 $3A $40 $C0 $A7 $CA $F5
-.db $59 $3D $CA $26 $59 $3D $CA $CE $58 $3D $CA $A9 $59 $3D $CA $A3
-.db $59 $3D $CA $20 $59 $3D $CA $EE $59 $3D $CA $2B $5A $C3 $37 $59
-.db $3A $40 $C0 $A7 $CA $47 $59 $3D $CA $59 $59 $3D $CA $5F $59 $3D
-.db $CA $53 $59 $3D $CA $5C $5B $3D $CA $62 $5B $3D $CA $A1 $58 $C3
-.db $4D $59
-
+;.db $D5 $CD $9B $05 $CD $52 $05 $D1 $3A $90 $DE $CB $6F $C0 $E6 $1F
+;.db $CA $64 $5E $CB $67 $C0 $3A $FF $C7 $F3 $DD $E5 $D5 $CD $C6 $5E
+;.db $D1 $DD $E1 $FB $3A $90 $DE $47 $3A $FF $C7 $CB $58 $28 $02 $D6
+;.db $04 $CB $50 $28 $02 $C6 $04 $CB $48 $28 $09 $4F $E6 $04 $6F $79
+;.db $3D $E6 $03 $B5 $CB $40 $28 $09 $4F $E6 $04 $6F $79 $3C $E6 $03
+;.db $B5 $E6 $07 $32 $FF $C7 $D5 $DD $E5 $F3 $CD $F1 $5E $FB $DD $E1
+;.db $D1 $C9 $21 $6B $70 $87 $85 $6F $7C $CE $00 $67 $7E $23 $66 $6F
+;.db $23 $23 $11 $40 $00 $CD $DF $5E $CD $DF $5E $F3 $CD $BB $04 $FB
+;.db $06 $06 $DD $7E $00 $D3 $BE $DD $23 $10 $F7 $19 $C9 $21 $6B $70
+;.db $87 $85 $6F $7C $CE $00 $67 $7E $23 $66 $6F $23 $23 $06 $03 $FD
+;.db $21 $98 $5F $E5 $CD $17 $5F $E1 $7D $C6 $40 $6F $7C $CE $00 $67
+;.db $10 $F1 $C9 $CD $1D $5F $CD $1D $5F $C5 $D5 $E5 $CD $BD $04 $DB
+;.db $BE $DD $77 $00 $DB $BE $DD $77 $01 $F3 $CD $BB $04 $FB $7B $D3
+;.db $BE $DD $7E $01 $E6 $FE $B2 $D3 $BE $DD $6E $00 $DD $7E $01 $E6
+;.db $01 $67 $29 $29 $29 $29 $29 $CD $BD $04 $DD $23 $DD $23 $06 $20
+;.db $21 $00 $C8 $DB $BE $77 $23 $10 $FA $EB $29 $29 $29 $29 $29 $F3
+;.db $CD $BB $04 $FB $11 $00 $C8 $06 $08 $1A $FD $B6 $00 $13 $D3 $BE
+;.db $1A $FD $B6 $00 $13 $D3 $BE $1A $4F $FD $AE $00 $A1 $13 $D3 $BE
+;.db $1A $4F $FD $AE $00 $A1 $13 $D3 $BE $FD $23 $10 $DC $E1 $D1 $C1
+;.db $13 $23 $23 $C9 $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00
+;.db $00 $00 $00 $00 $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0
+;.db $C0 $C0 $C0 $C0 $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03
+;.db $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00
+;.db $00 $00 $00 $FF $03 $03 $03 $03 $03 $03 $03 $FF $CD $46 $60 $3A
+;.db $4E $C0 $A7 $28 $3B $3D $28 $12 $3A $40 $C0 $A7 $CA $F5 $59 $3D
+;.db $CA $CE $58 $3D $CA $EE $59 $C3 $37 $59 $3A $40 $C0 $A7 $CA $F5
+;.db $59 $3D $CA $26 $59 $3D $CA $CE $58 $3D $CA $A9 $59 $3D $CA $A3
+;.db $59 $3D $CA $20 $59 $3D $CA $EE $59 $3D $CA $2B $5A $C3 $37 $59
+;.db $3A $40 $C0 $A7 $CA $47 $59 $3D $CA $59 $59 $3D $CA $5F $59 $3D
+;.db $CA $53 $59 $3D $CA $5C $5B $3D $CA $62 $5B $3D $CA $A1 $58 $C3
+;.db $4D $59
+_LABEL_5E64_:	
+		push de
+		call _LABEL_59B_MAIN
+		call _LABEL_552_CHECK_AB_BUTTONS
+		pop de
+		ld a, (_RAM_DE90_GAMEPAD)
+		bit 5, a
+		ret nz
+		and $1F
+		jp z, _LABEL_5E64_
+		bit 4, a
+		ret nz
+		ld a, (_RAM_C7FF_)
+		di
+		push ix
+		push de
+		call _LABEL_5EC6_
+		pop de
+		pop ix
+		ei
+		ld a, (_RAM_DE90_GAMEPAD)
+		ld b, a
+		ld a, (_RAM_C7FF_)
+		bit 3, b
+		jr z, +
+		sub $04
++:	
+		bit 2, b
+		jr z, +
+		add a, $04
++:	
+		bit 1, b
+		jr z, +
+		ld c, a
+		and $04
+		ld l, a
+		ld a, c
+		dec a
+		and $03
+		or l
++:	
+		bit 0, b
+		jr z, +
+		ld c, a
+		and $04
+		ld l, a
+		ld a, c
+		inc a
+		and $03
+		or l
++:	
+		and $07
+		ld (_RAM_C7FF_), a
+		push de
+		push ix
+		di
+		call _LABEL_5EF1_
+		ei
+		pop ix
+		pop de
+		ret
+	
+_LABEL_5EC6_:	
+		ld hl, _DATA_706B_HUD_PORTRAITS
+		add a, a
+		add a, l
+		ld l, a
+		ld a, h
+		adc a, $00
+		ld h, a
+		ld a, (hl)
+		inc hl
+		ld h, (hl)
+		ld l, a
+		inc hl
+		inc hl
+		ld de, $0040
+		call +
+		call +
++:	
+		di
+		call _LABEL_4BB_VDP_RAM_WRITESETUP
+		ei
+		ld b, $06
+-:	
+		ld a, (ix+0)
+		out (Port_VDPData), a
+		inc ix
+		djnz -
+		add hl, de
+		ret
+	
+_LABEL_5EF1_:	
+		ld hl, _DATA_706B_HUD_PORTRAITS
+		add a, a
+		add a, l
+		ld l, a
+		ld a, h
+		adc a, $00
+		ld h, a
+		ld a, (hl)
+		inc hl
+		ld h, (hl)
+		ld l, a
+		inc hl
+		inc hl
+		ld b, $03
+		ld iy, _DATA_5F98_
+-:	
+		push hl
+		call +
+		pop hl
+		ld a, l
+		add a, $40
+		ld l, a
+		ld a, h
+		adc a, $00
+		ld h, a
+		djnz -
+		ret
+	
++:	
+		call +
+		call +
++:	
+		push bc
+		push de
+		push hl
+		call _LABEL_4BD_VDP_OUTSETUP
+		in a, (Port_VDPData)
+		ld (ix+0), a
+		in a, (Port_VDPData)
+		ld (ix+1), a
+		di
+		call _LABEL_4BB_VDP_RAM_WRITESETUP
+		ei
+		ld a, e
+		out (Port_VDPData), a
+		ld a, (ix+1)
+		and $FE
+		or d
+		out (Port_VDPData), a
+		ld l, (ix+0)
+		ld a, (ix+1)
+		and $01
+		ld h, a
+		add hl, hl
+		add hl, hl
+		add hl, hl
+		add hl, hl
+		add hl, hl
+		call _LABEL_4BD_VDP_OUTSETUP
+		inc ix
+		inc ix
+		ld b, $20
+		ld hl, _RAM_C800_
+-:	
+		in a, (Port_VDPData)
+		ld (hl), a
+		inc hl
+		djnz -
+		ex de, hl
+		add hl, hl
+		add hl, hl
+		add hl, hl
+		add hl, hl
+		add hl, hl
+		di
+		call _LABEL_4BB_VDP_RAM_WRITESETUP
+		ei
+		ld de, _RAM_C800_
+		ld b, $08
+-:	
+		ld a, (de)
+		or (iy+0)
+		inc de
+		out (Port_VDPData), a
+		ld a, (de)
+		or (iy+0)
+		inc de
+		out (Port_VDPData), a
+		ld a, (de)
+		ld c, a
+		xor (iy+0)
+		and c
+		inc de
+		out (Port_VDPData), a
+		ld a, (de)
+		ld c, a
+		xor (iy+0)
+		and c
+		inc de
+		out (Port_VDPData), a
+		inc iy
+		djnz -
+		pop hl
+		pop de
+		pop bc
+		inc de
+		inc hl
+		inc hl
+		ret
+	
+; Data from 5F98 to 5FDF (72 bytes)	
+_DATA_5F98_:	
+	.db $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00
+	.db $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $C0
+	.db $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $03 $03
+	.db $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00 $FF
+	.db $03 $03 $03 $03 $03 $03 $03 $FF
+	
+; 1st entry of Jump Table from 6CD5 (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
+_LABEL_5FE0_:	
+		call _LABEL_6046_
+		ld a, (_RAM_C04E_)
+		and a
+		jr z, ++
+		dec a
+		jr z, +
+		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
+		and a
+		jp z, _LABEL_59F5_
+		dec a
+		jp z, _LABEL_58CE_
+		dec a
+		jp z, _LABEL_59EE_
+		jp _LABEL_5937_
+	
++:	
+		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
+		and a
+		jp z, _LABEL_59F5_
+		dec a
+		jp z, _LABEL_5926_
+		dec a
+		jp z, _LABEL_58CE_
+		dec a
+		jp z, _LABEL_59A9_
+		dec a
+		jp z, _LABEL_59A3_
+		dec a
+		jp z, _LABEL_5920_
+		dec a
+		jp z, _LABEL_59EE_
+		dec a
+		jp z, _LABEL_5A2B_
+		jp _LABEL_5937_
+	
+++:	
+		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
+		and a
+		jp z, _LABEL_5947_
+		dec a
+		jp z, _LABEL_5959_
+		dec a
+		jp z, _LABEL_595F_
+		dec a
+		jp z, _LABEL_5953_
+		dec a
+		jp z, _LABEL_5B5C_
+		dec a
+		jp z, _LABEL_5B62_
+		dec a
+		jp z, _LABEL_58A1_
+		jp _LABEL_594D_
+_LABEL_6046_:
 -:
 	call _LABEL_59B_MAIN
 	call _LABEL_552_CHECK_AB_BUTTONS
@@ -8198,32 +8793,258 @@ _LABEL_6053_WAIT4BUTTN:	;This is easy to guess. We jump right in a small routine
 	jp _LABEL_5C65_ENTER_INGAME_MENU
 
 ; Data from 605C to 61F9 (414 bytes)
-.db $11 $10 $AB $06 $11 $FD $21 $D3 $6C $2E $04 $26 $00 $3E $01 $32
-.db $4F $C0 $3D $32 $4E $C0 $DD $21 $BC $DE $DD $7E $00 $FE $03 $28
-.db $12 $DD $23 $24 $2D $20 $F3 $11 $5F $AA $06 $11 $FD $21 $F3 $6C
-.db $C3 $41 $6A $CD $73 $65 $D5 $11 $B5 $DB $19 $D1 $7E $A7 $28 $E7
-.db $D5 $11 $FC $FF $19 $D1 $7E $FE $02 $C2 $AB $60 $C3 $41 $6A $11
-.db $09 $AA $18 $D6 $DD $21 $BC $DE $1E $04 $16 $00 $3E $02 $32 $4F
-.db $C0 $DD $7E $00 $CD $73 $65 $01 $B1 $DB $09 $7E $FE $01 $28 $12
-.db $DD $23 $14 $1D $20 $EB $11 $5B $AD $06 $15 $FD $21 $F3 $6C $C3
-.db $41 $6A $01 $04 $00 $09 $7E $A7 $28 $EC $DD $7E $00 $11 $BD $AD
-.db $06 $15 $FD $21 $0F $6D $A7 $3E $01 $CA $00 $61 $3C $11 $69 $AE
-.db $FD $21 $F9 $6C $32 $4E $C0 $C3 $41 $6A $21 $8C $67 $11 $78 $66
-.db $3E $06 $32 $4F $C0 $C3 $30 $61 $21 $A8 $67 $11 $67 $64 $3E $03
-.db $32 $4F $C0 $C3 $30 $61 $21 $9A $67 $11 $C2 $66 $3E $05 $32 $4F
-.db $C0 $C3 $30 $61 $D5 $E5 $CD $46 $60 $CD $42 $6B $E1 $FD $21 $00
-.db $C1 $11 $00 $00 $DD $21 $00 $C3 $01 $00 $00 $CD $1D $6A $DD $21
-.db $00 $C3 $11 $88 $38 $D5 $CD $60 $6B $D9 $0E $00 $06 $08 $D9 $7E
-.db $A7 $28 $30 $D1 $C1 $C5 $7B $C6 $40 $5F $7A $CE $00 $57 $D5 $E5
-.db $C5 $4E $E5 $D9 $D1 $26 $C3 $79 $87 $F6 $80 $6F $73 $23 $72 $D9
-.db $21 $09 $68 $7E $23 $3C $20 $FB $0D $20 $F8 $C1 $CD $1D $6A $E1
-.db $D9 $0C $D9 $23 $23 $D9 $10 $C6 $D1 $E1 $79 $A7 $20 $17 $DD $21
-.db $00 $C3 $21 $B5 $67 $01 $00 $00 $11 $00 $00 $CD $1D $6A $DD $21
-.db $00 $C3 $11 $08 $3A $01 $53 $60 $21 $40 $00 $19 $EB $21 $DB $67
-.db $CD $1D $6A $11 $00 $C1 $06 $0C $FD $21 $00 $C3 $C3 $41 $6A $CD
-.db $46 $60 $CD $42 $6B $21 $48 $38 $11 $B5 $A7 $CD $A6 $35 $FB $21
-.db $88 $38 $11 $6C $01 $06 $0B $0E $97 $DD $21 $00 $C0 $CD $E6 $6A
-.db $CD $FA $61 $3E $07 $32 $4F $C0 $CD $B1 $62 $C3 $53 $60
+;.db $11 $10 $AB $06 $11 $FD $21 $D3 $6C $2E $04 $26 $00 $3E $01 $32
+;.db $4F $C0 $3D $32 $4E $C0 $DD $21 $BC $DE $DD $7E $00 $FE $03 $28
+;.db $12 $DD $23 $24 $2D $20 $F3 $11 $5F $AA $06 $11 $FD $21 $F3 $6C
+;.db $C3 $41 $6A $CD $73 $65 $D5 $11 $B5 $DB $19 $D1 $7E $A7 $28 $E7
+;.db $D5 $11 $FC $FF $19 $D1 $7E $FE $02 $C2 $AB $60 $C3 $41 $6A $11
+;.db $09 $AA $18 $D6 $DD $21 $BC $DE $1E $04 $16 $00 $3E $02 $32 $4F
+;.db $C0 $DD $7E $00 $CD $73 $65 $01 $B1 $DB $09 $7E $FE $01 $28 $12
+;.db $DD $23 $14 $1D $20 $EB $11 $5B $AD $06 $15 $FD $21 $F3 $6C $C3
+;.db $41 $6A $01 $04 $00 $09 $7E $A7 $28 $EC $DD $7E $00 $11 $BD $AD
+;.db $06 $15 $FD $21 $0F $6D $A7 $3E $01 $CA $00 $61 $3C $11 $69 $AE
+;.db $FD $21 $F9 $6C $32 $4E $C0 $C3 $41 $6A $21 $8C $67 $11 $78 $66
+;.db $3E $06 $32 $4F $C0 $C3 $30 $61 $21 $A8 $67 $11 $67 $64 $3E $03
+;.db $32 $4F $C0 $C3 $30 $61 $21 $9A $67 $11 $C2 $66 $3E $05 $32 $4F
+;.db $C0 $C3 $30 $61 $D5 $E5 $CD $46 $60 $CD $42 $6B $E1 $FD $21 $00
+;.db $C1 $11 $00 $00 $DD $21 $00 $C3 $01 $00 $00 $CD $1D $6A $DD $21
+;.db $00 $C3 $11 $88 $38 $D5 $CD $60 $6B $D9 $0E $00 $06 $08 $D9 $7E
+;.db $A7 $28 $30 $D1 $C1 $C5 $7B $C6 $40 $5F $7A $CE $00 $57 $D5 $E5
+;.db $C5 $4E $E5 $D9 $D1 $26 $C3 $79 $87 $F6 $80 $6F $73 $23 $72 $D9
+;.db $21 $09 $68 $7E $23 $3C $20 $FB $0D $20 $F8 $C1 $CD $1D $6A $E1
+;.db $D9 $0C $D9 $23 $23 $D9 $10 $C6 $D1 $E1 $79 $A7 $20 $17 $DD $21
+;.db $00 $C3 $21 $B5 $67 $01 $00 $00 $11 $00 $00 $CD $1D $6A $DD $21
+;.db $00 $C3 $11 $08 $3A $01 $53 $60 $21 $40 $00 $19 $EB $21 $DB $67
+;.db $CD $1D $6A $11 $00 $C1 $06 $0C $FD $21 $00 $C3 $C3 $41 $6A $CD
+;.db $46 $60 $CD $42 $6B $21 $48 $38 $11 $B5 $A7 $CD $A6 $35 $FB $21
+;.db $88 $38 $11 $6C $01 $06 $0B $0E $97 $DD $21 $00 $C0 $CD $E6 $6A
+;.db $CD $FA $61 $3E $07 $32 $4F $C0 $CD $B1 $62 $C3 $53 $60
+
+_LABEL_605C_:	
+		ld de, _DATA_AB10_
+		ld b, $11
+		ld iy, _DATA_6CD5_ - 2
+		ld l, $04
+		ld h, $00
+		ld a, $01
+		ld (_RAM_C04F_), a
+		dec a
+		ld (_RAM_C04E_), a
+		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
+-:	
+		ld a, (ix+0)
+		cp $03
+		jr z, +
+		inc ix
+		inc h
+		dec l
+		jr nz, -
+--:	
+		ld de, _DATA_AA5F_
+-:	
+		ld b, $11
+		ld iy, _DATA_6CF5_ - 2
+		jp _LABEL_6A41_
+	
++:	
+		call _LABEL_6573_
+		push de
+		ld de, _RAM_DBB5_GOLDMOON_HP
+		add hl, de
+		pop de
+		ld a, (hl)
+		and a
+		jr z, --
+		push de
+		ld de, $FFFC
+		add hl, de
+		pop de
+		ld a, (hl)
+		cp $02
+		jp nz, +
+		jp _LABEL_6A41_
+	
++:	
+		ld de, _DATA_AA09_
+		jr -
+	
+; 5th entry of Jump Table from 6CAF (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
+_LABEL_60B0_:	
+		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
+		ld e, $04
+		ld d, $00
+		ld a, $02
+		ld (_RAM_C04F_), a
+-:	
+		ld a, (ix+0)
+		call _LABEL_6573_
+		ld bc, _RAM_DBB1_
+		add hl, bc
+		ld a, (hl)
+		cp $01
+		jr z, +
+		inc ix
+		inc d
+		dec e
+		jr nz, -
+-:	
+		ld de, _DATA_AD5B_
+		ld b, $15
+		ld iy, $6CF3
+		jp _LABEL_6A41_
+	
++:	
+		ld bc, $0004
+		add hl, bc
+		ld a, (hl)
+		and a
+		jr z, -
+		ld a, (ix+0)
+		ld de, _DATA_ADBD_
+		ld b, $15
+		ld iy, $6D0F
+		and a
+		ld a, $01
+		jp z, +
+		inc a
+		ld de, _DATA_AE69_
+		ld iy, $6CF9
++:	
+		ld (_RAM_C04E_), a
+		jp _LABEL_6A41_
+	
+_LABEL_6106_:	
+		ld hl, _DATA_678C_
+		ld de, $6678
+		ld a, $06
+		ld (_RAM_C04F_), a
+		jp +
+	
+; 7th entry of Jump Table from 6CAF (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
+_LABEL_6114_:	
+		ld hl, _DATA_67A8_
+		ld de, $6467
+		ld a, $03
+		ld (_RAM_C04F_), a
+		jp +
+	
+_LABEL_6122_:	
+		ld hl, _DATA_679A_
+		ld de, $66C2
+		ld a, $05
+		ld (_RAM_C04F_), a
+		jp +
+	
++:	
+		push de
+		push hl
+		call _LABEL_6046_
+		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
+		pop hl
+		ld iy, _RAM_C100_
+		ld de, $0000
+		ld ix, _RAM_C300_
+		ld bc, $0000
+		call _LABEL_6A1D_
+		ld ix, _RAM_C300_
+		ld de, $3888
+		push de
+		call _LABEL_6B60_
+		exx
+		ld c, $00
+		ld b, $08
+--:	
+		exx
+		ld a, (hl)
+		and a
+		jr z, +
+		pop de
+		pop bc
+		push bc
+		ld a, e
+		add a, $40
+		ld e, a
+		ld a, d
+		adc a, $00
+		ld d, a
+		push de
+		push hl
+		push bc
+		ld c, (hl)
+		push hl
+		exx
+		pop de
+		ld h, $C3
+		ld a, c
+		add a, a
+		or $80
+		ld l, a
+		ld (hl), e
+		inc hl
+		ld (hl), d
+		exx
+		ld hl, _DATA_6809_
+-:	
+		ld a, (hl)
+		inc hl
+		inc a
+		jr nz, -
+		dec c
+		jr nz, -
+		pop bc
+		call _LABEL_6A1D_
+		pop hl
+		exx
+		inc c
+		exx
++:	
+		inc hl
+		inc hl
+		exx
+		djnz --
+		pop de
+		pop hl
+		ld a, c
+		and a
+		jr nz, +
+		ld ix, _RAM_C300_
+		ld hl, _DATA_67B5_
+		ld bc, $0000
+		ld de, $0000
+		call _LABEL_6A1D_
+		ld ix, _RAM_C300_
+		ld de, $3A08
++:	
+		ld bc, $6053
+		ld hl, $0040
+		add hl, de
+		ex de, hl
+		ld hl, _DATA_67DB_
+		call _LABEL_6A1D_
+		ld de, _RAM_C100_
+		ld b, $0C
+		ld iy, $C300
+		jp _LABEL_6A41_
+	
+_LABEL_61CB_:	
+		call _LABEL_6046_
+		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
+		ld hl, $3848
+		ld de, _DATA_A7B5_
+		call _LABEL_35A6_RANDOM
+		ei
+		ld hl, $3888
+		ld de, $016C
+		ld b, $0B
+		ld c, $97
+		ld ix, _RAM_C000_
+		call _LABEL_6AE6_
+		call _LABEL_61FA_
+		ld a, $07
+		ld (_RAM_C04F_), a
+		call _LABEL_62B1_
+		jp _LABEL_6053_WAIT4BUTTN
+	
 
 _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN. I GUESS THERE IS ANOTHER PART WHERE THE TITLE PART(THE SCORE, GAME OVER OF WIN TEXT IS CHANGED, SINCE THE ENDING IS BASICALLY JUST THIS SCREEN WITH A DIFFERENT HEADER.)
 	ld b, $0A	;THERE ARE TEN MONSTER TYPES. CHANGING THIS NUMBER WILL LIMIT HOW MANY NUMBERS ARE DRAWN.
@@ -8329,7 +9150,7 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 	jr z, _LABEL_62B1_SCOREMENU_CONT_LOOP			;IF WE HAVE NOT PRESSED EITHER, THEN LOOP BACK.
 	ret
 
-; Data from 62C2 to 6572 (689 bytes)
+; Data from 62C2 to 6572 (689 bytes)	;This is not yet used even in the newer source file.
 .db $C3 $C2 $62 $CD $46 $60 $CD $42 $6B $21 $7E $67 $FD $21 $00 $C1
 .db $11 $00 $00 $DD $21 $00 $C3 $01 $00 $00 $3E $04 $32 $4F $C0 $CD
 .db $1D $6A $11 $C8 $38 $DD $21 $00 $C3 $D5 $DD $E5 $06 $96 $0E $00
@@ -8555,49 +9376,302 @@ _LABEL_6B42_DRW_SOLID_CLR_SCRN:	;This resets the tilemap, and draws a background
 	jr nz, -
 	ret
 
-; Data from 6B60 to 6CAC (333 bytes)
-.db $3A $BC $DE $D5 $CD $73 $65 $11 $A0 $DB $19 $D1 $C9 $C5 $D5 $E5
-.db $DD $E5 $CD $9B $05 $3A $FF $C7 $21 $BC $DE $4F $06 $00 $09 $7E
-.db $4F $CD $73 $65 $11 $B5 $DB $19 $E5 $7E $A7 $79 $20 $02 $3E $08
-.db $6F $26 $00 $29 $4D $44 $29 $29 $5D $54 $09 $EB $29 $01 $39 $6D
-.db $09 $EB $21 $88 $38 $CD $A6 $35 $21 $88 $38 $11 $6C $01 $06 $0E
-.db $0E $97 $DD $21 $00 $C0 $CD $E6 $6A $D1 $21 $05 $00 $19 $E5 $DD
-.db $E1 $01 $20 $39 $26 $06 $E5 $DD $6E $00 $11 $14 $00 $C5 $CD $61
-.db $6C $C1 $21 $40 $00 $09 $4D $44 $DD $23 $E1 $25 $20 $E8 $11 $F4
-.db $FF $DD $19 $21 $40 $00 $09 $4D $44 $DD $5E $00 $16 $00 $DD $6E
-.db $01 $D5 $E5 $CD $61 $6C $E1 $11 $00 $D1 $26 $00 $4C $CD $09 $6E
-.db $21 $22 $3B $11 $04 $D1 $CD $A6 $35 $E1 $26 $00 $4C $11 $00 $D1
-.db $CD $09 $6E $21 $28 $3B $11 $01 $D1 $3E $2F $12 $13 $3E $20 $12
-.db $13 $12 $1B $1B $CD $A6 $35 $DD $2B $DD $2B $DD $2B $21 $8C $3B
-.db $11 $F6 $67 $E5 $CD $A6 $35 $E1 $11 $F6 $67 $DD $7E $04 $A7 $28
-.db $17 $11 $E6 $67 $DD $7E $00 $A7 $28 $0E $11 $09 $68 $E6 $7F $4F
-.db $1A $13 $3C $20 $FB $0D $20 $F8 $CD $A6 $35 $DD $E1 $E1 $D1 $C1
-.db $C9 $C5 $D5 $26 $00 $29 $29 $4D $44 $29 $5D $54 $29 $29 $19 $09
-.db $D1 $0E $00 $7A $B3 $28 $0C $4B $44 $0B $3E $FF $A7 $3C $ED $52
-.db $30 $FB $4F $11 $00 $D1 $AF $12 $13 $06 $0B $79 $FE $04 $38 $02
-.db $3E $04 $3C $12 $13 $79 $D6 $04 $30 $01 $AF $4F $10 $ED $3E $06
-.db $12 $13 $3E $FF $12 $E1 $11 $00 $D1 $CD $A6 $35 $C9
+;; Data from 6B60 to 6CAC (333 bytes)
+;.db $3A $BC $DE $D5 $CD $73 $65 $11 $A0 $DB $19 $D1 $C9 $C5 $D5 $E5
+;.db $DD $E5 $CD $9B $05 $3A $FF $C7 $21 $BC $DE $4F $06 $00 $09 $7E
+;.db $4F $CD $73 $65 $11 $B5 $DB $19 $E5 $7E $A7 $79 $20 $02 $3E $08
+;.db $6F $26 $00 $29 $4D $44 $29 $29 $5D $54 $09 $EB $29 $01 $39 $6D
+;.db $09 $EB $21 $88 $38 $CD $A6 $35 $21 $88 $38 $11 $6C $01 $06 $0E
+;.db $0E $97 $DD $21 $00 $C0 $CD $E6 $6A $D1 $21 $05 $00 $19 $E5 $DD
+;.db $E1 $01 $20 $39 $26 $06 $E5 $DD $6E $00 $11 $14 $00 $C5 $CD $61
+;.db $6C $C1 $21 $40 $00 $09 $4D $44 $DD $23 $E1 $25 $20 $E8 $11 $F4
+;.db $FF $DD $19 $21 $40 $00 $09 $4D $44 $DD $5E $00 $16 $00 $DD $6E
+;.db $01 $D5 $E5 $CD $61 $6C $E1 $11 $00 $D1 $26 $00 $4C $CD $09 $6E
+;.db $21 $22 $3B $11 $04 $D1 $CD $A6 $35 $E1 $26 $00 $4C $11 $00 $D1
+;.db $CD $09 $6E $21 $28 $3B $11 $01 $D1 $3E $2F $12 $13 $3E $20 $12
+;.db $13 $12 $1B $1B $CD $A6 $35 $DD $2B $DD $2B $DD $2B $21 $8C $3B
+;.db $11 $F6 $67 $E5 $CD $A6 $35 $E1 $11 $F6 $67 $DD $7E $04 $A7 $28
+;.db $17 $11 $E6 $67 $DD $7E $00 $A7 $28 $0E $11 $09 $68 $E6 $7F $4F
+;.db $1A $13 $3C $20 $FB $0D $20 $F8 $CD $A6 $35 $DD $E1 $E1 $D1 $C1
+;.db $C9 $C5 $D5 $26 $00 $29 $29 $4D $44 $29 $5D $54 $29 $29 $19 $09
+;.db $D1 $0E $00 $7A $B3 $28 $0C $4B $44 $0B $3E $FF $A7 $3C $ED $52
+;.db $30 $FB $4F $11 $00 $D1 $AF $12 $13 $06 $0B $79 $FE $04 $38 $02
+;.db $3E $04 $3C $12 $13 $79 $D6 $04 $30 $01 $AF $4F $10 $ED $3E $06
+;.db $12 $13 $3E $FF $12 $E1 $11 $00 $D1 $CD $A6 $35 $C9
+;
+;; Data from 6CAD to 6DC8 (284 bytes)
+;_DATA_6CAD_PALETTES:	;This is a pack of palettes, I wonder how much of this is actually used...
+;.db $C8 $38 $43 $5D $08 $39 $5C $60 $48 $39 $B0 $60 $88 $39 $14 $61
+;.db $C8 $39 $C5 $62 $08 $3A $22 $61 $48 $3A $06 $61 $88 $3A $CB $61
+;.db $C8 $3A $6C $6A $00 $00 $C8 $38 $E0 $5F $08 $39 $E0 $5F $48 $39
+;.db $E0 $5F $88 $39 $E0 $5F $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A
+;.db $E0 $5F $88 $3A $E0 $5F $C8 $3A $53 $60 $00 $00 $C8 $38 $E0 $5F
+;.db $08 $39 $E0 $5F $48 $39 $E0 $5F $88 $39 $E0 $5F $C8 $39 $53 $60
+;.db $00 $00 $C8 $38 $E0 $5F $08 $39 $E0 $5F $48 $39 $E0 $5F $88 $39
+;.db $E0 $5F $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A $E0 $5F $88 $3A
+;.db $E0 $5F $C8 $3A $E0 $5F $08 $3B $53 $60 $00 $00 $20 $47 $6F $6C
+;.db $64 $6D $6F $6F $6E $20 $20 $20 $20 $20 $FF $00 $20 $20 $53 $74
+;.db $75 $72 $6D $20 $20 $20 $20 $20 $20 $20 $FF $00 $20 $43 $61 $72
+;.db $61 $6D $6F $6E $20 $20 $20 $20 $20 $20 $FF $00 $20 $52 $61 $69
+;.db $73 $74 $6C $69 $6E $20 $20 $20 $20 $20 $FF $00 $20 $20 $54 $61
+;.db $6E $69 $73 $20 $20 $20 $20 $20 $20 $20 $FF $00 $54 $61 $73 $73
+;.db $6C $65 $68 $6F $66 $66 $20 $20 $20 $20 $FF $00 $52 $69 $76 $65
+;.db $72 $77 $69 $6E $64 $20 $20 $20 $20 $20 $FF $00 $20 $20 $46 $6C
+;.db $69 $6E $74 $20 $20 $20 $20 $20 $20 $20 $FF $00 $44 $65 $61 $64
+;.db $20 $63 $68 $61 $72 $61 $63 $74 $65 $72 $FF $00
 
-; Data from 6CAD to 6DC8 (284 bytes)
-_DATA_6CAD_PALETTES:	;This is a pack of palettes, I wonder how much of this is actually used...
-.db $C8 $38 $43 $5D $08 $39 $5C $60 $48 $39 $B0 $60 $88 $39 $14 $61
-.db $C8 $39 $C5 $62 $08 $3A $22 $61 $48 $3A $06 $61 $88 $3A $CB $61
-.db $C8 $3A $6C $6A $00 $00 $C8 $38 $E0 $5F $08 $39 $E0 $5F $48 $39
-.db $E0 $5F $88 $39 $E0 $5F $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A
-.db $E0 $5F $88 $3A $E0 $5F $C8 $3A $53 $60 $00 $00 $C8 $38 $E0 $5F
-.db $08 $39 $E0 $5F $48 $39 $E0 $5F $88 $39 $E0 $5F $C8 $39 $53 $60
-.db $00 $00 $C8 $38 $E0 $5F $08 $39 $E0 $5F $48 $39 $E0 $5F $88 $39
-.db $E0 $5F $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A $E0 $5F $88 $3A
-.db $E0 $5F $C8 $3A $E0 $5F $08 $3B $53 $60 $00 $00 $20 $47 $6F $6C
-.db $64 $6D $6F $6F $6E $20 $20 $20 $20 $20 $FF $00 $20 $20 $53 $74
-.db $75 $72 $6D $20 $20 $20 $20 $20 $20 $20 $FF $00 $20 $43 $61 $72
-.db $61 $6D $6F $6E $20 $20 $20 $20 $20 $20 $FF $00 $20 $52 $61 $69
-.db $73 $74 $6C $69 $6E $20 $20 $20 $20 $20 $FF $00 $20 $20 $54 $61
-.db $6E $69 $73 $20 $20 $20 $20 $20 $20 $20 $FF $00 $54 $61 $73 $73
-.db $6C $65 $68 $6F $66 $66 $20 $20 $20 $20 $FF $00 $52 $69 $76 $65
-.db $72 $77 $69 $6E $64 $20 $20 $20 $20 $20 $FF $00 $20 $20 $46 $6C
-.db $69 $6E $74 $20 $20 $20 $20 $20 $20 $20 $FF $00 $44 $65 $61 $64
-.db $20 $63 $68 $61 $72 $61 $63 $74 $65 $72 $FF $00
+_LABEL_6B60_:	
+		ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
+		push de
+		call _LABEL_6573_
+		ld de, _RAM_DBA0_
+		add hl, de
+		pop de
+		ret
+	
+_LABEL_6B6D_:	
+		push bc
+		push de
+		push hl
+		push ix
+		call _LABEL_59B_MAIN
+		ld a, (_RAM_C7FF_)
+		ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
+		ld c, a
+		ld b, $00
+		add hl, bc
+		ld a, (hl)
+		ld c, a
+		call _LABEL_6573_
+		ld de, _RAM_DBB5_GOLDMOON_HP
+		add hl, de
+		push hl
+		ld a, (hl)
+		and a
+		ld a, c
+		jr nz, +
+		ld a, $08
++:	
+		ld l, a
+		ld h, $00
+		add hl, hl
+		ld c, l
+		ld b, h
+		add hl, hl
+		add hl, hl
+		ld e, l
+		ld d, h
+		add hl, bc
+		ex de, hl
+		add hl, hl
+		ld bc, _DATA_6D39_
+		add hl, bc
+		ex de, hl
+		ld hl, $3888
+		call _LABEL_35A6_RANDOM
+		ld hl, $3888
+		ld de, $016C
+		ld b, $0E
+		ld c, $97
+		ld ix, _RAM_C000_
+		call _LABEL_6AE6_
+		pop de
+		ld hl, $0005
+		add hl, de
+		push hl
+		pop ix
+		ld bc, $3920
+		ld h, $06
+-:	
+		push hl
+		ld l, (ix+0)
+		ld de, $0014
+		push bc
+		call _LABEL_6C61_
+		pop bc
+		ld hl, $0040
+		add hl, bc
+		ld c, l
+		ld b, h
+		inc ix
+		pop hl
+		dec h
+		jr nz, -
+		ld de, $FFF4
+		add ix, de
+		ld hl, $0040
+		add hl, bc
+		ld c, l
+		ld b, h
+		ld e, (ix+0)
+		ld d, $00
+		ld l, (ix+1)
+		push de
+		push hl
+		call _LABEL_6C61_
+		pop hl
+		ld de, _RAM_D100_
+		ld h, $00
+		ld c, h
+		call _LABEL_6E09_
+		ld hl, $3B22
+		ld de, _RAM_D104_
+		call _LABEL_35A6_RANDOM
+		pop hl
+		ld h, $00
+		ld c, h
+		ld de, _RAM_D100_
+		call _LABEL_6E09_
+		ld hl, $3B28
+		ld de, _RAM_D101_
+		ld a, $2F
+		ld (de), a
+		inc de
+		ld a, $20
+		ld (de), a
+		inc de
+		ld (de), a
+		dec de
+		dec de
+		call _LABEL_35A6_RANDOM
+		dec ix
+		dec ix
+		dec ix
+		ld hl, $3B8C
+		ld de, _DATA_67F6_
+		push hl
+		call _LABEL_35A6_RANDOM
+		pop hl
+		ld de, _DATA_67F6_
+		ld a, (ix+4)
+		and a
+		jr z, +
+		ld de, _DATA_67E6_
+		ld a, (ix+0)
+		and a
+		jr z, +
+		ld de, _DATA_6809_
+		and $7F
+		ld c, a
+-:	
+		ld a, (de)
+		inc de
+		inc a
+		jr nz, -
+		dec c
+		jr nz, -
++:	
+		call _LABEL_35A6_RANDOM
+		pop ix
+		pop hl
+		pop de
+		pop bc
+		ret
+	
+_LABEL_6C61_:	
+		push bc
+		push de
+		ld h, $00
+		add hl, hl
+		add hl, hl
+		ld c, l
+		ld b, h
+		add hl, hl
+		ld e, l
+		ld d, h
+		add hl, hl
+		add hl, hl
+		add hl, de
+		add hl, bc
+		pop de
+		ld c, $00
+		ld a, d
+		or e
+		jr z, +
+		ld c, e
+		ld b, h
+		dec bc
+		ld a, $FF
+		and a
+-:	
+		inc a
+		sbc hl, de
+		jr nc, -
+		ld c, a
++:	
+		ld de, _RAM_D100_
+		xor a
+		ld (de), a
+		inc de
+		ld b, $0B
+-:	
+		ld a, c
+		cp $04
+		jr c, +
+		ld a, $04
++:	
+		inc a
+		ld (de), a
+		inc de
+		ld a, c
+		sub $04
+		jr nc, +
+		xor a
++:	
+		ld c, a
+		djnz -
+		ld a, $06
+		ld (de), a
+		inc de
+		ld a, $FF
+		ld (de), a
+		pop hl
+		ld de, _RAM_D100_
+		call _LABEL_35A6_RANDOM
+		ret
+	
+_DATA_6CAD_PALETTES:	; Data from 6CAD to 6CAE (2 bytes)
+	.db $C8 $38
+	
+; Jump Table from 6CAF to 6CBC (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
+_DATA_6CAF_:	
+	.dw _LABEL_5D43_ _LABEL_3908_ _LABEL_605C_ _LABEL_3948_ _LABEL_60B0_ _LABEL_3988_ _LABEL_6114_
+	
+	; Data from 6CBD to 6CD4 (24 bytes)
+	.db $C8 $39 $C5 $62 $08 $3A $22 $61 $48 $3A $06 $61 $88 $3A $CB $61
+	.db $C8 $3A $6C $6A $00 $00 $C8 $38
+	
+; Jump Table from 6CD5 to 6CE2 (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
+_DATA_6CD5_:	
+	.dw _LABEL_5FE0_ _LABEL_3908_ _LABEL_5FE0_ _LABEL_3948_ _LABEL_5FE0_ _LABEL_3988_ _LABEL_5FE0_
+	
+	; Data from 6CE3 to 6CF4 (18 bytes)
+	.db $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A $E0 $5F $88 $3A $E0 $5F
+	.db $C8 $3A
+	
+; Jump Table from 6CF5 to 6CF6 (1 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
+_DATA_6CF5_:	
+	.dw _LABEL_6053_WAIT4BUTTN
+	
+	; Data from 6CF7 to 6D38 (66 bytes)
+	.db $00 $00 $C8 $38 $E0 $5F $08 $39 $E0 $5F $48 $39 $E0 $5F $88 $39
+	.db $E0 $5F $C8 $39 $53 $60 $00 $00 $C8 $38 $E0 $5F $08 $39 $E0 $5F
+	.db $48 $39 $E0 $5F $88 $39 $E0 $5F $C8 $39 $E0 $5F $08 $3A $E0 $5F
+	.db $48 $3A $E0 $5F $88 $3A $E0 $5F $C8 $3A $E0 $5F $08 $3B $53 $60
+	.db $00 $00
+	
+; Data from 6D39 to 6DC8 (144 bytes)	
+_DATA_6D39_:	
+	.db $20 $47 $6F $6C $64 $6D $6F $6F $6E $20 $20 $20 $20 $20 $FF $00
+	.db $20 $20 $53 $74 $75 $72 $6D $20 $20 $20 $20 $20 $20 $20 $FF $00
+	.db $20 $43 $61 $72 $61 $6D $6F $6E $20 $20 $20 $20 $20 $20 $FF $00
+	.db $20 $52 $61 $69 $73 $74 $6C $69 $6E $20 $20 $20 $20 $20 $FF $00
+	.db $20 $20 $54 $61 $6E $69 $73 $20 $20 $20 $20 $20 $20 $20 $FF $00
+	.db $54 $61 $73 $73 $6C $65 $68 $6F $66 $66 $20 $20 $20 $20 $FF $00
+	.db $52 $69 $76 $65 $72 $77 $69 $6E $64 $20 $20 $20 $20 $20 $FF $00
+	.db $20 $20 $46 $6C $69 $6E $74 $20 $20 $20 $20 $20 $20 $20 $FF $00
+	.db $44 $65 $61 $64 $20 $63 $68 $61 $72 $61 $63 $74 $65 $72 $FF $00
+	
 
 _LABEL_6DC9_NME_KILLED_INCKILLCOUNT:	;The below will run, when the player is killing an enemy.
 	sub $09	;So, a seems to be the input for this. Subtract 9 from it. I guess this is the monster type.
@@ -10383,6 +11457,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 ; Data from A73A to A7C1 (136 bytes)
 _DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
 .db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
+_DATA_A74A_:
 .dsb 12, $20
 .db $4D $49 $4E $20 $20 $20 $20 $20 $20 $20 $4D $41 $58 $0D $53 $74
 .db $72 $65 $6E $67 $74 $68 $0D $49 $6E $74 $65 $6C $6C $69 $67 $65
