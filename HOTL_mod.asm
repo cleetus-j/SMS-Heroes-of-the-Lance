@@ -276,9 +276,9 @@ _RAM_DE2A_ dw
 .ende
 
 .enum $DE2E export
-_RAM_DE2E_ db
+_RAM_DE2E_BANKSWITCH db
 _RAM_DE2F_ dw
-_RAM_DE31_ db
+_RAM_DE31_BANKSWITCH2 db	;These two are used for bankswitching. I'll check later what it does exactly.
 _RAM_DE32_ dw
 _RAM_DE34_SCRN_SCROLL dw
 _RAM_DE36_ dw
@@ -1240,7 +1240,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	add hl, de
 	ld a, (hl)
 	and a
-	jp nz, _LABEL_924_
+	jp nz, _LABEL_924_UPDATE_GAME_SCRN
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jr nz, +
@@ -1274,7 +1274,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 +:
 	and $03
-	jp nz, _LABEL_924_
+	jp nz, _LABEL_924_UPDATE_GAME_SCRN
 	ld a, $08
 	call _LABEL_652_LOAD_NEW_SCRN
 	add a, a
@@ -1291,7 +1291,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 -:
 	ld a, (hl)
 	inc a
-	jp z, _LABEL_924_
+	jp z, _LABEL_924_UPDATE_GAME_SCRN
 	push hl
 	pop iy
 	push hl
@@ -1406,7 +1406,8 @@ _LABEL_906_GOOD_END: ;Ending screen.
    ld ($DE56), a ; Store value of A into memory address specified by DE+$DE56 3
    jp -- ;$08dc; Jump to address $08DC 3
 ;.dsb 27,$00
-_LABEL_924_:
+_LABEL_924_UPDATE_GAME_SCRN:	
+	;jp _LABEL_757_GAME_MAIN
 	ld a, (_RAM_DEF4_)
 	cp $01
 	jr nz, +	;IF THIS IS NOT ZERO, JUMP.
@@ -1887,10 +1888,10 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and wh
 	ld h, (hl)
 	ld l, a
 	ld a, (hl)
-	ld (_RAM_DE31_), a
+	ld (_RAM_DE31_BANKSWITCH2), a
 	inc hl
 	ld a, (hl)
-	ld (_RAM_DE2E_), a
+	ld (_RAM_DE2E_BANKSWITCH), a
 	inc hl
 	ld a, (hl)
 	ld (_RAM_DE29_), a
@@ -1950,7 +1951,7 @@ _LABEL_D29_:
 	add hl, de
 	ex de, hl
 	exx
-	ld a, (_RAM_DE2E_)
+	ld a, (_RAM_DE2E_BANKSWITCH)
 	ld (_RAM_FFFF_), a
 	ld de, (_RAM_DE2F_)
 	ld a, (ix+0)
@@ -1968,7 +1969,7 @@ _LABEL_D4F_:
 	ld c, $04
 	push de
 _LABEL_D52_:
-	ld a, (_RAM_DE2E_)
+	ld a, (_RAM_DE2E_BANKSWITCH)
 	ld (_RAM_FFFF_), a
 	ld a, (de)
 	add a, $D0
@@ -1992,7 +1993,7 @@ _LABEL_D52_:
 	sbc hl, de
 	dec a
 	ld c, a
-	ld a, (_RAM_DE31_)
+	ld a, (_RAM_DE31_BANKSWITCH2)
 	ld (_RAM_FFFF_), a
 	ld de, (_RAM_DE32_)
 	add hl, de
@@ -2072,7 +2073,7 @@ _LABEL_D89_:
 	ei
 	pop bc
 	pop hl
-	ld a, (_RAM_DE31_)
+	ld a, (_RAM_DE31_BANKSWITCH2)
 	ld (_RAM_FFFF_), a
 _LABEL_DF6_:
 	ld e, (hl)
@@ -2129,7 +2130,7 @@ _LABEL_E17_:
 
 ; Data from E3A to E40 (7 bytes)
 ;.db $E1 $C1 $E1 $D1 $C1 $D1 $C1
-_LABEL_E3A_:	
+_LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy code. This is somehow connected with the chests in the game.
 		pop hl
 		pop bc
 		pop hl
@@ -2137,12 +2138,13 @@ _LABEL_E3A_:
 		pop bc
 		pop de
 		pop bc
-+:
++:			;But the code jump here often, after a room change.
 	ld a, $08
-	ld (_RAM_FFFF_), a
-	ld hl, (_DATA_20078_)
-	ld a, (_DATA_2007C_)
-	ld (_RAM_FFFF_), a
+	ld (_RAM_FFFF_), a	;Get bank 8.
+	ld hl, (_DATA_20078_)	;Get the very first data from this address.
+	ld a, (_DATA_2007C_)	;This points to an external datafile.
+	ld (_RAM_FFFF_), a	;Okay, then switch to the bank the data points us to, in this case the very first value is $0A.
+	;What I don't get, is that the above will provide the same result every time, unless you change the ROM data there, so why not just hardcode them?
 	ld de, $0080
 	add hl, de
 	ld a, (hl)
@@ -2158,22 +2160,25 @@ _LABEL_E3A_:
 	ld a, c
 	xor l
 	add a, $0B
-	ld (_RAM_FFFF_), a
-	ld ix, _DATA_1331_
-	ld b, $08
+	ld (_RAM_FFFF_), a		;This is $16. Bank 22.
+	ld ix, _DATA_1331_		;Changing this data will mess up some tiles of the boxes you encounter.
+	ld b, $08			;How many tiles to draw for the boxes. What is strange that we use eigth tiles, but a box is okay in four. These can be even made invisible, or at least drawn with tile 0. The box tiles are loaded at the end of the tile parts.
 -:
-	push bc
+	push bc		;Save this to stack.
 	ld e, (ix+0)
-	ld d, (ix+1)
-	ld bc, $0020
+	ld d, (ix+1)	;1
+	ld bc, $0020 ;How many bytes to load for a tile. Since one is 32 bytes, this is why it is used.
 	di
-	call _LABEL_48C_LOAD_VDP_DATA
+	call _LABEL_48C_LOAD_VDP_DATA	;And load the tiles.
+	;nop
+	;nop
+	;nop
 	ei
 	ex de, hl
 	pop bc
 	inc ix
 	inc ix
-	djnz -
+	djnz -		;We will loop 32 times, and load those tiles.
 	ld hl, $F0F4
 	ld (_RAM_C0FE_), hl
 	ld hl, $0909
@@ -2189,7 +2194,7 @@ _LABEL_E3A_:
 	ld hl, $F3F7
 	ld (_RAM_C6FE_), hl
 	ld hl, $0909
-	ld (_RAM_C7FE_), hl
+	ld (_RAM_C7FE_), hl	;These writes are only done once so far, but i'm not sure we'll not see these again.
 	ld ix, _RAM_D600_
 	ld c, $96
 	ld a, (_RAM_DE52_ROOM_NR)
@@ -2247,8 +2252,8 @@ _LABEL_E3A_:
 	ld hl, _RAM_C800_
 	ld (_RAM_DE2F_), hl
 	ld a, $02
-	ld (_RAM_DE2E_), a
-	ld a, (_RAM_DE2E_)
+	ld (_RAM_DE2E_BANKSWITCH), a
+	ld a, (_RAM_DE2E_BANKSWITCH)
 	ld (_RAM_FFFF_), a
 	ld hl, $3800
 	call _LABEL_4BB_VDP_RAM_WRITESETUP
@@ -2472,7 +2477,7 @@ _LABEL_106D_:
 	ret
 
 _LABEL_10B1_:
-	ld a, (_RAM_DE2E_)
+	ld a, (_RAM_DE2E_BANKSWITCH)
 	ld (_RAM_FFFF_), a
 	ld a, (_RAM_DE4E_SCROLL_DIR)
 	cp $02
@@ -2667,7 +2672,7 @@ _LABEL_116F_:
 
 
 _LABEL_11C5_:	
-		ld a, (_RAM_DE2E_)
+		ld a, (_RAM_DE2E_BANKSWITCH)
 		ld (_RAM_FFFF_), a
 		ld a, (_RAM_DE4F_)
 		cp $02
@@ -2892,6 +2897,8 @@ _DATA_1325_:
 
 ; Data from 1331 to 1342 (18 bytes)
 _DATA_1331_:
+;.db $40 $3E $40 $3E $20 $3E $60 $3E $80 $3E $C0 $3E $A0 $3E $E0 $3E
+;.db $00 $00	;THE -2 IN THE POINTERS POINT TO THIS.
 .db $00 $3E $40 $3E $20 $3E $60 $3E $80 $3E $C0 $3E $A0 $3E $E0 $3E
 .db $00 $00	;THE -2 IN THE POINTERS POINT TO THIS.
 
@@ -9388,6 +9395,7 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 .db $38 $01 $70 $D5 $CD $3B $6F $D1 $C3 $8E $65 $EB $CD $73 $65 $EB
 .db $C9
 
+
 _LABEL_6573_:
 	add a, a ;2X
 	add a, a	;4X
@@ -12536,7 +12544,7 @@ _DATA_20000_:	;MESSES UP SPRITES REALLY BAD, SO THIS MIGHT BE SOME SPRITE MAP, O
 ; Data from 20078 to 2007B (4 bytes)
 _DATA_20078_:	;IF THIS IS COMMENTED OUT, THEN THE COLLISION DETECTION IS GETTING MESSY.
 .db $EC $80 $EE $81
-
+;.db $EE $81 $EE $81
 ; Data from 2007C to 23FFF (16260 bytes)
 _DATA_2007C_:	;THIS MIGHT BE SOME SPRITE COORDINATES, AND SPRITE MAPS, AS THE PLAYER DOES NOT SHOW, AND ENEMIES ARE SHOWING AS GARBLED SPRITES.
 .incbin "HOTL_mod_DATA_2007C_.inc"
@@ -13837,32 +13845,35 @@ _LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
 ; Data from 628C4 to 63FFF (5948 bytes)
 .incbin "HOTL_mod_DATA_628C4_.inc"	;NO IDEA WHAT THIS IS. THE FIRST LEVEL DOES NOT USE IT, AND ITS NOT MUSIC EITHER, DESPITE BEING IN THAT BANK.
 
-.BANK 25	;COMPRESSED GRAPHICS BANK.
+;So, the below banks are used for the compressed intro tilemaps, tiles and all that jazz. The very last bank is halfway used so far, because the letter tiles are stored in it. The rest, I have no idea yet what is used for. If you want to get rid of the intro, and the legal screens, this is where you want to start. The initial game is likely not using any of this at all. Almost a 100kb can be freed this way. Also, the second to last bank is almost empty, so code, and other things can go there, the software does not check. Additionally, I'll mark the offsets where the individual screens are loaded, but it's likely that i'll just rip these off, and use the free space for something else.
+
+.BANK 25	;COMPRESSED GRAPHICS BANK. This seems to be used with all compressed things in the intro. Without this, no intro graphics are going to load.
 .ORG $0000
 
 ; Data from 64000 to 67FFF (16384 bytes)
 _DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. IF COMMENTED OUT, OBVIOUSLY THE COMPRESSED STUFF AT THE BEGINNING WON'T SHOW.
 .incbin "HOTL_mod_DATA_64000_.inc"
 
-.BANK 26	;THIS IS SOME TILEMAP BANK, CERTAIN COMPRESSED SCREENS TEXTS ARE NOT SHOWING PROPERLY WITHOUT IT.
+.BANK 26	;The US Gold Logo's compressed tilemap and stuff is here. Also the Title Screen with the Dragon Logo is also stored here, and Goldmoon's, Sturm's  tilemap and tiles as well.
 .ORG $0000
 
 ; Data from 68000 to 6BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_68000_.inc"
 
-.BANK 27	;THIS IS ALSO SOME TILEMAP BANK, THE COMPRESSED STUFF IS ALSO IN THIS ONE.
+.BANK 27	;Compressed intro tilemaps and tile data.
 .ORG $0000
-
+;Half of Caramon's graphics, Raistlin as a whole, Tanis's tilemap is here.
 ; Data from 6C000 to 6FFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_6C000_.inc"
 
-.BANK 28	;SOME COMPRESSED DATA AGAIN, AND FINALLY LEVEL DATA.
+.BANK 28	;I'm not sure this has any level data yet, but the below is definetly true.
 .ORG $0000
-
+;Tanis's, Tasslehoff's, Riverwind's and Flint's  intro tilemap and things are in here. Later on, we have to map the entry addresses where the tiles and stuff are stored.
 ; Data from 70000 to 73FFF (16384 bytes)
 .incbin "HOTL_mod_DATA_70000_.inc"
 
-.BANK 29	;TASSLEHOFF AND FLINT HAS SOME GRAPHICS IN THIS.
+.BANK 29	;TASSLEHOFF AND FLINT HAS SOME GRAPHICS IN THIS, and some intro screens as well. Some part of the intro graphics are also reading from here.
+;The intro legal screen's tilemap is here, that's for sure, then that continue to the next bank. Why not just move the whole piece of data there altogether? The NTSC legal screen is also stored here.
 .ORG $0000
 
 ; Data from 74000 to 77FFF (16384 bytes)
@@ -13872,8 +13883,9 @@ _DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. 
 .ORG $0000
 
 ; Data from 78000 to 7BFFF (16384 bytes)
-.incbin "HOTL_mod_DATA_78000_.inc"	;Some data, but the bank is almost empty.
-
+.incbin "HOTL_mod_DATA_78000_.inc"	;This bank is called, when the legal screen's things have to be decompressed, but the bottom part of the screen. Strange.
+;The "Based on the module DL1" part and the bottom of the screen. Why the game does it like this is beyond me.
+.empyfill
 .BANK 31
 .ORG $0000
 
