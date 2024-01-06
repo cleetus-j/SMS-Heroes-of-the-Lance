@@ -7867,7 +7867,7 @@ _LABEL_5937_DRAGON_BREATH_SPELL:	;This is the 'Deflect Dragon Breath' spell.
 		ld a, $3F				;This is the time for the spell duration. 63 seconds.
 		ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a	
 		jp _LABEL_6053_WAIT4BUTTN
-	
+;These are Raistlin's spells.	
 _LABEL_5947_:	
 		ld b, $06
 		ld a, $01
