@@ -219,10 +219,10 @@ _RAM_DCE0_ db
 .ende
 
 .enum $DCF2 export
-_RAM_DCF2_ dsb $20
-_RAM_DD12_MUS_ENA db
-_RAM_DD13_ db
-_RAM_DD14_ db
+_RAM_DCF2_UNUSED dsb $20	;Hm, checking this does not seem to reveal anything. The code does not write here anything other than zeroes, so I think this is unused. More strange that here, 32 bytes are assigned to this, but only 16 bytes are written.
+_RAM_DD12_MUS_ENA db	;Does as what's written on the tin.
+_RAM_DD13_MUSIC_NR db	;Valid from 1-4. 0 is silence, and anything over that too. Goes to FF after you enter the character bio screens, then disables music, but that's it.
+_RAM_DD14_SFX_PLAY db	;These are the sound the player and the enemies will make, but not the environment. The number here always starts as $Ex.
 _RAM_DD15_ db
 _RAM_DD16_ db
 _RAM_DD17_ db
@@ -386,13 +386,13 @@ _RAM_DEE8_ db
 _RAM_DEE9_ db
 _RAM_DEEA_GMOON_STAFF_CHRG dw
 _RAM_DEEC_RAIST_STFFCHRG dw
-_RAM_DEEE_ db
+_RAM_DEEE_PROT_EVIL_TIMER db
 _RAM_DEEF_ db
-_RAM_DEF0_ db
-_RAM_DEF1_ db
+_RAM_DEF0_DEFLECT_DRGN_BREATH db	;This is the timer for the 'Deflect Dragon Breath' spell. $3F is the default value.
+_RAM_DEF1_STR_POTION db	;This is the strength potion's remaining power. It increases damage output or course. It also decreases with each use. The damage calculation is also around this variable.
 _RAM_DEF2_HOLD_PLYR db
 _RAM_DEF3_ENEMY_MOV_ENA db
-_RAM_DEF4_ db
+_RAM_DEF4_FALLING_STONES db
 .ende
 
 .enum $FFFF export
@@ -444,7 +444,7 @@ _LABEL_0_:
 
 ; Data from 2B to 37 (13 bytes)
 .db $0C $1D $0C $3D $04 $3D $95 $10 $E4 $58 $0C $3D $04
-
+.org $0038
 _LABEL_38_:
 	push af
 	in a, (Port_VDPStatus)
@@ -1235,7 +1235,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld (_RAM_DEE6_), a
 	ld a, e
 +:
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	ld de, _RAM_DBB5_GOLDMOON_HP
 	add hl, de
 	ld a, (hl)
@@ -1408,7 +1408,7 @@ _LABEL_906_GOOD_END: ;Ending screen.
 ;.dsb 27,$00
 _LABEL_924_UPDATE_GAME_SCRN:	
 	;jp _LABEL_757_GAME_MAIN
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $01
 	jr nz, +	;IF THIS IS NOT ZERO, JUMP.
 	ld hl, (_RAM_D900_CHARA_COORD)	;THIS IS SOME CHARACTER COORDINATE ON SCREEN, AND WHAT THEY DO, LIKE JUMP OR SOMETHING.
@@ -1421,7 +1421,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld c, $08
 	call _LABEL_57CC_
 +:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02			
 	jr nz, +
 	ld a, (_RAM_DE57_)
@@ -1445,33 +1445,31 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	pop af
 	ld (_RAM_D904_), a
 +:				;THIS IS $02, THEN STONES FALL ON THE CHARACTER'S HEAD, LIKE IN THE ENDING.
-	ld a, (_RAM_DEF0_)
-	sub $01
+;---DRAGON BREATH PROTECTION TIMER.
+	ld a, (_RAM_DEF0_DEFLECT_DRGN_BREATH)	;Get the dragon breath timer.
+	sub $01					;Decrease the value.
 	adc a, $00
-	ld (_RAM_DEF0_), a
+	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a	;This small part controls the dragon breath protection. Once the spell is activated, you are given a certain amount of time, where the dragonfire won't hurt you. Here, the counter for this spell is decreasing.
+;----------------------------------
 	ld a, (_RAM_DEEF_)
 	inc a
 	and $07
-	ld (_RAM_DEEF_), a
-	jr nz, +
-	ld a, (_RAM_DEEE_)
+	ld (_RAM_DEEF_), a	;This goes from 0 to 7
+	jr z, +			;Jump if it's zero.
+	ld a, (_RAM_DEEE_PROT_EVIL_TIMER)
 	sub $01
-	adc a, $00
-	ld (_RAM_DEEE_), a
-+:
-	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
-	inc a
-	ld (_RAM_D909_FIRST_COMPANION), a
-	call _LABEL_2DE2_
+	adc a, $00		;If this is commented out, the falling traps are only damaging you once, and not every other frame almost, so it's a lot more forgiving that way.
+	ld (_RAM_DEEE_PROT_EVIL_TIMER), a	;Decrease this value. Some counter.. Maybe some spell.
++:	;The code is here when the value is zero.
+	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the first companion from the list.
+	inc a					;Increment the value, aka get the next Companion value.
+	ld (_RAM_D909_FIRST_COMPANION), a	;Put this to the first companion value.
+	call _LABEL_2DE2_			;This seems to draw and\or animate the character. If this is commented out, the character is not updated while moving. So it may control animation. If the whole function is just a ret, then no sprites are drawn\updated.
 	ld hl, _DATA_314_
 	ld (_RAM_DEB9_), hl
-;.dsb 15,$00
 	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_A10_
-	;nop
-	;nop
-	;nop
 	ld b, $0D
 	call _LABEL_2EC8_
 	ld hl, _DATA_335_
@@ -1718,11 +1716,11 @@ _LABEL_B47_CHECK_MAP_LEFT_BORDER:
 	jp _LABEL_106D_
 
 ; Data from B67 to B96 (48 bytes)
-_DATA_B67_DEMO_INPUT:
+_DATA_B67_DEMO_INPUT:	;CHANGED
 .db $01 $00 $16 $01 $05 $00 $1A $02 $04 $08 $18 $01 $04 $00 $00 $FE
 .db $E8 $DE $08 $00 $FE $E9 $DE $02 $0C $11 $05 $00 $40 $02 $00 $FE
 .db $BC $DE $01 $00 $FE $BD $DE $00 $0F $00 $1E $12 $0A $00 $00 $FF
-
+.org $0B97
 ; Data from B97 to BB6 (32 bytes)
 _DATA_B97_:
 .db $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01 $BF $01
@@ -1854,7 +1852,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and wh
 	sbc hl, de	;$0400
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;save this value
 	push af			;save this one too on the stack
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $01
 	jr Nz, +
 	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
@@ -1920,7 +1918,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and wh
 	ld a, (_RAM_DE52_ROOM_NR)
 	cp $28
 	jr nz, +
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02
 	jr nz, +
 	ld ix, _DATA_2ACC_
@@ -3999,6 +3997,7 @@ _LABEL_2D7E_:
 	ret
 
 _LABEL_2DE2_:
+	;ret
 	ld hl, (_RAM_DEB3_)
 	ld de, $0020
 	ld bc, $0004
@@ -5723,7 +5722,7 @@ _LABEL_3988_:
 	and a
 	jp nz, _LABEL_3B2E_
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	ld bc, _RAM_DBB1_GMSTAFF_IN4CHARS
 	add hl, bc
 	ld c, l
@@ -5733,7 +5732,7 @@ _LABEL_3988_:
 	jp z, _LABEL_3B2E_
 	bit 7, a
 	jp nz, _LABEL_3B2E_
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	dec a
 	ld a, (hl)
 	jr nz, +
@@ -6354,11 +6353,11 @@ _LABEL_3DFD_:
 	xor a
 	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
 	ld (_RAM_D920_), a
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	and a
 	jr nz, +
 	ld a, $01
-	ld (_RAM_DEF4_), a
+	ld (_RAM_DEF4_FALLING_STONES), a
 	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
 	ld (_RAM_DE3C_), hl
 	ld hl, $0240
@@ -7165,23 +7164,23 @@ _LABEL_5442_:
 	call _LABEL_652_LOAD_NEW_SCRN
 	inc a
 	ld c, a
-	ld a, (_RAM_DEEE_)
+	ld a, (_RAM_DEEE_PROT_EVIL_TIMER)
 	and a
 	jr z, +
 	inc c
 	inc c
-+:
-	ld a, (_RAM_DEF1_)
++:			;Okay, so it seems to control the Strength potion part.
+	ld a, (_RAM_DEF1_STR_POTION)	;Do we have any strength potion points left?
 	and a
-	jr z, +
-	dec a
-	ld (_RAM_DEF1_), a
-	ld a, c
-	add a, $07
-	ld c, a
+	jr z, +				;Nah we don't. Jump out.
+	dec a				;We do have some. Decrement the value.
+	ld (_RAM_DEF1_STR_POTION), a	;Put back the number.
+	ld a, c				;I guess here, c would hold the initial damage value.
+	add a, $07			;Add some extra oomph to it.
+	ld c, a				;Put back the final value to c.
 +:
-	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
-	call _LABEL_6573_
+	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the character we are playing with.
+	call _LABEL_6573_CALC_DMG		;Calculate the new damage value.
 	ld de, _RAM_DBB9_
 	add hl, de
 	ld e, (hl)
@@ -7191,13 +7190,16 @@ _LABEL_5442_:
 	ld a, (hl)
 	add a, c
 	ld c, a
-	call _LABEL_54ED_
-	ld a, $01
+	call _LABEL_54ED_		;If this is commented out, the calculated damage is not applied, and your slashes become useless.
+;	nop
+;	nop
+;	nop
+	ld a, $01	;This is the sound effect number, that we the Player will use when we attack. If you really want, you can get this into a variable, and control the sound effect that way, but this is my two cents.
 	call _LABEL_2FF_PREPNPLAYSFX
 	pop bc
 	jp _LABEL_5442_
 
-_LABEL_54ED_:
+_LABEL_54ED_:	;This does not make sense to me without dissecting the previous long line of code, only some small parts.
 	ld a, (ix+9)
 	cp $15
 	ld a, c
@@ -7225,7 +7227,7 @@ _LABEL_54ED_:
 	ld (ix+4), $01
 +:
 	xor a
-	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a	;This might be that the enemy will stay still while attacking. Yes, if the xor is commented out, some enemies that might be "ambushing" you will not move.
 	ld a, (ix+8)
 	sub c
 	ld (ix+8), $00
@@ -7407,7 +7409,7 @@ _LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. R
 							;RAISTLIN WILL STILL GET HURT FOR SOME REASON.
 	;ret
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)		;READ FROM THE CHARA LIST. I GUESS WHICH ONE IS AT THE FRONT.
-	call _LABEL_6573_				;DO SOME MATH WITH IT.
+	call _LABEL_6573_CALC_DMG				;DO SOME MATH WITH IT.
 	ld de, _RAM_DBB5_GOLDMOON_HP
 	add hl, de
 	ld a, (hl)
@@ -7595,7 +7597,7 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	ld a, (hl)	;Else if we are with her, continue here.
 	cp $05		;So, the Game has a mechanic, that once Goldmoon has low health, Riverwind will take her place, and she'll be saved. This not always works though.
 	ret nc		;If her health is not low enough, just return.
-	ld a, (_RAM_DEF4_) ;If this $02, then stones will fall on the Companions heads constantly. If it's just $01, I can't seem to notice any difference.
+	ld a, (_RAM_DEF4_FALLING_STONES) ;If this $02, then stones will fall on the Companions heads constantly. If it's just $01, I can't seem to notice any difference.
 	and a
 	ret nz		;This will be mapped later, with more clear code.
 	ld a, (_RAM_DCA5_RIVERWIND_HP)	;Get Riverwind's health.
@@ -7635,7 +7637,7 @@ _LABEL_57CC_:
 	ld b, $03
 -:
 	ld a, (ix+1)
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	ld de, _RAM_DBB5_GOLDMOON_HP
 	add hl, de
 	ld a, (hl)
@@ -7689,11 +7691,11 @@ _LABEL_5819_:
 	ld de, $0028
 	add hl, de
 	djnz -
-	ld hl, _RAM_DCF2_
-	ld de, _RAM_DCF2_ + 1
+	ld hl, _RAM_DCF2_UNUSED
+	ld de, _RAM_DCF2_UNUSED + 1
 	ld (hl), $00
 	ld bc, $001F
-	ldir
+	ldir			;This does not do anything, and marked as unused.
 	ret
 
 _LABEL_5851_:
@@ -7843,27 +7845,27 @@ _LABEL_58DA_:
 		inc ix
 		jr _LABEL_58DA_
 	
-_LABEL_5920_:	
+_LABEL_5920_PRAYER_SPELL:	
 		ld a, $03
 		ld b, $32
 		jr +
 	
-_LABEL_5926_:	
-		ld a, $01
-		ld b, $64
-+:	
+_LABEL_5926_PROTECTION_FROM_EVIL:	;Protection from Evil spell.
+		ld a, $01		;Spell cost.
+		ld b, $64		;Duration.
++:							;The rest is the same, we just used b to set the duration instead of a fix value.
 		call _LABEL_59DE_DEPLETE_GMSTAFF
 		jp c, _LABEL_5ADA_BL_STF_NOPWR
 		ld a, b
-		ld (_RAM_DEEE_), a
+		ld (_RAM_DEEE_PROT_EVIL_TIMER), a
 		jp _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_5937_:	
-		ld a, $0A
-		call _LABEL_59DE_DEPLETE_GMSTAFF
-		jp c, _LABEL_5ADA_BL_STF_NOPWR
-		ld a, $3F
-		ld (_RAM_DEF0_), a
+_LABEL_5937_DRAGON_BREATH_SPELL:	;This is the 'Deflect Dragon Breath' spell.
+		ld a, $0A		;Spell cost.
+		call _LABEL_59DE_DEPLETE_GMSTAFF	;Subtract (or try to) spell cost from the overall staff charge.
+		jp c, _LABEL_5ADA_BL_STF_NOPWR		;Jump there and tell the player the staff does not have enough charge to perform the spell.
+		ld a, $3F				;This is the time for the spell duration. 63 seconds.
+		ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a	
 		jp _LABEL_6053_WAIT4BUTTN
 	
 _LABEL_5947_:	
@@ -8566,7 +8568,7 @@ _LABEL_5D6F_:
 		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
 		add hl, bc
 		ld a, (hl)
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		ld bc, _RAM_DBB5_GOLDMOON_HP
 		add hl, bc
 		ld a, (hl)
@@ -8625,7 +8627,7 @@ _LABEL_5DD4_:
 		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
 		add hl, bc
 		ld a, (hl)
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		ld bc, _RAM_DBB5_GOLDMOON_HP
 		add hl, bc
 		ld a, (hl)
@@ -8938,14 +8940,14 @@ _LABEL_5FE0_:
 		jp z, _LABEL_58CE_
 		dec a
 		jp z, _LABEL_59EE_
-		jp _LABEL_5937_
+		jp _LABEL_5937_DRAGON_BREATH_SPELL
 	
 +:	
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		and a
 		jp z, _LABEL_59F5_
 		dec a
-		jp z, _LABEL_5926_
+		jp z, _LABEL_5926_PROTECTION_FROM_EVIL
 		dec a
 		jp z, _LABEL_58CE_
 		dec a
@@ -8953,12 +8955,12 @@ _LABEL_5FE0_:
 		dec a
 		jp z, _LABEL_59A3_
 		dec a
-		jp z, _LABEL_5920_
+		jp z, _LABEL_5920_PRAYER_SPELL
 		dec a
 		jp z, _LABEL_59EE_
 		dec a
 		jp z, _LABEL_5A2B_
-		jp _LABEL_5937_
+		jp _LABEL_5937_DRAGON_BREATH_SPELL
 	
 ++:	
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
@@ -9046,7 +9048,7 @@ _LABEL_605C_:
 		jp _LABEL_6A41_
 	
 +:	
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		push de
 		ld de, _RAM_DBB5_GOLDMOON_HP
 		add hl, de
@@ -9076,7 +9078,7 @@ _LABEL_60B0_:
 		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 -:	
 		ld a, (ix+0)
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		ld bc, _RAM_DBB1_GMSTAFF_IN4CHARS
 		add hl, bc
 		ld a, (hl)
@@ -9396,7 +9398,7 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 .db $C9
 
 
-_LABEL_6573_:
+_LABEL_6573_CALC_DMG:	;This seems like the 
 	add a, a ;2X
 	add a, a	;4X
 	add a, a	;8X
@@ -9778,7 +9780,7 @@ _LABEL_6B42_DRW_SOLID_CLR_SCRN:	;This resets the tilemap, and draws a background
 _LABEL_6B60_:	
 		ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		push de
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		ld de, _RAM_DBA0_PLYR_STATS
 		add hl, de
 		pop de
@@ -9797,7 +9799,7 @@ _LABEL_6B6D_:
 		add hl, bc
 		ld a, (hl)
 		ld c, a
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		ld de, _RAM_DBB5_GOLDMOON_HP
 		add hl, de
 		push hl
@@ -10534,7 +10536,7 @@ _LABEL_717C_:
 	ld b, $07
 --:
 	ld a, (ix+0)
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	ld de, _RAM_DBB5_GOLDMOON_HP
 	add hl, de
 	ld a, (hl)
@@ -10550,7 +10552,7 @@ _LABEL_717C_:
 -:
 	inc iy
 	ld a, (iy+0)
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	add hl, de
 	ld a, (hl)
 	and a
@@ -10577,7 +10579,7 @@ _LABEL_71B9_:
 -:
 	inc iy
 	ld a, (iy+0)
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	add hl, de
 	ld a, (hl)
 	and a
@@ -10603,7 +10605,7 @@ _LABEL_71B9_:
 
 _LABEL_71E8_:	
 		ld a, (_RAM_DEC3_)
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		ld de, _RAM_DBB4_GOLDMOON_MAXHP
 		add hl, de
 		ld b, (hl)
@@ -10616,7 +10618,7 @@ _LABEL_71E8_:
 		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
 -:	
 		ld a, (ix+0)
-		call _LABEL_6573_
+		call _LABEL_6573_CALC_DMG
 		add hl, de
 		ld a, (hl)
 		and a
@@ -10873,7 +10875,7 @@ _LABEL_761C_:
 	ld a, (ix+24)
 	cp $0F
 	jr nz, +
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	dec a
 	jr nz, +
 	push hl
@@ -10886,7 +10888,7 @@ _LABEL_761C_:
 	pop de
 	pop hl
 	jr c, _LABEL_76C6_
-	jp _LABEL_7771_
+	jp _LABEL_7771_DRAGONDEAD_STONES
 
 +:
 	ld a, h
@@ -10930,7 +10932,7 @@ _LABEL_761C_:
 	cp $0D
 	jp z, _LABEL_775A_
 	cp $0F
-	jp z, _LABEL_7771_
+	jp z, _LABEL_7771_DRAGONDEAD_STONES
 	ld (iy+9), $00
 	ld (ix+9), $00
 	pop bc
@@ -11036,18 +11038,18 @@ _LABEL_775A_:
 	pop bc
 	jp _LABEL_7830_
 
-_LABEL_7771_:
+_LABEL_7771_DRAGONDEAD_STONES:	;This runs, when the Endboss, the Dragon is defeated. You'll get stones thrown on your head. Rude.
 	ld (iy+9), $00
 	ld (ix+9), $00
-	ld a, $02
-	ld (_RAM_DEF4_), a
-	ld hl, (_RAM_DE74_PT_FOR_CMBT)
+	ld a, $02		;Setting this to 02 will init the stone throwing.
+	ld (_RAM_DEF4_FALLING_STONES), a
+	ld hl, (_RAM_DE74_PT_FOR_CMBT)	;Get the points for combat.
 	ld de, $2710
 	add hl, de
-	ld (_RAM_DE74_PT_FOR_CMBT), hl
+	ld (_RAM_DE74_PT_FOR_CMBT), hl	;Add some value to it, presumably this is the Dragon's points amount.
 	ld a, (_RAM_DE76_CR_DMGLINK)
 	adc a, $00
-	ld (_RAM_DE76_CR_DMGLINK), a
+	ld (_RAM_DE76_CR_DMGLINK), a	;Turn off the damage link between Caramon and Raistlin. Since we will now run from the falling stones, it would be bad to lose Raistlin because of this link between the two brothers.
 	ld hl, (_RAM_DE3C_)
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl
 	ld a, $08
@@ -11169,7 +11171,7 @@ _LABEL_7851_:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jp nz, _LABEL_76D1_
-	ld a, (_RAM_DEF4_)
+	ld a, (_RAM_DEF4_FALLING_STONES)
 	dec a
 	jr nz, +
 	ld bc, $FFB4
@@ -11292,7 +11294,7 @@ _LABEL_790E_:
 
 _LABEL_793A_:
 	ld (ix+9), $00
-	ld a, (_RAM_DEF0_)
+	ld a, (_RAM_DEF0_DEFLECT_DRGN_BREATH)
 	and a
 	jp nz, _LABEL_76D1_
 	ld bc, $0408
@@ -11694,7 +11696,7 @@ _DATA_7D6C_PLYRSTATS:
 
 _LABEL_7E74_:
 	
-	call _LABEL_6573_
+	call _LABEL_6573_CALC_DMG
 	ld de, $DBB5
 	add hl, de
 	ld (hl), $00
@@ -11761,13 +11763,13 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (_RAM_DE56_), a	;THIS NEITHER.
 	ld (_RAM_DE55_WATERFALL), a
 	ld (_RAM_DEE5_), a		;NO EFFECT AS NOW.
-	ld (_RAM_DEEE_), a
-	ld (_RAM_DEF1_), a		;BOTH DOES NOTHING IMMEDIATE.
+	ld (_RAM_DEEE_PROT_EVIL_TIMER), a
+	ld (_RAM_DEF1_STR_POTION), a		;BOTH DOES NOTHING IMMEDIATE.
 	ld (_RAM_DE54_HOLD_PLYR), a	;IF THIS IS NOT ZERO, THE PLAYER CHARACTER WON'T BE ABLE TO MOVE.
-	ld (_RAM_DEF4_), a		;DOES SOME DAMAGE RELATED THING.
+	ld (_RAM_DEF4_FALLING_STONES), a		;DOES SOME DAMAGE RELATED THING.
 	ld (_RAM_DEF3_ENEMY_MOV_ENA), a	;NON-ZERO VALUE WILL PREVENT ENEMIES FROM MOVING.
 	ld (_RAM_DEF2_HOLD_PLYR), a	;THIS ONE ALSO STOPS THE PLAYER IN PLACE.
-	ld (_RAM_DEF0_), a
+	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a
 	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT.
 	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
 	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
@@ -11783,10 +11785,10 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld bc, $0015
 	ld (hl), $00
 	ldir		;SO, THIS INITS THE MONSTER KILLCOUNT ARRAY, THAT IS SHOWN AT THE SCORE\GAME OVER SCREEN IN THE MENU.		
-	ld hl, _RAM_DCF2_
-	ld de, _RAM_DCF2_ + 1
+	ld hl, _RAM_DCF2_UNUSED
+	ld de, _RAM_DCF2_UNUSED + 1
 	ld bc, $001F
-	ld (hl), $00	;THIS RAM PART IS WRITTEN WITH NULLS ONLY SO FAR.
+	ld (hl), $00	;THIS RAM PART IS WRITTEN WITH NULLS ONLY SO FAR. Marked as unused.
 	ldir
 	ld hl, $0064
 	ld (_RAM_DEEC_RAIST_STFFCHRG), hl	;GIVE 100 CHARGES TO RAISTLIN'S STAFF.
@@ -12770,7 +12772,7 @@ _DATA_604A7_:
 _DATA_6062C_:
 .db $3E $87
 
-; Pointer Table from 6062E to 6064B (15 entries, indexed by _RAM_DD13_)
+; Pointer Table from 6062E to 6064B (15 entries, indexed by _RAM_DD13_MUSIC_NR)
 .dw _DATA_60BE2_ _DATA_61276_ _DATA_60666_ _DATA_6153E_ _DATA_61910_ _DATA_60666_ _DATA_60666_ _DATA_61CC2_
 .dw _DATA_61D0D_ _DATA_61D7A_ _DATA_60666_ _DATA_61E11_ _DATA_6203A_ _DATA_6224F_ _DATA_60666_
 
@@ -12785,7 +12787,7 @@ _DATA_6064E_:
 ; Data from 60664 to 60665 (2 bytes)
 .db $00 $00
 
-; 3rd entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 3rd entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 60666 to 6066C (7 bytes)
 _DATA_60666_:
 .db $86 $9E $FE $00 $FE $9D $FF
@@ -12835,7 +12837,7 @@ _DATA_60732_SOUNDFX_TABLE:
 ; Data from 6073C to 60BE1 (1190 bytes)
 .incbin "HOTL_mod_DATA_6073C_.inc"
 
-; 1st entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 1st entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 60BE2 to 61275 (1684 bytes)
 _DATA_60BE2_:
 .incbin "HOTL_mod_DATA_60BE2_.inc"
@@ -12890,7 +12892,7 @@ _DATA_61276_:	;THE TITLE SCREEN, AND THE GAME OVER MUSIC USES THIS DATA.
 .db $23 $00 $01 $33 $23 $00 $01 $30 $17 $00 $01 $2B $5F $00 $01 $2E
 .db $2F $00 $01 $32 $29 $00 $00 $FF
 
-; 4th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 4th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 6153E to 6190F (978 bytes)
 _DATA_6153E_:
 ;.DSB 978,$FF
@@ -12957,7 +12959,7 @@ _DATA_6153E_:
 .db $04 $00 $0B $00 $01 $3B $16 $3E $03 $00 $13 $00 $01 $3B $0E $00
 .db $00 $FF
 
-; 5th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 5th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 61910 to 61CC1 (946 bytes)
 _DATA_61910_:
 .db $82 $24 $07 $00 $08 $24 $07 $00 $08 $24 $07 $00 $08 $24 $07 $00
@@ -13021,7 +13023,7 @@ _DATA_61910_:
 .db $03 $00 $21 $00 $08 $27 $0F $00 $01 $1F $28 $00 $05 $1F $06 $00
 .db $08 $FF
 
-; 8th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 8th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 61CC2 to 61D0C (75 bytes)
 _DATA_61CC2_:
 .db $95 $01 $F4 $C7 $9C $87 $39 $87 $38 $9A $35 $9B $34 $74 $32 $09
@@ -13030,7 +13032,7 @@ _DATA_61CC2_:
 .db $40 $3A $3E $13 $40 $14 $41 $13 $40 $13 $3E $14 $39 $3A $39 $13
 .db $37 $3A $3C $13 $39 $3A $37 $27 $39 $9B $FF
 
-; 9th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 9th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 61D0D to 61D79 (109 bytes)
 _DATA_61D0D_:
 .db $95 $01 $F4 $12 $9D $88 $35 $13 $3C $13 $3B $61 $3F $AE $37 $13
@@ -13041,7 +13043,7 @@ _DATA_61D0D_:
 .db $35 $3A $37 $3A $35 $13 $37 $14 $39 $13 $37 $13 $35 $14 $32 $3A
 .db $32 $13 $30 $3A $35 $13 $32 $3A $30 $27 $34 $9B $FF
 
-; 10th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 10th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 61D7A to 61E10 (151 bytes)
 _DATA_61D7A_:
 .db $95 $01 $F4 $7F $9D $89 $26 $26 $26 $13 $26 $14 $26 $26 $26 $14
@@ -13055,7 +13057,7 @@ _DATA_61D7A_:
 .db $1F $13 $1F $13 $1D $27 $1D $13 $1D $14 $1C $27 $1C $14 $1C $13
 .db $21 $27 $21 $13 $21 $78 $94
 
-; 12th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 12th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 61E11 to 62039 (553 bytes)
 _DATA_61E11_:
 .db $95 $01 $F7 $16 $9E $89 $1A $09 $26 $0A $1A $0A $26 $0A $1A $0A
@@ -13094,7 +13096,7 @@ _DATA_61E11_:
 .db $21 $14 $21 $0A $21 $09 $21 $14 $21 $0A $21 $0A $21 $14 $21 $0A
 .db $21 $0A $21 $14 $21 $0A $21 $0B $94
 
-; 13th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 13th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 6203A to 6224E (533 bytes)
 _DATA_6203A_:
 .db $95 $01 $F7 $3F $A0 $8A $39 $09 $39 $05 $39 $05 $39 $14 $39 $0A
@@ -13132,7 +13134,7 @@ _DATA_6203A_:
 .db $34 $0A $34 $0A $37 $0A $37 $0A $34 $0A $34 $0A $31 $0A $31 $0A
 .db $34 $0A $34 $0B $FF
 
-; 14th entry of Pointer Table from 6062E (indexed by _RAM_DD13_)
+; 14th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 6224F to 623E7 (409 bytes)
 _DATA_6224F_:
 .db $95 $01 $F7 $54 $A2 $8A $32 $09 $32 $05 $32 $05 $32 $14 $32 $0A
@@ -13202,8 +13204,8 @@ _LABEL_6242B_SET_MUS:
 	ret
 
 +:
-	ld (_RAM_DD13_), a
-	ld a, (_RAM_DD13_)
+	ld (_RAM_DD13_MUSIC_NR), a
+	ld a, (_RAM_DD13_MUSIC_NR)
 	ld iy, $DD32
 	cp $FF
 	jp z, _LABEL_62549_
@@ -13211,7 +13213,7 @@ _LABEL_6242B_SET_MUS:
 	call _LABEL_624D0_
 	ld a, $01
 	ld (_RAM_DD12_MUS_ENA), a
-	ld a, (_RAM_DD13_)
+	ld a, (_RAM_DD13_MUSIC_NR)
 	dec a
 	add a, a
 	add a, a
@@ -13256,8 +13258,8 @@ _LABEL_6248C_PLAYSFX:	;We come here from the pretty convincing sound effect init
 	ret
 
 +:
-	ld iy, $DD22
-	ld ix, $DDB2
+	ld iy, _RAM_DD22_;$DD22
+	ld ix, _RAM_DDB2_ ;$DDB2	;Fixed some RAM stuff here. If the vals are changed, this would look bad. Also: CHANGED!
 	ld (_RAM_DD15_), a
 	dec a
 	bit 7, a
@@ -13579,13 +13581,16 @@ _LABEL_62660_SOUND_MAIN:		;MAIN PART OF THE SOUND ENGINE.
 	and $07
 	or $E0
 	ld e, a
-	ld a, (_RAM_DD14_)
+	ld a, (_RAM_DD14_SFX_PLAY)
 	cp e
-	jr z, +
+	;nop
+	;nop
+	jr z, +		;Oh! This part is actually controls the sound effects, and whenever this equals, the sound effect is not playing. Otherwise we have to load and play a sound effect.
 	ld a, e
-	ld (_RAM_DD14_), a
+	ld (_RAM_DD14_SFX_PLAY), a
 	out (Port_PSG), a
 +:
+	;ret
 	ld e, $0B
 	call _LABEL_6272F_3RDCHANNEL
 	and $0F
@@ -13776,7 +13781,7 @@ _LABEL_62837_LOAD_INSTR:	;This seems like a "note prepare" for the next song.
 _LABEL_6285B_LOOP_MUSIC:		;This restarts the music, once it loops.
 	pop bc
 	pop bc
-	ld a, (_RAM_DD13_)
+	ld a, (_RAM_DD13_MUSIC_NR)
 	call _LABEL_6242B_SET_MUS
 	jp _LABEL_62660_SOUND_MAIN
 
