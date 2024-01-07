@@ -5819,7 +5819,7 @@ _LABEL_3988_:
 +:
 	xor a
 ++:
-	call _LABEL_597A_
+	call _LABEL_597A_CHECK_MAGIUS_STF_POWER
 	jp _LABEL_3786_
 
 _LABEL_3A4A_:
@@ -7780,37 +7780,37 @@ _LABEL_5887_:
 ;.db $E6 $DE $7A $32 $E7 $DE $C3 $53 $60
 
 
-_LABEL_58A1_:	
+_LABEL_58A1_FINALSTRIKE:	;Everybody dies.	
 		ld a, ( _RAM_DEBC_INRAM_HUD_PORTRAITS)
-		cp $03
-		jr z, +
-		ld de, _DATA_AADB_
-		jp _LABEL_658E_
+		cp $03					;We check if the character leading the party is Raistlin.
+		jr z, +					;Jump if that's the case. This might be the 'Final Strike' spell.
+		ld de, _DATA_AADB_RAISTLIN_NOT_PTY_LEADER			;Raistlin is not the party leader. This is the text for reminding the player.
+		jp _LABEL_658E_PLOT_FLSCRN_MSG					;We have the text, then we draw a nice screen for it.
 	
-+:	
++:		;We continue with the "everyone dies" scenario.
 		xor a
 		ld (_RAM_DEE6_), a
 		xor a
-		ld (_RAM_DEE7_), a
+		ld (_RAM_DEE7_), a	;Don't know what these do atm.
 		ld a, $01
-		ld ( _RAM_DEF2_HOLD_PLYR), a
-		ld b, $08
-		ld hl, _RAM_DBB4_GOLDMOON_MAXHP
-		ld de, $0027
+		ld ( _RAM_DEF2_HOLD_PLYR), a	;Prevent the player from moving.
+		ld b, $08			;Go through all party members.
+		ld hl, _RAM_DBB4_GOLDMOON_MAXHP	;I guess Goldmoon's max HP is first. This is done to prevent players resurrect the party. Since you can't heal someone who's got zero maximum health.
+		ld de, $0027	;Hm, this should be the "space" between characters. Why, I don't know.
 -:	
 		ld (hl), $00
 		inc hl
 		ld (hl), $00
-		add hl, de
-		djnz -
-		jp _LABEL_6053_WAIT4BUTTN
+		add hl, de	;Add the "space" between addresses.
+		djnz -		;Load zero heatlh into every slot, basically killing everyone.
+		jp _LABEL_6053_WAIT4BUTTN	;Go back to the game menu.
 	
-_LABEL_58CE_:	
-		ld a, $02
-		call _LABEL_59DE_DEPLETE_GMSTAFF
-		jp c, _LABEL_5ADA_BL_STF_NOPWR
+_LABEL_58CE_FINDTRAPS:	
+		ld a, $02			;Mana cost.
+		call _LABEL_59DE_DEPLETE_GMSTAFF	;Subtract mana cost.
+		jp c, _LABEL_5ADA_BL_STF_NOPWR		;If there is not enough, tell the player.
 		ld ix, _RAM_DCE0_
-_LABEL_58DA_:	
+_LABEL_58DA_:			;This is the loop for the spell. My guess that it goes through some level data, then marks the traps with sprites.
 		ld l, (ix+0)
 		ld h, (ix+1)
 		ld a, h
@@ -7867,28 +7867,28 @@ _LABEL_5937_DRAGON_BREATH_SPELL:	;This is the 'Deflect Dragon Breath' spell.
 		ld a, $3F				;This is the time for the spell duration. 63 seconds.
 		ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a	
 		jp _LABEL_6053_WAIT4BUTTN
-;These are Raistlin's spells.	
-_LABEL_5947_:	
+;These are Raistlin's spells.
+_LABEL_5947_CHARMSPELL:
 		ld b, $06
 		ld a, $01
 		jr +
 	
-_LABEL_594D_:	
+_LABEL_594D_BURNINGHANDSSPELL:	
 		ld b, $05
 		ld a, $01
 		jr +
 	
-_LABEL_5953_:	
+_LABEL_5953_WEBSPELL:	
 		ld b, $04
 		ld a, $02
 		jr +
 	
-_LABEL_5959_:	
+_LABEL_5959_SLEEPSPELL:	
 		ld b, $03
 		ld a, $01
 		jr +
 	
-_LABEL_595F_:	
+_LABEL_595F_MAGICMISSILESPELL:	
 		ld b, $02
 		ld a, $01
 +:	
@@ -7897,7 +7897,7 @@ _LABEL_595F_:
 		cp $03
 		ld a, d
 		ld d, $00
-		jr nz, _LABEL_597A_
+		jr nz, _LABEL_597A_CHECK_MAGIUS_STF_POWER
 		ld d, a
 		ld a, b
 		ld (_RAM_DEE6_), a
@@ -7907,11 +7907,11 @@ _LABEL_595F_:
 	
 
 
-_LABEL_597A_:
+_LABEL_597A_CHECK_MAGIUS_STF_POWER:
 	call _LABEL_59CE_DEPLETE_MAGIUS_STF
 	jp c, _LABEL_5AD5_MAGIUS_STF_NOPWR
 	ld a, $01
-_LABEL_5982_:
+_LABEL_5982_PLYR_LAUNCH_PROJECTILE:	;Used whenever the player uses a spell that generates a projectile. The enemy projectiles, or the ones that may be generated during death is not used by this code.
 -:
 	ld c, $0C
 	ld e, $14
@@ -7936,12 +7936,12 @@ _LABEL_5999_GMSTAFF_DECMANA:	;This will be used when the Blue Staff's power is n
 ;.db $60 $CD $DE $59 $DA $DA $5A $3E $01 $18 $B4
 
 
-_LABEL_59A3_:	
+_LABEL_59A3_SPIRITHAMMERSPELL:	
 		ld b, $08
 		ld a, $02
 		jr +
 	
-_LABEL_59A9_:	
+_LABEL_59A9_HOLDPERSONSPELL:	
 		ld b, $07
 		ld a, $02
 +:	
@@ -7962,7 +7962,7 @@ _LABEL_59A9_:
 		call  _LABEL_59DE_DEPLETE_GMSTAFF
 		jp c,  _LABEL_5ADA_BL_STF_NOPWR
 		ld a, $01
-		jr _LABEL_5982_
+		jr _LABEL_5982_PLYR_LAUNCH_PROJECTILE
 
 _LABEL_59CE_DEPLETE_MAGIUS_STF:	;IF THIS RET BELOW IS THERE, THE GAME WILL THINK RAISTLIN'S STAFF HAS NO CHARGE.
 	ld hl, (_RAM_DEEC_RAIST_STFFCHRG)
@@ -8937,7 +8937,7 @@ _LABEL_5FE0_:
 		and a
 		jp z, _LABEL_59F5_
 		dec a
-		jp z, _LABEL_58CE_
+		jp z, _LABEL_58CE_FINDTRAPS
 		dec a
 		jp z, _LABEL_59EE_
 		jp _LABEL_5937_DRAGON_BREATH_SPELL
@@ -8949,11 +8949,11 @@ _LABEL_5FE0_:
 		dec a
 		jp z, _LABEL_5926_PROTECTION_FROM_EVIL
 		dec a
-		jp z, _LABEL_58CE_
+		jp z, _LABEL_58CE_FINDTRAPS
 		dec a
-		jp z, _LABEL_59A9_
+		jp z, _LABEL_59A9_HOLDPERSONSPELL
 		dec a
-		jp z, _LABEL_59A3_
+		jp z, _LABEL_59A3_SPIRITHAMMERSPELL
 		dec a
 		jp z, _LABEL_5920_PRAYER_SPELL
 		dec a
@@ -8965,20 +8965,20 @@ _LABEL_5FE0_:
 ++:	
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		and a
-		jp z, _LABEL_5947_
+		jp z, _LABEL_5947_CHARMSPELL
 		dec a
-		jp z, _LABEL_5959_
+		jp z, _LABEL_5959_SLEEPSPELL
 		dec a
-		jp z, _LABEL_595F_
+		jp z, _LABEL_595F_MAGICMISSILESPELL
 		dec a
-		jp z, _LABEL_5953_
+		jp z, _LABEL_5953_WEBSPELL
 		dec a
 		jp z, _LABEL_5B5C_
 		dec a
 		jp z, _LABEL_5B62_
 		dec a
-		jp z, _LABEL_58A1_
-		jp _LABEL_594D_
+		jp z, _LABEL_58A1_FINALSTRIKE
+		jp _LABEL_594D_BURNINGHANDSSPELL
 _LABEL_6046_:
 -:
 	call _LABEL_59B_MAIN
@@ -9419,7 +9419,7 @@ _LABEL_6573_CALC_DMG:	;This seems like the
 	; Data from 6581 to 658D (13 bytes)
 	.db $36 $00 $3E $01 $32 $F3 $DE $11 $D4 $A8 $C3 $8E $65
 	
-_LABEL_658E_:	
+_LABEL_658E_PLOT_FLSCRN_MSG:	
 		push de
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		pop de
@@ -11957,7 +11957,7 @@ _DATA_AA5F_:
 	.db $65 $20 $74 $68 $69 $73 $20 $69 $74 $65 $6D $FF
 	
 ; Data from AADB to AB0F (53 bytes)	
-_DATA_AADB_:	
+_DATA_AADB_RAISTLIN_NOT_PTY_LEADER:	
 	.db $0D $0D $0D $52 $61 $69 $73 $74 $6C $69 $6E $20 $6D $75 $73 $74
 	.db $20 $62 $65 $0D $0D $70 $61 $72 $74 $79 $20 $6C $65 $61 $64 $65
 	.db $72 $20 $74 $6F $20 $75 $73 $65 $0D $0D $74 $68 $69 $73 $20 $73
