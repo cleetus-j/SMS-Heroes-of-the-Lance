@@ -19,37 +19,39 @@ BANKS 30
 .ENDRO
 
 .enum $C000 export
-_RAM_C000_RAM_START dsb $20
+_RAM_C000_RAM_START dsb $20			;Holds many things from mapdata to palettes.
 _RAM_C020_ db
 .ende
 
 .enum $C040 export
-_RAM_C040_SELECTED_MENUITEMINRAM_PAL dsb $f	;This is also used to check what menu item was selected in the ingame menu. Strange.
-_RAM_C04E_ DB
-_RAM_C04F_LAST_ENTERED_MENU db
-_RAM_C050_ dsb $10
+_RAM_C040_SELECTED_MENUITEMINRAM_PAL dsb $f	;This is also used to check what menu item was selected in the ingame menu. Also, the character introduction screens are using this memory to store the characters palettes.
+_RAM_C04E_ DB					;Used for menus so far.
+_RAM_C04F_LAST_ENTERED_MENU db			;Stores what was the last menu before we entered a submenu.
+_RAM_C050_ dsb $10				;Check this later.
 .ende
 
 .enum $C0FE export
-_RAM_C0FE_ dw
+_RAM_C0FE_UNUSED dw					;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
 .ende
 
 .enum $C100 export
-_RAM_C100_ db
+_RAM_C100_LEVEL_TILEMAP1 db						;This is one part of the tilemap used by the engine. These are scattered around RAM, i don't know why exactly.
 .ende
 
 .enum $C1FE export
-_RAM_C1FE_ dw
+_RAM_C1FE_UNUSED dw						;Only written once, but that's it.
+_RAM_C200_LEVEL_TILEMAP2 DB						;Second part of the tilemap engine.
 .ende
 
 .enum $C2FE export
 _RAM_C2FE_ dw
+_RAM_C300_LEVEL_TILEMAP3 DB						;Third part of the tilemap engine.
 .ende
 
 
-.enum $C300 export
-_RAM_C300_ db
-.ende
+;.enum $C300 export
+;_RAM_C200_LEVEL_TILEMAP2 db
+;.ende
 
 
 
@@ -70,16 +72,16 @@ _RAM_C5FE_ dw
 _RAM_C6FE_ dw
 .ende
 .enum $C700 export
-_RAM_C700_ db
+_RAM_C700_SELECTED_HERO_TILES db ;This array is used to store the tiles of the selected companion on the HUD. What I don't really understand, that 
 .ende
 
 .enum $C720 export
-_RAM_C720_ db
+_RAM_C720_NEW_HERO_SELECTIONTILES db	;Used to hold the tiles of the hero, while using the select hero menu. this holds the second hero's tiles that the first selected hero will be switched, if that makes any sense.
 .ende
-
+				;There is a 220 bytes hole here, not used for anything. The memory partitioning is horrible here.
 .enum $C7FE export
-_RAM_C7FE_ db
-_RAM_C7FF_ db
+_RAM_C7FE_HEROSELECT_VAR db
+_RAM_C7FF_FIRST_SELECTED_COMPANION db
 _RAM_C800_ dsb $24
 _RAM_C824_ dsb $10
 _RAM_C834_ dsb $4
@@ -157,6 +159,10 @@ _RAM_D920_ db
 _RAM_D9A8_ db
 .ende
 
+.enum $D9B0 export
+_RAM_D9B0_ db ;This is the timer for the 'Find Traps' spell.
+.ende
+
 .enum $DA50 export
 _RAM_DA50_ dsb $c
 _RAM_DA5C_ db
@@ -215,7 +221,7 @@ _RAM_DCCD_FLINT_HP DB
 .ENDE
 
 .enum $DCE0 export
-_RAM_DCE0_ db
+_RAM_DCE0_TRAPARRAY db	;This seems like an array for the traps in a given room. If this is nulled, no traps are spawned. It seems like there are two bytes for every trap on the screen, but i've not checked what makes them behave. There is an X coordinate and a trap type. The game then looks up the player position, and then checks this array to see if the player needs some love, then unleashes the trap.
 .ende
 
 .enum $DCF2 export
@@ -1219,7 +1225,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 ++:
 	ld (_RAM_DE9C_PLYR_BLOCK), a
 +++:
-	call _LABEL_717C_
+	call _LABEL_717C_CYCLE_DEAD2ALIVECHARS
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 	and a
 	jr z, +
@@ -1305,7 +1311,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld (_RAM_D904_), a
 	ld a, $01
 	ld ix, $D900
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	pop hl
 	ld de, $0008
 	add hl, de
@@ -1441,7 +1447,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld e, $07
 	ld h, $00
 	ld ix, $D900
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	pop af
 	ld (_RAM_D904_), a
 +:				;THIS IS $02, THEN STONES FALL ON THE CHARACTER'S HEAD, LIKE IN THE ENDING.
@@ -2178,9 +2184,9 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	inc ix
 	djnz -		;We will loop 32 times, and load those tiles.
 	ld hl, $F0F4
-	ld (_RAM_C0FE_), hl
+	ld (_RAM_C0FE_UNUSED), hl
 	ld hl, $0909
-	ld (_RAM_C1FE_), hl
+	ld (_RAM_C1FE_UNUSED), hl
 	ld hl, $F1F5
 	ld (_RAM_C2FE_), hl
 	ld hl, $0909
@@ -2192,7 +2198,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	ld hl, $F3F7
 	ld (_RAM_C6FE_), hl
 	ld hl, $0909
-	ld (_RAM_C7FE_), hl	;These writes are only done once so far, but i'm not sure we'll not see these again.
+	ld (_RAM_C7FE_HEROSELECT_VAR), hl	;These writes are only done once so far, but i'm not sure we'll not see these again.
 	ld ix, _RAM_D600_
 	ld c, $96
 	ld a, (_RAM_DE52_ROOM_NR)
@@ -5890,21 +5896,22 @@ _LABEL_3AA1_:
 	ld c, $18
 	ld e, $0C
 	ld h, $18
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	jp _LABEL_3786_
 
-_LABEL_3AAF_:
+_LABEL_3AAF_DRAWPROJECTILE:
 	ld iy, _RAM_D9A8_
 	push af
 	push bc
 	push de
-	ld de, $001C
-	ld b, $06
+	ld de, $001C	;28
+	ld b, $04;$06
 -:
-	ld a, (iy+9)
+	;$D9B0 is the timer for the animation on the find traps spell.
+	ld a, (iy+9)	;$D9B1 _RAM_D9B0_ is marked as a timer.
 	cp $14
 	jr nz, +
-	add iy, de
+	add iy, de	;What's up with this in-between bytes?
 	djnz -
 	pop de
 	pop bc
@@ -6389,7 +6396,7 @@ _LABEL_3DFD_:
 	ld l, $40
 	ld h, $00
 	ld b, $0E
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	ret
 
 ; 5th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
@@ -6798,7 +6805,7 @@ _LABEL_5223_:
 	ld hl, (_RAM_D900_CHARA_COORD)
 	call _LABEL_7AE7_
 	ld c, l
-	ld ix, _RAM_DCE0_
+	ld ix, _RAM_DCE0_TRAPARRAY
 _LABEL_522E_:
 	ld l, (ix+0)
 	ld h, (ix+1)
@@ -6886,7 +6893,7 @@ _LABEL_5294_:
 	ld h, $00
 	ld d, $00
 	ld l, $28
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 +:
 	pop ix
 	jp _LABEL_539C_
@@ -6921,7 +6928,7 @@ _LABEL_52D5_:
 	ld h, $20
 	ld e, $10
 	ld d, c
-	jp _LABEL_3AAF_
+	jp _LABEL_3AAF_DRAWPROJECTILE
 
 _LABEL_531C_:
 	cp $46
@@ -6958,7 +6965,7 @@ _LABEL_5321_:
 	ld h, $00
 	ld d, $EC
 	ld l, $00
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	ld a, $03
 	call _LABEL_2FF_PREPNPLAYSFX
 +:
@@ -6987,7 +6994,7 @@ _LABEL_536C_:
 	ld e, $07
 	ld h, $00
 	ld ix, $D900
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	pop af
 	ld (_RAM_D904_), a
 	call _LABEL_799A_
@@ -7251,7 +7258,7 @@ _LABEL_54ED_:	;This does not make sense to me without dissecting the previous lo
 	ld l, $18
 	ld h, $10
 	ld a, $14
-	jp _LABEL_3AAF_
+	jp _LABEL_3AAF_DRAWPROJECTILE
 
 +:
 	ret
@@ -7284,7 +7291,7 @@ _LABEL_5573_:
 	ld l, $20
 	ld h, $14
 	ld b, $0A
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	ld (ix+10), $00
 	ld (ix+11), $00
 	ld (ix+7), $00
@@ -7338,7 +7345,7 @@ _LABEL_5573_:
 	ld l, $20
 	ld h, $10
 	ld a, $01
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	jp _LABEL_5442_
 
 +:
@@ -7809,26 +7816,27 @@ _LABEL_58CE_FINDTRAPS:
 		ld a, $02			;Mana cost.
 		call _LABEL_59DE_DEPLETE_GMSTAFF	;Subtract mana cost.
 		jp c, _LABEL_5ADA_BL_STF_NOPWR		;If there is not enough, tell the player.
-		ld ix, _RAM_DCE0_
-_LABEL_58DA_:			;This is the loop for the spell. My guess that it goes through some level data, then marks the traps with sprites.
-		ld l, (ix+0)
-		ld h, (ix+1)
-		ld a, h
-		or l
-		jp z, _LABEL_6053_WAIT4BUTTN
-		push ix
+		ld ix, _RAM_DCE0_TRAPARRAY
+_LABEL_58DA_SHOWTRAP_LOOP:			;This is the loop for the spell. My guess that it goes through this array, then marks the traps with sprites.
+		ld l, (ix+0)	;L has the first byte.
+		ld h, (ix+1)	;H has the second byte.
+		ld a, h		;We check the second byte.
+		or l		;Make a comparison between the two bytes.
+		jp z, _LABEL_6053_WAIT4BUTTN	;If the numbers are the same (no traps left in the array) then just return. Since what I saw is that no trap marks are the using the same numbers. Usually, when there is no trap on the level, it's just marked with $00 $00 in this array.
+		;We do have traps on this line of execution.
+		push ix	;Save the address of the array on the stack.
 		inc hl
-		inc hl
-		ld a, (hl)
-		ld ix, _RAM_D100_
-		ld l, a
-		ld h, $00
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		add hl, hl
+		inc hl	;Go to the next trap addess.
+		ld a, (hl)	;Read the first byte from array.
+		ld ix, _RAM_D100_	;IX is now this array's address. I suspect this holds the in-ram sprite map.
+		ld l, a			;Put the first byte into L.
+		ld h, $00		;So, the first format is like $00xx
+		add hl, hl		;2x
+		add hl, hl		;4x
+		add hl, hl		;8x
+		add hl, hl		;16x
 		ld (ix+0), l
-		ld (ix+1), h
+		ld (ix+1), h		;Put this number to $D100
 		ld (ix+2), $90
 		ld (ix+3), $00
 		ld (ix+4), $00
@@ -7838,12 +7846,13 @@ _LABEL_58DA_:			;This is the loop for the spell. My guess that it goes through s
 		ld l, $20
 		ld h, $00
 		ld d, $00
-		ld b, $09
-		call _LABEL_3AAF_
-		pop ix
+		ld b, $09		;I guess here, we build some sprites, so the engine can show them later. What is strange, that the trap mark uses quiete a few sprites to show the player there is something to look out for. IMO one or two would be sufficient for warning.
+		call _LABEL_3AAF_DRAWPROJECTILE	;Upon commenting this out, the traps won't show on the screen.
+	;.dsb 3,$ff
+		pop ix		;We get back the position for the array, and increment it two times, so we are looking at the next element.
 		inc ix
 		inc ix
-		jr _LABEL_58DA_
+		jr _LABEL_58DA_SHOWTRAP_LOOP	;Loop back, and check the next item in the array.
 	
 _LABEL_5920_PRAYER_SPELL:	
 		ld a, $03
@@ -7918,7 +7927,7 @@ _LABEL_5982_PLYR_LAUNCH_PROJECTILE:	;Used whenever the player uses a spell that 
 	ld l, $20
 	ld h, $14
 	ld ix, _RAM_D900_CHARA_COORD
-	call _LABEL_3AAF_
+	call _LABEL_3AAF_DRAWPROJECTILE
 	ld a, (_RAM_DEE5_)
 	and a
 	ret z
@@ -8006,27 +8015,28 @@ _LABEL_59DE_DEPLETE_GMSTAFF:			;This really looks like when you use the Blue Cry
 ;.db $C7 $F3 $CD $C6 $5E $FB $C9
 
 
-_LABEL_59EE_:	
-		ld a, $05
-		ld bc, $1606
+_LABEL_59EE_CURE_CRITICAL_WOUNDS:	
+		ld a, $05	;Mana cost.
+		ld bc, $1606	;Okay, so this is the min and max value of the healing. It is very clever indeed.
 		jr +
 	
-_LABEL_59F5_:	
-		ld a, $01
+_LABEL_59F5_CURE_LIGHT_WOUNDS:	
+		ld a, $01	;Same.
 		ld bc, $0801
 +:	
 		push bc
 		call  _LABEL_59DE_DEPLETE_GMSTAFF
 		pop bc
-		jp c,  _LABEL_5ADA_BL_STF_NOPWR
+		jp c,  _LABEL_5ADA_BL_STF_NOPWR	;As with other spells, this checks if the Staff had enough charge for the operation. If not, tell the user.
 		push bc
-		call _LABEL_5AA2_
+	;.dsb 3,$ff
+		call _LABEL_5AA2_SELECT_PLAYER_CLERICAL		;This lets you select who you want to to an action on, like this healing.
 		pop bc
 		ld a, b
-		call _LABEL_652_LOAD_NEW_SCRN
+		call _LABEL_652_LOAD_NEW_SCRN			;Does nothing if commented out.
 		add a, c
 		ld c, a
-		call _LABEL_5A83_
+		call _LABEL_5A83_HEALING			;Heals the selected player.
 		ld e, (hl)
 		inc hl
 		ld d, (hl)
@@ -8043,16 +8053,16 @@ _LABEL_59F5_:
 +:	
 		ld (hl), a
 		di
-		call _LABEL_6F3B__UPD_HUD
+		call _LABEL_6F3B__UPD_HUD			;Updates the HUD with the new health values.
 		ei
 		jp  _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_5A2B_:	
-		ld a, $05
-		call  _LABEL_59DE_DEPLETE_GMSTAFF
-		jp c,  _LABEL_5ADA_BL_STF_NOPWR
-		call _LABEL_5AA2_
-		call _LABEL_5A83_
+_LABEL_5A2B_RESURRECT:	
+		ld a, $05					;Mana cost.
+		call  _LABEL_59DE_DEPLETE_GMSTAFF		;Check for mana.
+		jp c,  _LABEL_5ADA_BL_STF_NOPWR			;Jump if mana is not enough.
+		call _LABEL_5AA2_SELECT_PLAYER_CLERICAL		;Select the player for resurrection.
+		call _LABEL_5A83_HEALING			;Give some health back as well.
 		ld a, (hl)
 		and a
 		jp z,  _LABEL_6053_WAIT4BUTTN
@@ -8060,7 +8070,7 @@ _LABEL_5A2B_:
 		inc hl
 		ld a, (hl)
 		and a
-		jp nz,  _LABEL_6053_WAIT4BUTTN
+		jp nz,  _LABEL_6053_WAIT4BUTTN			;Wait for the player to press a button.
 		ld a, d
 		srl a
 		srl a
@@ -8072,17 +8082,17 @@ _LABEL_5A2B_:
 		add hl, de
 		ld bc, $0007
 		ldir
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		ld l, a
 		ld h, $00
-		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS
+		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS		
 		add hl, de
 		ld a, (hl)
 		add a, a
 		add a, a
 		ld e, a
 		ld d, $00
-		ld hl, $DCF2
+		ld hl, _RAM_DCF2_UNUSED ;$DCF2		;Hm, there is a RAM value for this, but the disassy made it hardcoded... also CHANGED
 		add hl, de
 		ld (hl), $00
 		inc hl
@@ -8091,16 +8101,16 @@ _LABEL_5A2B_:
 		ld (hl), $00
 		inc hl
 		ld (hl), $00
-		call _LABEL_717C_
+		call _LABEL_717C_CYCLE_DEAD2ALIVECHARS	;Cycle the now alive char to the end of the HUD player array, aka show the resurrected last on the screen's Companion list.
 		di
-		call _LABEL_6F3B__UPD_HUD
+		call _LABEL_6F3B__UPD_HUD		;Show the updated HUD.
 		ei
-		jp  _LABEL_6053_WAIT4BUTTN
+		jp  _LABEL_6053_WAIT4BUTTN		;Wait for a button press, and we are good.
 	
-_LABEL_5A83_:	
-		ld a, (_RAM_C7FF_)
+_LABEL_5A83_HEALING:	
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)	;Read from this address. It's usually 09 at the start of the game.
 		ld l, a
-		ld h, $00
+		ld h, $00		;So, it's $0009 this way.
 		push de
 		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS
 		add hl, de
@@ -8116,37 +8126,38 @@ _LABEL_5A83_:
 		ld a, $00
 		adc a, $00
 		ld d, a
-		ld hl, _RAM_DBB4_GOLDMOON_MAXHP
+		ld hl, _RAM_DBB4_GOLDMOON_MAXHP	
 		add hl, de
 		pop de
-		ret
+		ret	;This looks easy, but I can't wrap my head around this at the moment, but it works.
 	
-_LABEL_5AA2_:	
+_LABEL_5AA2_SELECT_PLAYER_CLERICAL:	;This works for any spell, where you have to select a Companion for healing\resurrection.
 		xor a
-		ld (_RAM_C7FF_), a
+		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
 		ld de, $01A2
-		ld ix, _RAM_C700_
+		ld ix, _RAM_C700_SELECTED_HERO_TILES
 		di
 		push de
 		push ix
-		call _LABEL_5EF1_
+	;.dsb 3,$00
+		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
 		pop ix
 		pop de
 		ei
 -:	
 		push de
 		push ix
-		call _LABEL_5E64_
+		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
 		ld b, $0C
-		call _LABEL_5E58_
+		call _LABEL_5E58_DELAYBYB
 		pop ix
 		pop de
 		ld a, (_RAM_DE94_GAMEPAD)
 		and a
 		jr z, -
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		di
-		call _LABEL_5EC6_
+		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
 		ei
 		ret
 
@@ -8202,12 +8213,12 @@ _DATA_5B2E_MG_STF_NOPWR_TXT:	;'The Staff if Magius has no power at present.'
 .db $69 $75 $73 $0D $0D $68 $61 $73 $20 $6E $6F $20 $70 $6F $77 $65
 .db $72 $20 $61 $74 $0D $0D $70 $72 $65 $73 $65 $6E $74 $FF		;The first set of bytes are there for the text, the rest is the below code.
 
-_LABEL_5B5C_:	
+_LABEL_5B5C_DETECTMAGICSPELL:	
 		ld a, $01
 		ld c, $DF
 		jr +
 	
-_LABEL_5B62_:	
+_LABEL_5B62_DETECTINVISIBLESPELL:	
 		ld a, $02
 		ld c, $9F
 +:	
@@ -8309,7 +8320,7 @@ _LABEL_5BBE_CHECKWTRFALL:	;This seems to check the waterfall, and apply healing 
 	jr z, ---
 	call _LABEL_6F3B__UPD_HUD	;This all seems to be the health refill part.
 	ld b, $04
-	call _LABEL_5E58_
+	call _LABEL_5E58_DELAYBYB
 	jr --
 
 ++:		;We go here, if the party will not get their refill. Rude.
@@ -8501,7 +8512,7 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 	out (Port_VDPData), a
 	djnz -
 	ld b, $04
-	call _LABEL_5E58_
+	call _LABEL_5E58_DELAYBYB
 	jp _LABEL_5C89_
 
 ; Data from 5D43 to 5E57 (277 bytes)
@@ -8524,58 +8535,65 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 ;.db $CD $3B $6F $C3 $53 $60 $3A $FE $C7 $DD $21 $00 $C7 $F3 $CD $C6
 ;.db $5E $FB $C3 $53 $60
 
-_LABEL_5D43_:	
+_LABEL_5D43_HERO_SELECT_MENU:	
 		xor a
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
-		call _LABEL_6046_
-		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
-		ld hl, $38C8
-		ld de, _DATA_A74A_
-		call _LABEL_35A6_RANDOM
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
+		call _LABEL_6046_WAIT4GAMEPAD		;Wait for a button press.
+		call _LABEL_6B42_DRW_SOLID_CLR_SCRN	;Draw a solid color screen.
+		ld hl, $38C8				;This is a screen position in VRAM, we'll draw the text below there.
+		ld de, _DATA_A74A_COMPANION_STATS_TEXT	;Grab the text address.
+		call _LABEL_35A6_RANDOM			;Randomize things. I should look at this again probably.
 		xor a
-		ld (_RAM_C7FF_), a
-		ld ix, _RAM_C700_
+		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a	;This seems to be the hero selection on said screen. Not the hero the number represents, but the position on the list.
+		ld ix, _RAM_C700_SELECTED_HERO_TILES			;This is a 17 bytes long array of tiles, we'll get the current hero's tiles.
 		ld de, $01A2
 		push de
 		push ix
 		di
-		call _LABEL_5EF1_
+		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT		;Draw a rectangle over it.
 		ei
 		pop ix
 		pop de
-		call _LABEL_6B6D_
-_LABEL_5D6F_:	
-		call _LABEL_5E64_
+		;nop
+		;nop
+		;nop
+		call _LABEL_6B6D_DRAW_HERODETAILS			;This draws the current hero's details.
+_LABEL_5D6F_SELECT_HERO_LOOP:	
+		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
 		ld a, (_RAM_DE90_GAMEPAD)
 		bit 5, a
 		jr z, +
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		di
-		call _LABEL_5EC6_
+		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
 		ei
 		jp _LABEL_6053_WAIT4BUTTN
 	
 +:	
-		call _LABEL_6B6D_
-		ld b, $0C
-		call _LABEL_5E58_
+		call _LABEL_6B6D_DRAW_HERODETAILS			;Draws the next selected hero's details.
+		ld b, $0C						;Sooo, we tell the program how many times the next will loop. It has just a main looper inside.
+		;nop
+		;nop
+		;nop
+		call _LABEL_5E58_DELAYBYB					;Well, this little thing here actually inserts some wait states by looping with main. Without this, the hero selection would be a little too fast. If this is here, we have some delay, and time to grasp the speed of selecting a leading hero. I've not seen a delay this way, but works well.
 		ld a, (_RAM_DE94_GAMEPAD)
 		and a
-		jr z, _LABEL_5D6F_
-		ld a, (_RAM_C7FF_)
-		ld l, a
-		ld h, $00
-		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
-		add hl, bc
-		ld a, (hl)
+		jr z, _LABEL_5D6F_SELECT_HERO_LOOP					;Loop back, if we have not pressed any gamepad buttons.
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)		;Get the first selection.
+		ld l, a							;Move it to L.
+		ld h, $00						;So, the format will be $00xx<--firstly selected companion.
+		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS			;Get the portrait array's first element.
+		add hl, bc						;Get the final address.
+		ld a, (hl)						;Get who's at that slot.
 		call _LABEL_6573_CALC_DMG
-		ld bc, _RAM_DBB5_GOLDMOON_HP
+		ld bc, _RAM_DBB5_GOLDMOON_HP				;I don't understand why Goldmoon's HP is involved...
 		add hl, bc
 		ld a, (hl)
 		and a
-		jr z, _LABEL_5D6F_
-		ld a, (_RAM_C7FF_)
-		ld (_RAM_C7FE_), a
+		jr z, _LABEL_5D6F_SELECT_HERO_LOOP			;I suspect, we have to loop until we get to Goldmoon? She's got the number 0.
+									;The rest seems to be fairly straightforward, so I won't comment it on every line.
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+		ld (_RAM_C7FE_HEROSELECT_VAR), a
 		and a
 		jr nz, +
 		ld a, (_RAM_D90A_)
@@ -8583,45 +8601,45 @@ _LABEL_5D6F_:
 		jr nz, +
 		ld a, (_RAM_DE54_HOLD_PLYR)
 		and a
-		jr z, _LABEL_5D6F_
+		jr z, _LABEL_5D6F_SELECT_HERO_LOOP
 +:	
 		xor a
-		ld (_RAM_C7FF_), a
-		ld ix, _RAM_C720_
+		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
+		ld ix, _RAM_C720_NEW_HERO_SELECTIONTILES
 		ld de, $01AC
 		push de
 		push ix
 		di
-		call _LABEL_5EF1_
+		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
 		ei
 		pop ix
 		pop de
-_LABEL_5DD4_:	
-		call _LABEL_5E64_
+_LABEL_5DD4_OLDHERO_SELECTLOOP:	
+		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
 		ld a, (_RAM_DE90_GAMEPAD)
 		bit 5, a
 		jr z, +
-		ld a, (_RAM_C7FE_)
+		ld a, (_RAM_C7FE_HEROSELECT_VAR)
 		ld b, a
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		cp b
-		jp z, _LABEL_5E49_
+		jp z, _LABEL_5E49_FIXOLD_SELECTED
 		di
-		call _LABEL_5EC6_
+		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
 		ei
-		jp _LABEL_5E49_
+		jp _LABEL_5E49_FIXOLD_SELECTED
 	
 +:	
 		ld b, $0C
-		call _LABEL_5E58_
+		call _LABEL_5E58_DELAYBYB
 		ld a, (_RAM_DE94_GAMEPAD)
 		and a
-		jr z, _LABEL_5DD4_
-		ld a, (_RAM_C7FF_)
+		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		ld b, a
-		ld a, (_RAM_C7FE_)
+		ld a, (_RAM_C7FE_HEROSELECT_VAR)
 		cp b
-		jr z, _LABEL_5E49_
+		jr z, _LABEL_5E49_FIXOLD_SELECTED
 		ld l, b
 		ld h, $00
 		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
@@ -8632,8 +8650,8 @@ _LABEL_5DD4_:
 		add hl, bc
 		ld a, (hl)
 		and a
-		jr z, _LABEL_5DD4_
-		ld a, (_RAM_C7FF_)
+		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		and a
 		jr nz, +
 		ld a, (_RAM_D90A_)
@@ -8641,9 +8659,9 @@ _LABEL_5DD4_:
 		jr nz, +
 		ld a, (_RAM_DE54_HOLD_PLYR)
 		and a
-		jr z, _LABEL_5DD4_
+		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
 +:	
-		ld a, (_RAM_C7FE_)
+		ld a, (_RAM_C7FE_HEROSELECT_VAR)
 		ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
 		ld c, a
 		ld b, $00
@@ -8651,7 +8669,7 @@ _LABEL_5DD4_:
 		ld d, h
 		add hl, bc
 		ex de, hl
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		ld c, a
 		add hl, bc
 		ld c, (hl)
@@ -8662,16 +8680,16 @@ _LABEL_5DD4_:
 		call _LABEL_6F3B__UPD_HUD
 		jp _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_5E49_:	
-		ld a, (_RAM_C7FE_)
-		ld ix, _RAM_C700_
+_LABEL_5E49_FIXOLD_SELECTED:	;Here, we get the older not selected heroes, and fix the picture it used.
+		ld a, (_RAM_C7FE_HEROSELECT_VAR)
+		ld ix, _RAM_C700_SELECTED_HERO_TILES
 		di
-		call _LABEL_5EC6_
+		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
 		ei
 		jp _LABEL_6053_WAIT4BUTTN
 	
 
-_LABEL_5E58_:
+_LABEL_5E58_DELAYBYB:
 	push bc
 	push de
 	push hl
@@ -8679,7 +8697,7 @@ _LABEL_5E58_:
 	pop hl
 	pop de
 	pop bc
-	djnz _LABEL_5E58_
+	djnz _LABEL_5E58_DELAYBYB
 	ret
 
 ; Data from 5E64 to 6045 (482 bytes)
@@ -8714,39 +8732,42 @@ _LABEL_5E58_:
 ;.db $3A $40 $C0 $A7 $CA $47 $59 $3D $CA $59 $59 $3D $CA $5F $59 $3D
 ;.db $CA $53 $59 $3D $CA $5C $5B $3D $CA $62 $5B $3D $CA $A1 $58 $C3
 ;.db $4D $59
-_LABEL_5E64_:	
+_LABEL_5E64_MOVE_CHARSELECT_CURSOR:	
 		push de
 		call _LABEL_59B_MAIN
 		call _LABEL_552_CHECK_AB_BUTTONS
 		pop de
 		ld a, (_RAM_DE90_GAMEPAD)
-		bit 5, a
-		ret nz
-		and $1F
-		jp z, _LABEL_5E64_
+		bit 5, a		;Check for Button 2 on the first gamepad.
+		ret nz			;Return if it was pressed. Button 2 is used to cancel actions.
+		and $1F	;0001 1111
+		jp z, _LABEL_5E64_MOVE_CHARSELECT_CURSOR	;Loop, if no button was pressed at all.
 		bit 4, a
-		ret nz
-		ld a, (_RAM_C7FF_)
+		ret nz			;Return if button 1 is pressed. This all seems to be a bit strange to me..
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		di
 		push ix
 		push de
-		call _LABEL_5EC6_
+		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+		;nop
+		;nop
+		;nop
 		pop de
 		pop ix
 		ei
 		ld a, (_RAM_DE90_GAMEPAD)
 		ld b, a
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		bit 3, b
-		jr z, +
+		jr z, +			;Check for the right button.
 		sub $04
 +:	
 		bit 2, b
-		jr z, +
+		jr z, +			;Check for the left button.
 		add a, $04
 +:	
 		bit 1, b
-		jr z, +
+		jr z, +			;Check for the down button.
 		ld c, a
 		and $04
 		ld l, a
@@ -8756,7 +8777,7 @@ _LABEL_5E64_:
 		or l
 +:	
 		bit 0, b
-		jr z, +
+		jr z, +			;Check for the up button.
 		ld c, a
 		and $04
 		ld l, a
@@ -8766,17 +8787,17 @@ _LABEL_5E64_:
 		or l
 +:	
 		and $07
-		ld (_RAM_C7FF_), a
+		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
 		push de
 		push ix
 		di
-		call _LABEL_5EF1_
+		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT	;We have the coordinated and everything, so let's move the selecting rectangle.
 		ei
 		pop ix
 		pop de
 		ret
 	
-_LABEL_5EC6_:	
+_LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC:		;This makes sure, that the older, not selected portraits are drawn properly. If this is commented out, the last selected hero will be drawn to the next box, still selected. It is a bit difficult to name these properly, and still know what the function is about.
 		ld hl, _DATA_706B_HUD_PORTRAITS
 		add a, a
 		add a, l
@@ -8806,7 +8827,7 @@ _LABEL_5EC6_:
 		add hl, de
 		ret
 	
-_LABEL_5EF1_:	
+_LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines them with that white rectangle, that is used for player selection. The original portraits are also in VRAM.
 		ld hl, _DATA_706B_HUD_PORTRAITS
 		add a, a
 		add a, l
@@ -8821,7 +8842,7 @@ _LABEL_5EF1_:
 		inc hl
 		inc hl
 		ld b, $03
-		ld iy, _DATA_5F98_
+		ld iy,_DATA_5F98_RECTANGLE1BITTILE	;This is the 1-bit tile for the rectangle that would be drawn around the player portraits when you select it. Like a cursor.
 -:	
 		push hl
 		call +
@@ -8918,7 +8939,8 @@ _LABEL_5EF1_:
 		ret
 	
 ; Data from 5F98 to 5FDF (72 bytes)	
-_DATA_5F98_:	
+_DATA_5F98_RECTANGLE1BITTILE:	
+;The below is a piece of graphics, the white rectangle that is shown around a selected hero.
 	.db $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00
 	.db $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $C0
 	.db $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $03 $03
@@ -8926,8 +8948,8 @@ _DATA_5F98_:
 	.db $03 $03 $03 $03 $03 $03 $03 $FF
 	
 ; 1st entry of Jump Table from 6CD5 (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
-_LABEL_5FE0_:	
-		call _LABEL_6046_
+_LABEL_5FE0_SPELLIST_JUMPS:	;Based on what we've selected, we'll go to the appropriate spell's code. This is used for both the Magical and Clerical stuff too.
+		call _LABEL_6046_WAIT4GAMEPAD
 		ld a, (_RAM_C04E_)
 		and a
 		jr z, ++
@@ -8935,17 +8957,17 @@ _LABEL_5FE0_:
 		jr z, +
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		and a
-		jp z, _LABEL_59F5_
+		jp z, _LABEL_59F5_CURE_LIGHT_WOUNDS
 		dec a
 		jp z, _LABEL_58CE_FINDTRAPS
 		dec a
-		jp z, _LABEL_59EE_
+		jp z, _LABEL_59EE_CURE_CRITICAL_WOUNDS
 		jp _LABEL_5937_DRAGON_BREATH_SPELL
 	
 +:	
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		and a
-		jp z, _LABEL_59F5_
+		jp z, _LABEL_59F5_CURE_LIGHT_WOUNDS
 		dec a
 		jp z, _LABEL_5926_PROTECTION_FROM_EVIL
 		dec a
@@ -8957,9 +8979,9 @@ _LABEL_5FE0_:
 		dec a
 		jp z, _LABEL_5920_PRAYER_SPELL
 		dec a
-		jp z, _LABEL_59EE_
+		jp z, _LABEL_59EE_CURE_CRITICAL_WOUNDS
 		dec a
-		jp z, _LABEL_5A2B_
+		jp z, _LABEL_5A2B_RESURRECT
 		jp _LABEL_5937_DRAGON_BREATH_SPELL
 	
 ++:	
@@ -8973,20 +8995,21 @@ _LABEL_5FE0_:
 		dec a
 		jp z, _LABEL_5953_WEBSPELL
 		dec a
-		jp z, _LABEL_5B5C_
+		jp z, _LABEL_5B5C_DETECTMAGICSPELL
 		dec a
-		jp z, _LABEL_5B62_
+		jp z, _LABEL_5B62_DETECTINVISIBLESPELL
 		dec a
 		jp z, _LABEL_58A1_FINALSTRIKE
 		jp _LABEL_594D_BURNINGHANDSSPELL
-_LABEL_6046_:
+		;Finally, all spells are mapped now. Sadly, nothing hidden.
+_LABEL_6046_WAIT4GAMEPAD:
 -:
-	call _LABEL_59B_MAIN
-	call _LABEL_552_CHECK_AB_BUTTONS
+	call _LABEL_59B_MAIN	;Run a nice main for a change.
+	call _LABEL_552_CHECK_AB_BUTTONS	;Stop for buttons, and draw a blank BG.
 	ld a, (_RAM_DE94_GAMEPAD)
 	and a
-	ret z
-	jr -
+	ret z	;If a button is pressed, return.
+	jr -	;Otherwise we loop around.
 
 _LABEL_6053_WAIT4BUTTN:	;This is easy to guess. We jump right in a small routine that waits until we press 1 or 2.
 	call -
@@ -9021,8 +9044,8 @@ _LABEL_6053_WAIT4BUTTN:	;This is easy to guess. We jump right in a small routine
 ;.db $88 $38 $11 $6C $01 $06 $0B $0E $97 $DD $21 $00 $C0 $CD $E6 $6A
 ;.db $CD $FA $61 $3E $07 $32 $4F $C0 $CD $B1 $62 $C3 $53 $60
 
-_LABEL_605C_:	
-		ld de, _DATA_AB10_
+_LABEL_605C_MAGICUSERSPELLMENU:	
+		ld de, _DATA_AB10_MAGIC_USER_MENUTEXT
 		ld b, $11
 		ld iy, _DATA_6CD5_ - 2
 		ld l, $04
@@ -9139,15 +9162,15 @@ _LABEL_6122_:
 +:	
 		push de
 		push hl
-		call _LABEL_6046_
+		call _LABEL_6046_WAIT4GAMEPAD
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		pop hl
-		ld iy, _RAM_C100_
+		ld iy, _RAM_C100_LEVEL_TILEMAP1
 		ld de, $0000
-		ld ix, _RAM_C300_
+		ld ix, _RAM_C200_LEVEL_TILEMAP2
 		ld bc, $0000
 		call _LABEL_6A1D_
-		ld ix, _RAM_C300_
+		ld ix, _RAM_C200_LEVEL_TILEMAP2
 		ld de, $3888
 		push de
 		call _LABEL_6B60_
@@ -9208,12 +9231,12 @@ _LABEL_6122_:
 		ld a, c
 		and a
 		jr nz, +
-		ld ix, _RAM_C300_
+		ld ix, _RAM_C200_LEVEL_TILEMAP2
 		ld hl, _DATA_67B5_
 		ld bc, $0000
 		ld de, $0000
 		call _LABEL_6A1D_
-		ld ix, _RAM_C300_
+		ld ix, _RAM_C200_LEVEL_TILEMAP2
 		ld de, $3A08
 +:	
 		ld bc, $6053
@@ -9222,16 +9245,16 @@ _LABEL_6122_:
 		ex de, hl
 		ld hl, _DATA_67DB_
 		call _LABEL_6A1D_
-		ld de, _RAM_C100_
+		ld de, _RAM_C100_LEVEL_TILEMAP1
 		ld b, $0C
 		ld iy, $C300
 		jp _LABEL_6A41_
 	
 _LABEL_61CB_:	
-		call _LABEL_6046_
+		call _LABEL_6046_WAIT4GAMEPAD
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		ld hl, $3848
-		ld de, _DATA_A7B5_
+		ld de, _DATA_A7B5_SCORETXT
 		call _LABEL_35A6_RANDOM
 		ei
 		ld hl, $3888
@@ -9551,7 +9574,7 @@ _LABEL_6A41_:
 		push iy
 		push bc
 		push de
-		call _LABEL_6046_
+		call _LABEL_6046_WAIT4GAMEPAD
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		pop de
 		ei
@@ -9786,13 +9809,13 @@ _LABEL_6B60_:
 		pop de
 		ret
 	
-_LABEL_6B6D_:	
+_LABEL_6B6D_DRAW_HERODETAILS:	;Wew this is long....
 		push bc
 		push de
 		push hl
 		push ix
 		call _LABEL_59B_MAIN
-		ld a, (_RAM_C7FF_)
+		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
 		ld c, a
 		ld b, $00
@@ -9992,7 +10015,7 @@ _DATA_6CAD_PALETTES:	; Data from 6CAD to 6CAE (2 bytes)
 	
 ; Jump Table from 6CAF to 6CBC (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _DATA_6CAF_:	
-	.dw _LABEL_5D43_ _LABEL_3908_ _LABEL_605C_ _LABEL_3948_ _LABEL_60B0_ _LABEL_3988_ _LABEL_6114_
+	.dw _LABEL_5D43_HERO_SELECT_MENU _LABEL_3908_ _LABEL_605C_MAGICUSERSPELLMENU _LABEL_3948_ _LABEL_60B0_ _LABEL_3988_ _LABEL_6114_
 	
 	; Data from 6CBD to 6CD4 (24 bytes)
 	.db $C8 $39 $C5 $62 $08 $3A $22 $61 $48 $3A $06 $61 $88 $3A $CB $61
@@ -10000,7 +10023,7 @@ _DATA_6CAF_:
 	
 ; Jump Table from 6CD5 to 6CE2 (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _DATA_6CD5_:	
-	.dw _LABEL_5FE0_ _LABEL_3908_ _LABEL_5FE0_ _LABEL_3948_ _LABEL_5FE0_ _LABEL_3988_ _LABEL_5FE0_
+	.dw _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3908_ _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3948_ _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3988_ _LABEL_5FE0_SPELLIST_JUMPS
 	
 	; Data from 6CE3 to 6CF4 (18 bytes)
 	.db $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A $E0 $5F $88 $3A $E0 $5F
@@ -10531,18 +10554,18 @@ _LABEL_714D_:
 	ei
 	ret
 
-_LABEL_717C_:
-	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
+_LABEL_717C_CYCLE_DEAD2ALIVECHARS: ;This also runs every frame, and check for dead characters. As in the normal game, dead players are automatically switched to the next alive one.
+	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Load the player list used in the hud.
 	ld b, $07
 --:
-	ld a, (ix+0)
+	ld a, (ix+0)		;This might be a bug, since this is gonna be just IX.
 	call _LABEL_6573_CALC_DMG
-	ld de, _RAM_DBB5_GOLDMOON_HP
-	add hl, de
+	ld de, _RAM_DBB5_GOLDMOON_HP	
+	add hl, de			;So, we use now damage as healing also? I might be also wrong on the function's task.
 	ld a, (hl)
 	and a
-	jr nz, _LABEL_71B9_
-	dec hl
+	jr nz, _LABEL_71B9_INC_CHKNEXT_CHAR		;If the given char is not dead, jump ahead.
+	dec hl				;Char is dead.
 	ld a, (hl)
 	and a
 	jr z, ++
@@ -10559,16 +10582,16 @@ _LABEL_717C_:
 	jr nz, +
 	dec c
 	jr nz, -
-	jp _LABEL_71B9_
+	jp _LABEL_71B9_INC_CHKNEXT_CHAR
 
 +:
 	ld c, (iy+0)
 	ld a, (ix+0)
 	ld (iy+0), a
 	ld (ix+0), c
-_LABEL_71B9_:
-	inc ix
-	djnz --
+_LABEL_71B9_INC_CHKNEXT_CHAR:		;The player is fine.
+	inc ix		;Increment the player array.
+	djnz --		;Loop back, and check the next in the roster, until we've checked all of them.
 	ret
 
 ++:
@@ -10587,7 +10610,7 @@ _LABEL_71B9_:
 	dec c
 	jr nz, -
 	inc de
-	jp _LABEL_71B9_
+	jp _LABEL_71B9_INC_CHKNEXT_CHAR
 
 +:
 	ld c, (iy+0)
@@ -10595,7 +10618,7 @@ _LABEL_71B9_:
 	ld (iy+0), a
 	ld (ix+0), c
 	inc de
-	jp _LABEL_71B9_
+	jp _LABEL_71B9_INC_CHKNEXT_CHAR
 
 ; Data from 71E8 to 721B (52 bytes)
 ;.db $3A $C3 $DE $CD $73 $65 $11 $B4 $DB $19 $46 $23 $7E $4F $B0 $C8
@@ -11337,7 +11360,7 @@ _LABEL_7971_INIT_TRAPS:
 	djnz -
 _LABEL_799A_:
 	ld a, (_RAM_DE52_ROOM_NR)
-	ld ix, _RAM_DCE0_
+	ld ix, _RAM_DCE0_TRAPARRAY
 	ld (ix+0), $00
 	ld (ix+1), $00
 	ld hl, _RAM_D601_
@@ -11814,7 +11837,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 ; Data from A73A to A7C1 (136 bytes)
 _DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
 .db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
-_DATA_A74A_:
+_DATA_A74A_COMPANION_STATS_TEXT:
 .dsb 12, $20
 .db $4D $49 $4E $20 $20 $20 $20 $20 $20 $20 $4D $41 $58 $0D $53 $74
 .db $72 $65 $6E $67 $74 $68 $0D $49 $6E $74 $65 $6C $6C $69 $67 $65
@@ -11822,7 +11845,7 @@ _DATA_A74A_:
 .db $69 $74 $75 $74 $69 $6F $6E $0D $44 $65 $78 $74 $65 $72 $69 $74
 .db $79 $0D $43 $68 $61 $72 $69 $73 $6D $61 $0D $0D $48 $69 $74 $20
 .db $70 $6F $69 $6E $74 $73 $0D $0D $55 $73 $69 $6E $67 $3A $FF 
-_DATA_A7B5_:
+_DATA_A7B5_SCORETXT:	;This is literally a text for 'score'.
 .db $20
 .db $20 $20 $20 $20 $20 $53 $43 $4F $52 $45 $0D $0D
 
@@ -11964,7 +11987,7 @@ _DATA_AADB_RAISTLIN_NOT_PTY_LEADER:
 	.db $70 $65 $6C $6C $FF
 	
 ; Data from AB10 to AC6B (348 bytes)	
-_DATA_AB10_:	
+_DATA_AB10_MAGIC_USER_MENUTEXT:	
 	.db $4D $41 $47 $49 $43 $20 $55 $53 $45 $52 $20 $53 $50 $45 $4C $4C
 	.db $53 $0D $43 $68 $61 $72 $6D $0D $53 $6C $65 $65 $70 $0D $4D $61
 	.db $67 $69 $63 $20 $6D $69 $73 $73 $69 $6C $65 $0D $57 $65 $62 $0D
