@@ -58,14 +58,17 @@ _RAM_C300_LEVEL_TILEMAP3 DB						;Third part of the tilemap engine.
 
 .enum $C3FE export
 _RAM_C3FE_ dw
+_RAM_C400_ db								;Another part of the tilemap, or similar. Every $100th there is a small array for something. Why would you do this at all? There must be a logical reason....
 .ende
 
 .enum $C4FE export
 _RAM_C4FE_ dw
+_RAM_C500_ db
 .ende
 
 .enum $C5FE export
 _RAM_C5FE_ dw
+_RAM_C600_ db
 .ende
 
 .enum $C6FE export
@@ -387,18 +390,18 @@ _RAM_DED3_ db
 _RAM_DEE4_ db
 _RAM_DEE5_ db
 _RAM_DEE6_ db
-_RAM_DEE7_ db
-_RAM_DEE8_ db
-_RAM_DEE9_ db
+_RAM_DEE7_ db				;Used in many places, but I can't seem to identify this. TODO
+_RAM_DEE8_PROJECTILE_TYPE db		;What the spellcasters will shoot. Or if you use a bow, that would also count as a similar projectile.
+_RAM_DEE9_HOLDPERSON_VAR db		;Used with the spell, but not sure yet what it does, maybe some temp space.
 _RAM_DEEA_GMOON_STAFF_CHRG dw
 _RAM_DEEC_RAIST_STFFCHRG dw
-_RAM_DEEE_PROT_EVIL_TIMER db
-_RAM_DEEF_ db
+_RAM_DEEE_PROT_EVIL_TIMER db		;This 'Protection from Evil' spell is on a timer, and this is what that is.
+_RAM_DEEF_DEFL_DRAGONB_SPELL_TIMER db	;Used around the deflect spell, but that's it.
 _RAM_DEF0_DEFLECT_DRGN_BREATH db	;This is the timer for the 'Deflect Dragon Breath' spell. $3F is the default value.
 _RAM_DEF1_STR_POTION db	;This is the strength potion's remaining power. It increases damage output or course. It also decreases with each use. The damage calculation is also around this variable.
-_RAM_DEF2_HOLD_PLYR db
-_RAM_DEF3_ENEMY_MOV_ENA db
-_RAM_DEF4_FALLING_STONES db
+_RAM_DEF2_HOLD_PLYR db			;Will prevent the player from moving.
+_RAM_DEF3_ENEMY_MOV_ENA db		;Does the same thing for any enemy on the screen.
+_RAM_DEF4_FALLING_STONES db		;Set this to $02, and stones will fall on your head constantly, like after you defeat the final boss.
 .ende
 
 .enum $FFFF export
@@ -431,7 +434,7 @@ _LABEL_0_:
 	out (Port_MemoryControl), a
 	ld de, _RAM_C000_RAM_START + 1
 	ld (hl), l
-	ld bc, $1EFF
+	ld bc, $1EFF	;7936 bytes
 	ldir	;Clear RAM.
 	ld l, $FC
 	ld a, $80
@@ -1231,7 +1234,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	jr z, +
 	ld e, a
 	ld a, $FF
-	ld (_RAM_DEE8_), a
+	ld (_RAM_DEE8_PROJECTILE_TYPE), a
 	ld a, e
 +:
 	cp $03
@@ -1457,10 +1460,10 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	adc a, $00
 	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a	;This small part controls the dragon breath protection. Once the spell is activated, you are given a certain amount of time, where the dragonfire won't hurt you. Here, the counter for this spell is decreasing.
 ;----------------------------------
-	ld a, (_RAM_DEEF_)
+	ld a, (_RAM_DEEF_DEFL_DRAGONB_SPELL_TIMER)
 	inc a
 	and $07
-	ld (_RAM_DEEF_), a	;This goes from 0 to 7
+	ld (_RAM_DEEF_DEFL_DRAGONB_SPELL_TIMER), a	;This goes from 0 to 7
 	jr z, +			;Jump if it's zero.
 	ld a, (_RAM_DEEE_PROT_EVIL_TIMER)
 	sub $01
@@ -5837,12 +5840,12 @@ _LABEL_3A4A_:
 	jr _LABEL_3AA1_
 
 _LABEL_3A54_:
-	ld a, (_RAM_DEE8_)
+	ld a, (_RAM_DEE8_PROJECTILE_TYPE)
 	inc a
 	jp z, _LABEL_3786_
 	dec a
 	ld b, a
-	ld a, (_RAM_DEE9_)
+	ld a, (_RAM_DEE9_HOLDPERSON_VAR)
 	call _LABEL_5999_GMSTAFF_DECMANA
 	jp _LABEL_3786_
 
@@ -7950,28 +7953,28 @@ _LABEL_59A3_SPIRITHAMMERSPELL:
 		ld a, $02
 		jr +
 	
-_LABEL_59A9_HOLDPERSONSPELL:	
-		ld b, $07
-		ld a, $02
+_LABEL_59A9_HOLDPERSONSPELL:	;Okay, let's check this one now.
+		ld b, $07	;I don't know if this is the spell duration or not...
+		ld a, $02	;Spellcost. Sometimes the code just switches what to load first.
 +:	
-		ld d, a
-		ld a, ( _RAM_DEBC_INRAM_HUD_PORTRAITS)
-		and a
-		ld a, d
-		ld d, $00
-		jp nz, +
-		ld d, a
+		ld d, a		;Okay, save the spellcost into D.
+		ld a, ( _RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the first character in the roster.
+		and a					
+		ld a, d					;Load D into A.
+		ld d, $00	;Whatever.. we zero out D.
+		jp nz, +	;Because of the carry, this seems to work anyways... Nice.
+		ld d, a		;We come here, if the party leader is Goldmoon.
 		ld a, b
-		ld (_RAM_DEE8_), a
+		ld (_RAM_DEE8_PROJECTILE_TYPE), a	;This is also a projectile type.
 		ld a, d
-		ld (_RAM_DEE9_), a
-		jp  _LABEL_6053_WAIT4BUTTN
+		ld (_RAM_DEE9_HOLDPERSON_VAR), a
+		jp  _LABEL_6053_WAIT4BUTTN	;Because we are the staff's normal owner, we can control this spell. This means we can fire it at will.
 	
-+:	
++:						;We are not Goldmoon, so the spell has been cast, and will fire away after we leave the menu.
 		call  _LABEL_59DE_DEPLETE_GMSTAFF
-		jp c,  _LABEL_5ADA_BL_STF_NOPWR
-		ld a, $01
-		jr _LABEL_5982_PLYR_LAUNCH_PROJECTILE
+		jp c,  _LABEL_5ADA_BL_STF_NOPWR	;Just a check to see if we have enough points for the spell.
+		ld a, $01			;This should be the projectile type.
+		jr _LABEL_5982_PLYR_LAUNCH_PROJECTILE	;Aand we fire it away.
 
 _LABEL_59CE_DEPLETE_MAGIUS_STF:	;IF THIS RET BELOW IS THERE, THE GAME WILL THINK RAISTLIN'S STAFF HAS NO CHARGE.
 	ld hl, (_RAM_DEEC_RAIST_STFFCHRG)
@@ -11802,7 +11805,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (_RAM_DE6D_), a
 	ld a, $FF
 	ld (_RAM_DEE6_), a
-	ld (_RAM_DEE8_), a		;NOT SEEM TO BE USED AT THIS TIME, but it is used.
+	ld (_RAM_DEE8_PROJECTILE_TYPE), a		
 	ld hl, _RAM_DE7A_KILLCOUNT_ARRAY
 	ld de, _RAM_DE7A_KILLCOUNT_ARRAY + 1
 	ld bc, $0015
