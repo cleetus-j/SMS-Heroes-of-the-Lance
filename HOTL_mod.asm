@@ -374,22 +374,24 @@ _RAM_DEB3_ dw
 _RAM_DEB5_ db
 _RAM_DEB6_ db
 _RAM_DEB7_ dw
-_RAM_DEB9_ dw
+_RAM_DEB9_ANIM_POINTER dw
 _RAM_DEBB_DEBUG db
 _RAM_DEBC_INRAM_HUD_PORTRAITS db
-_RAM_DEBD_ dsb $6
+_RAM_DEBD_SECOND_HERO_ARRAY dsb $6	;A small array starting with the second hero.
 _RAM_DEC3_ db
-_RAM_DEC4_ db
+_RAM_DEC4_PALETTE_LOAD_POINTER db	;This is just a pointer, from where the code gets the palette data, and showes it out to the VDP directly.
+_RAM_DEC5_FADEOUT_WORKPAL dsb $f	;The code writes here the temporary palette for fadeout.
 .ende
 
 .enum $DED3 export
-_RAM_DED3_ db
+_RAM_DED3_FADEOUT_VAR db		;After this one, there is an array for the BG colors during fadeouts.
+_RAM_DED4_FADEOUT_BG_PAL dsb $F		;It's not marked in the code, but here, some palette data is loaded while the fadeout is there.
 .ende
 
 .enum $DEE4 export
 _RAM_DEE4_ db
-_RAM_DEE5_ db
-_RAM_DEE6_ db
+_RAM_DEE5_MENUORGAME db			;If this is $FF, then we are in a menu, or info screen, anything not gameplay.
+_RAM_DEE6_ db				;I don't know what these do at the moment.
 _RAM_DEE7_ db				;Used in many places, but I can't seem to identify this. TODO
 _RAM_DEE8_PROJECTILE_TYPE db		;What the spellcasters will shoot. Or if you use a bow, that would also count as a similar projectile.
 _RAM_DEE9_HOLDPERSON_VAR db		;Used with the spell, but not sure yet what it does, maybe some temp space.
@@ -810,7 +812,7 @@ _LABEL_4CF_LOAD2PALS:
 	ld a, $C0
 	out (Port_VDPAddress), a
 	ld b, $20
-	ld de, _RAM_DEC4_
+	ld de, _RAM_DEC4_PALETTE_LOAD_POINTER
 -:
 	ld a, (hl)
 	ld (de), a
@@ -824,16 +826,16 @@ _LABEL_4CF_LOAD2PALS:
 .dsb 18, $FF
 
 _LABEL_4F9_PALETTE:
-	ld a, (_RAM_DED3_)
+	ld a, (_RAM_DED3_FADEOUT_VAR)
 	and a
 	ret z
 	ld b, $03
 -:
 	push bc
-	ld hl, _RAM_DEC4_
+	ld hl, _RAM_DEC4_PALETTE_LOAD_POINTER
 	ld b, $20
 	call _LABEL_51E_FADEOUT
-	ld hl, _RAM_DEC4_
+	ld hl, _RAM_DEC4_PALETTE_LOAD_POINTER
 	di
 	call _LABEL_4CF_LOAD2PALS
 	ei
@@ -1474,23 +1476,26 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	inc a					;Increment the value, aka get the next Companion value.
 	ld (_RAM_D909_FIRST_COMPANION), a	;Put this to the first companion value.
 	call _LABEL_2DE2_			;This seems to draw and\or animate the character. If this is commented out, the character is not updated while moving. So it may control animation. If the whole function is just a ret, then no sprites are drawn\updated.
+	
 	ld hl, _DATA_314_
-	ld (_RAM_DEB9_), hl
+	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_A10_
 	ld b, $0D
 	call _LABEL_2EC8_
+	
 	ld hl, _DATA_335_
-	ld (_RAM_DEB9_), hl
+	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
 	call _LABEL_2ECE_
 	call _LABEL_A10_
 	ld b, $0D
 	call _LABEL_2ECE_
+	
 	ld hl, _DATA_356_
-	ld (_RAM_DEB9_), hl
+	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
 	call _LABEL_2ECE_
@@ -1498,8 +1503,9 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld b, $0C
 	call _LABEL_2ECE_
 	call _LABEL_2C1A_
+	
 	ld hl, _DATA_377_
-	ld (_RAM_DEB9_), hl
+	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_3238_
 	ld a, (_RAM_DE96_)
@@ -4559,7 +4565,7 @@ _LABEL_3157_:
 	jr nc, +
 	ld e, a
 	ld d, $00
-	ld hl, (_RAM_DEB9_)
+	ld hl, (_RAM_DEB9_ANIM_POINTER)
 	add hl, de
 	ld l, (hl)
 	ld h, d
@@ -4569,7 +4575,7 @@ _LABEL_3157_:
 +:
 	ld e, a
 	ld d, $00
-	ld hl, (_RAM_DEB9_)
+	ld hl, (_RAM_DEB9_ANIM_POINTER)
 	add hl, de
 	ld e, (hl)
 	ld h, b
@@ -4597,7 +4603,7 @@ _LABEL_3157_:
 	jr nc, +
 	ld e, a
 	ld d, $00
-	ld hl, (_RAM_DEB9_)
+	ld hl, (_RAM_DEB9_ANIM_POINTER)
 	add hl, de
 	ld l, (hl)
 	ld h, d
@@ -4607,7 +4613,7 @@ _LABEL_3157_:
 +:
 	ld e, a
 	ld d, $00
-	ld hl, (_RAM_DEB9_)
+	ld hl, (_RAM_DEB9_ANIM_POINTER)
 	add hl, de
 	ld e, (hl)
 	ld h, b
@@ -5551,7 +5557,7 @@ _LABEL_37C8_:
 	jp _LABEL_726_
 
 _LABEL_3839_:
-	ld hl, _RAM_DEBD_
+	ld hl, _RAM_DEBD_SECOND_HERO_ARRAY
 	ld de, _RAM_DEBC_INRAM_HUD_PORTRAITS
 	ld bc, $0007
 	ld a, (de)
@@ -7583,7 +7589,7 @@ _LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. R
 	rrd
 	call _LABEL_3262_
 	call _LABEL_5887_
-	ld hl, _RAM_DEBD_
+	ld hl, _RAM_DEBD_SECOND_HERO_ARRAY
 	ld de, _RAM_DEBC_INRAM_HUD_PORTRAITS
 	ld bc, $0007
 	ld a, (de)
@@ -7613,7 +7619,7 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	ld a, (_RAM_DCA5_RIVERWIND_HP)	;Get Riverwind's health.
 	and a
 	ret z				;If he's dead, then he can't protect Goldmoon, so we return.
-	ld hl, _RAM_DEBD_		;He's alive, so we continue.
+	ld hl, _RAM_DEBD_SECOND_HERO_ARRAY		;He's alive, so we continue.
 -:
 	ld a, (hl)			;Check the HUD portraits\player list.
 	cp $06				;Check for Riverwind.
@@ -7931,7 +7937,7 @@ _LABEL_5982_PLYR_LAUNCH_PROJECTILE:	;Used whenever the player uses a spell that 
 	ld h, $14
 	ld ix, _RAM_D900_CHARA_COORD
 	call _LABEL_3AAF_DRAWPROJECTILE
-	ld a, (_RAM_DEE5_)
+	ld a, (_RAM_DEE5_MENUORGAME)
 	and a
 	ret z
 	jp _LABEL_6053_WAIT4BUTTN
@@ -8173,7 +8179,7 @@ _LABEL_5ADA_BL_STF_NOPWR:
 	ld de, _DATA_5B05_BL_STF_NOPWR_TXT	;"The Blue staff has no power at present" text.
 +:
 	push de
-	ld a, (_RAM_DEE5_)
+	ld a, (_RAM_DEE5_MENUORGAME)
 	ld b, a
 	and a
 	jr nz, +
@@ -8340,7 +8346,7 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	ld (_RAM_DE34_SCRN_SCROLL), a		;THIS SEEMS TO DO SOME RESET FOR THE SCROLLING. CHANGING THIS RAM VALUE WILL SCROLL THE SCREEN IN A GIVEN DIRECTION.
 	;IT DOES NOT DO MUCH, COMMENTING THIS OUT WILL NOT CHANGE ANYTHING NOTICEABLE.
 	ld a, $FF
-	ld (_RAM_DEE5_), a	;THIS VARIABLE IS STILL NOT CLEAR WHAT DOES IT DO.
+	ld (_RAM_DEE5_MENUORGAME), a	;THIS VARIABLE IS STILL NOT CLEAR WHAT DOES IT DO.
 	ld a, (_RAM_DE9F_TIMER)
 	ld (_RAM_DEA0_TIMER_TEMP), a	;SAVE THE MAIN TIMER'S VALUE.
 
@@ -9625,7 +9631,7 @@ _LABEL_6A6C_AFTERMSG_SCR_LOADLVLBCK:	;We get here from the non-healing waterfall
 	ld hl, (_RAM_DE64_)
 	ld (_RAM_DE62_), hl
 	xor a
-	ld (_RAM_DEE5_), a
+	ld (_RAM_DEE5_MENUORGAME), a
 	ld (_RAM_DE9E_), a
 	ld a, (_RAM_DEA0_TIMER_TEMP)			;We restore timers and everything.
 	ld (_RAM_DE9F_TIMER), a				;Then return.
@@ -11788,7 +11794,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (_RAM_DE96_), a	;NOT NOTICEABLE.
 	ld (_RAM_DE56_), a	;THIS NEITHER.
 	ld (_RAM_DE55_WATERFALL), a
-	ld (_RAM_DEE5_), a		;NO EFFECT AS NOW.
+	ld (_RAM_DEE5_MENUORGAME), a		;NO EFFECT AS NOW.
 	ld (_RAM_DEEE_PROT_EVIL_TIMER), a
 	ld (_RAM_DEF1_STR_POTION), a		;BOTH DOES NOTHING IMMEDIATE.
 	ld (_RAM_DE54_HOLD_PLYR), a	;IF THIS IS NOT ZERO, THE PLAYER CHARACTER WON'T BE ABLE TO MOVE.
