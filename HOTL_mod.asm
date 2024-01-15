@@ -124,7 +124,7 @@ _RAM_D400_ dsb $100
 .ende
 
 .enum $D600 export
-_RAM_D600_ db
+_RAM_D600_ITEMNTRAP_TYPES db
 _RAM_D601_ db
 .ende
 
@@ -314,12 +314,12 @@ _RAM_DE52_ROOM_NR db
 _RAM_DE53_COMPASS db
 _RAM_DE54_HOLD_PLYR db
 _RAM_DE55_WATERFALL db
-_RAM_DE56_ db
+_RAM_DE56_WINPOINT_ADD db	;If this is non-zero, then the game adds 10k points to items. I guess, the Disks of Mishakal worth this much points.
 _RAM_DE57_ db
 _RAM_DE58_ db
 _RAM_DE59_LEFT_DEBUG_NR db
 _RAM_DE5A_ db
-_RAM_DE5B_ dw
+_RAM_DE5B_COMBAT_MARK dw	;If this is not zero, we are in combat, and able to attack.
 _RAM_DE5D_ db
 _RAM_DE5E_ dw
 _RAM_DE60_ dw
@@ -333,7 +333,7 @@ _RAM_DE66_ db
 _RAM_DE6A_ db
 _RAM_DE6B_ db
 _RAM_DE6C_NME_MOVE7BIT db
-_RAM_DE6D_ db
+_RAM_DE6D_GAME_WIN db		;If this is not zero, the game is won automatically.
 _RAM_DE6E_ db
 _RAM_DE6F_ dw
 _RAM_DE71_ db
@@ -349,7 +349,7 @@ _RAM_DE92_ db
 _RAM_DE93_ db
 _RAM_DE94_GAMEPAD db
 _RAM_DE95_GAMEPAD db
-_RAM_DE96_ db
+_RAM_DE96_STOPGAME db
 _RAM_DE97_ db
 _RAM_DE98_ dw
 _RAM_DE9A_ db
@@ -374,7 +374,7 @@ _RAM_DEB3_ dw
 _RAM_DEB5_ db
 _RAM_DEB6_ db
 _RAM_DEB7_ dw
-_RAM_DEB9_ANIM_POINTER dw
+_RAM_DEB9_ANIM_POINTER dw		;Some pointer, that helps with animations, but the connecting data is not obvious what it is now.
 _RAM_DEBB_DEBUG db
 _RAM_DEBC_INRAM_HUD_PORTRAITS db
 _RAM_DEBD_SECOND_HERO_ARRAY dsb $6	;A small array starting with the second hero.
@@ -392,11 +392,11 @@ _RAM_DED4_FADEOUT_BG_PAL dsb $F		;It's not marked in the code, but here, some pa
 _RAM_DEE4_ db
 _RAM_DEE5_MENUORGAME db			;If this is $FF, then we are in a menu, or info screen, anything not gameplay.
 _RAM_DEE6_ db				;I don't know what these do at the moment.
-_RAM_DEE7_ db				;Used in many places, but I can't seem to identify this. TODO
+_RAM_DEE7_ db				;Used with the magic missile, but I just don't know what it is.
 _RAM_DEE8_PROJECTILE_TYPE db		;What the spellcasters will shoot. Or if you use a bow, that would also count as a similar projectile.
 _RAM_DEE9_HOLDPERSON_VAR db		;Used with the spell, but not sure yet what it does, maybe some temp space.
-_RAM_DEEA_GMOON_STAFF_CHRG dw
-_RAM_DEEC_RAIST_STFFCHRG dw
+_RAM_DEEA_GMOON_STAFF_CHRG dw		;Goldmoon's staff charge.
+_RAM_DEEC_RAIST_STFFCHRG dw		;Raistlin's staff charge.
 _RAM_DEEE_PROT_EVIL_TIMER db		;This 'Protection from Evil' spell is on a timer, and this is what that is.
 _RAM_DEEF_DEFL_DRAGONB_SPELL_TIMER db	;Used around the deflect spell, but that's it.
 _RAM_DEF0_DEFLECT_DRGN_BREATH db	;This is the timer for the 'Deflect Dragon Breath' spell. $3F is the default value.
@@ -407,7 +407,7 @@ _RAM_DEF4_FALLING_STONES db		;Set this to $02, and stones will fall on your head
 .ende
 
 .enum $FFFF export
-_RAM_FFFF_ db
+_RAM_FFFF_ db				;Slot 2 mapping is at the top of RAM, and this is that.
 .ende
 
 ; Ports
@@ -479,8 +479,8 @@ _LABEL_38_:
 	reti
 
 ; Data from 59 to 63 (11 bytes)
-.dsb 11, $00	;11
-
+;.dsb 11, $00	;11 
+.org $0064	;With the ORG, this above is not needed, we can use that space for something later.
 _LABEL_64_:
 	dec a
 	inc c
@@ -523,9 +523,9 @@ _LABEL_66_:
 	ld (_RAM_FFFF_), a	;AND SWITCH BACK.
 	ret
 
-; Data from A0 to AA (11 bytes)
-.dsb 11, $FF
-
+; Data from A0 to AA (11 bytes) free space again.
+;.dsb 11, $FF
+.org $00AB
 ; Data from AB to 1FF (341 bytes)
 _DATA_AB_:
 .dsb 32, $00
@@ -691,7 +691,7 @@ _LABEL_2FF_PREPNPLAYSFX:	;If this is returned early, then there will bw no sound
 	pop bc			;Restore this older value.
 	ret
 
-; Data from 314 to 334 (33 bytes)
+; Data from 314 to 334 (33 bytes)		;This is connected with some animations, but not sure what this is yet.
 _DATA_314_:
 .db $00 $01 $01 $01 $01 $02 $02 $02 $02 $03 $03 $03 $03 $04 $04 $04
 .db $04 $05 $05 $05 $05 $06 $06 $06 $06 $07 $07 $07 $07 $08 $08 $08
@@ -746,7 +746,7 @@ _DATA_468_VDP_INIT_DATA:
 .db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F
 
 ; Data from 473 to 48B (25 bytes)
-_DATA_473_:
+_DATA_473_VDP_CONF_DATA:		;This is also sent ot the VDP.
 .db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F $3E $10 $F3 $D3 $BF
 .db $3E $C0 $D3 $BF $78 $D3 $BE $FB $C9
 
@@ -781,7 +781,7 @@ _LABEL_48C_LOAD_VDP_DATA:
 		jr nz, -
 		ret
 	
-_LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM?
+_LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM? It is not used though.
 		di
 		ld a, $1F	;Bank 31.
 		ld (_RAM_FFFF_), a
@@ -803,8 +803,8 @@ _LABEL_4BD_VDP_OUTSETUP:		;This is used to do general VDP tasks, nor just write.
 	ret
 
 ; Data from 4C6 to 4CE (9 bytes)
-.dsb 9, $FF
-
+.dsb 9, $FF 
+;.org $04CF
 _LABEL_4CF_LOAD2PALS:
 	xor a
 	out (Port_VDPAddress), a
@@ -823,8 +823,7 @@ _LABEL_4CF_LOAD2PALS:
 	ret
 
 ; Data from 4E7 to 4F8 (18 bytes)
-.dsb 18, $FF
-
+.dsb 18, $FF 
 _LABEL_4F9_PALETTE:
 	ld a, (_RAM_DED3_FADEOUT_VAR)
 	and a
@@ -1040,9 +1039,9 @@ _LABEL_63B_CLEAR_SAT:	;THIS GOES TO THE VDP AS I CAN SEE.
 _LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will load the next part of the game. I'll look into this later, but does not seem to be that difficult.
 	push bc
 	push de
-	push hl
-	ld c, a
-	call ++
+	push hl			;Save the registers for later.
+	ld c, a			;Move this to C.
+	call ++			;Well, imo this call is not really needed, since nothing else jumps there. It would function the same I guess if i just copy that here instead.
 	ld de, $0000
 	ld l, a
 	ld h, $00
@@ -1063,9 +1062,10 @@ _LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will l
 	ret
 
 ++:
+
 	push hl
 	push de
-	push bc
+	push bc			;Push these the second time, and they are do needed. The game works, but after a complete screen change, the game resets.
 	ld hl, (_RAM_DE72_LVL_LOAD)
 	ld c, l
 	ld b, h
@@ -1096,10 +1096,10 @@ _LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will l
 
 _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	di
-	ld hl, $3C00	;0011 1100 0000 0000
+	ld hl, $3C00	;0011 1100 0000 0000	;This is for the sprite table I think.
 	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	ld bc, $0100
-	ld de, $00BF
+	ld bc, $0100				;256 bytes.
+	ld de, $00BF				;191
 -:
 	ld a, e ;1011 1111
 	out (Port_VDPData), a
@@ -1112,9 +1112,9 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	or c
 	jr nz, -	;DO SOME VDP SETUP
 	ei
-	ld a, $01
+	ld a,$01
 	ld (_RAM_DE52_ROOM_NR), a	;SET THE STARTING ROOM.
-	call _LABEL_7D42_LOAD_PLYRSTAT
+	call _LABEL_7D42_LOAD_PLYRSTAT	;Load player stats of course, I mapped some things at the data part.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
 	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;THIS CAN BE DISABLED, THE GAME WORKS THE SAME EITHER WAY.
@@ -1158,7 +1158,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	call _LABEL_6242B_SET_MUS	;SELECT MUSIC BANK, MUSIC AND START IT.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD.
-_LABEL_726_:
+_LABEL_726_LEVEL_WARP_LOAD:
 	call _LABEL_5819_		;I CAN'T SEEM TO FIND WHAT THIS DOES EXACTLY. COPIES 32 BYTES OF SOMETHING, BUT IT'S ALL ZEROES SO FAR. COMMENTING IT OUT DOES NOT DO ANYTHING NOTICEABLE ON THE GAMEPLAY. NOT EVEN ON THE SPELLS OR ANYTHING.
 	;NOP
 	;NOP
@@ -1271,7 +1271,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	cp $01
 	jr nz, +
 	ld a, $C0
-	ld (_RAM_DE6D_), a
+	ld (_RAM_DE6D_GAME_WIN), a
 +:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
@@ -1508,11 +1508,11 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_3238_
-	ld a, (_RAM_DE96_)
+	ld a, (_RAM_DE96_STOPGAME)
 	and a
 	jr z, +
 	dec a
-	ld (_RAM_DE96_), a
+	ld (_RAM_DE96_STOPGAME), a
 	jr ++
 
 +:
@@ -1814,7 +1814,7 @@ _LABEL_BE0_:
 	jr nz, --
 	xor a
 	ld (_RAM_DE46_SCROLLBG), a
-	ld hl, _DATA_473_
+	ld hl, _DATA_473_VDP_CONF_DATA
 	call _LABEL_61F_WRITE_VDP_REG
 	call _LABEL_59B_MAIN
 	ret
@@ -2208,7 +2208,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	ld (_RAM_C6FE_), hl
 	ld hl, $0909
 	ld (_RAM_C7FE_HEROSELECT_VAR), hl	;These writes are only done once so far, but i'm not sure we'll not see these again.
-	ld ix, _RAM_D600_
+	ld ix, _RAM_D600_ITEMNTRAP_TYPES
 	ld c, $96
 	ld a, (_RAM_DE52_ROOM_NR)
 	ld b, a
@@ -3805,7 +3805,14 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 	ret
 
 ; Data from 2CA0 to 2CA6 (7 bytes)
-.db $16 $00 $CB $7B $C8 $15 $C9
+;.db $16 $00 $CB $7B $C8 $15 $C9
+
+_LABEL_2CA0_:	
+		ld d, $00
+		bit 7, e
+		ret z
+		dec d
+		ret
 
 +++:
 	ld l, (ix+16)
@@ -5342,7 +5349,7 @@ _LABEL_369E_:
 	call _LABEL_3CCF_
 	exx
 	ld hl, $0000
-	ld (_RAM_DE5B_), hl
+	ld (_RAM_DE5B_COMBAT_MARK), hl
 	ld de, $001C
 	exx
 	ld b, $05
@@ -5383,7 +5390,7 @@ _LABEL_36B9_:
 	cp $13
 	jr z, +
 	ld hl, $0001
-	ld (_RAM_DE5B_), hl
+	ld (_RAM_DE5B_COMBAT_MARK), hl
 +:
 	exx
 	add hl, bc
@@ -5438,34 +5445,37 @@ _LABEL_36B9_:
 	ld (_RAM_DE42_), a
 	ret
 
-_LABEL_374B_:
-	call _LABEL_552_CHECK_AB_BUTTONS
+_LABEL_374B_:				;Some button checkin' thingo.
+	call _LABEL_552_CHECK_AB_BUTTONS	;Check if we've pressed the A or B buttons.
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
-	jr z, +
-	xor a
+	jr z, +				;If the player is held still, then jump. (Maybe not in movement?)
+	xor a				;Clear a.
 	ld (_RAM_DE95_GAMEPAD), a
 	ld (_RAM_DE94_GAMEPAD), a
-	ld (_RAM_DE90_GAMEPAD), a
+	ld (_RAM_DE90_GAMEPAD), a	;Clear joypad values.
 +:
 	ld ix, _RAM_D900_CHARA_COORD
 	ld a, (_RAM_DE95_GAMEPAD)
 	and a
-	jr z, _LABEL_3786_
+	jr z, _LABEL_3786_		;Sooo, this means, get into the options menu if we've pressed the B button on the controller.
 	ld a, (ix+10)
 	cp $05
-	jr z, _LABEL_3786_
-	ld a, (_RAM_DEBB_DEBUG)
+	jr z, _LABEL_3786_		;If D910 is 05, then jump. This is the X coordinate on the player. So if it's 05, which is normally outside the playfied, then jump to that menu.
+	ld a, (_RAM_DEBB_DEBUG)		;Check debug flag, we are not there with those coordinates.
 	and a
-	jr nz, +
-	call _LABEL_7A14_
+	jr nz, +			;If we are not in debug, jump. Strangely, we are NOT in debug if the flag is 1.
+	call _LABEL_7A14_		;This does some coordinate relocation, but the debug mode works better without this, as many rooms are otherwise not playable with it. The players spawn in strange locations, and can't be controlled. I won't name this yet, but I'm sure this is what it does.
+	;nop
+	;nop
+	;nop
 	ld a, (_RAM_DE52_ROOM_NR)
 	inc a
-	ld (_RAM_DE52_ROOM_NR), a
+	ld (_RAM_DE52_ROOM_NR), a	;This small part I know. So, in debug mode, the ingame menu is disabled. Instead, we go to the next "room" of the game.
 	pop hl
-	jp _LABEL_726_
+	jp _LABEL_726_LEVEL_WARP_LOAD	;Warp to the desired level. If this is commented out, you go to the menu, as the code is just below, then when you leave the room, the game reboots.
 
-+:
++:					;No debug mode here.
 	call _LABEL_5C07_
 _LABEL_3786_:
 	ld ix, _RAM_D900_CHARA_COORD
@@ -5554,7 +5564,7 @@ _LABEL_37C8_:
 	ld (ix+11), $00
 	ld (ix+7), $00
 	call _LABEL_5B9D_ALARMBELLS_TXT_SCRN
-	jp _LABEL_726_
+	jp _LABEL_726_LEVEL_WARP_LOAD
 
 _LABEL_3839_:
 	ld hl, _RAM_DEBD_SECOND_HERO_ARRAY
@@ -5577,7 +5587,7 @@ _LABEL_3839_:
 	xor a
 	ld (_RAM_DE90_GAMEPAD), a
 	ld a, $06
-	ld (_RAM_DE96_), a
+	ld (_RAM_DE96_STOPGAME), a
 _LABEL_3876_:
 	ld a, (ix+10)
 	ld (_RAM_DE6A_), a
@@ -5722,7 +5732,7 @@ _LABEL_3953_:
 	ret
 
 ++:
-	ld hl, (_RAM_DE5B_)
+	ld hl, (_RAM_DE5B_COMBAT_MARK)
 	ld a, h
 	or l
 	jr z, +
@@ -6082,7 +6092,7 @@ _LABEL_3B77_:
 	pop hl
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
-	jp z, _LABEL_726_
+	jp z, _LABEL_726_LEVEL_WARP_LOAD
 	ld hl, (_RAM_D900_CHARA_COORD)
 	ld de, (_RAM_DE34_SCRN_SCROLL)
 	ld bc, (_RAM_DE52_ROOM_NR)
@@ -6105,7 +6115,7 @@ _LABEL_3B77_:
 	ld hl, $0040
 	ld (_RAM_D902_), hl
 	ld (_RAM_D912_), hl
-	jp _LABEL_726_
+	jp _LABEL_726_LEVEL_WARP_LOAD
 
 _LABEL_3C32_:
 	ld b, $01
@@ -8233,7 +8243,7 @@ _LABEL_5B62_DETECTINVISIBLESPELL:
 +:	
 		call _LABEL_59DE_DEPLETE_GMSTAFF
 		jp c, _LABEL_5ADA_BL_STF_NOPWR
-		ld hl, _RAM_D600_
+		ld hl, _RAM_D600_ITEMNTRAP_TYPES
 		ld b, $96
 		ld a, (_RAM_DE52_ROOM_NR)
 		ld e, a
@@ -9355,7 +9365,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	add ix, de
 	ex de, hl
 	djnz --
-	ld a, (_RAM_DE56_)
+	ld a, (_RAM_DE56_WINPOINT_ADD)
 	and a
 	jr z, +
 	ld hl, $2710
@@ -9447,9 +9457,14 @@ _LABEL_6573_CALC_DMG:	;This seems like the
 ; Data from 6581 to 6A6B (1259 bytes)
 ;.incbin "HOTL_mod_DATA_6581_.inc"
 
-	
+_LABEL_6581_:	
+		ld (hl), $00
+		ld a, $01
+		ld (_RAM_DEF3_ENEMY_MOV_ENA), a
+		ld de, _DATA_A8D4_
+		jp _LABEL_658E_PLOT_FLSCRN_MSG
 	; Data from 6581 to 658D (13 bytes)
-	.db $36 $00 $3E $01 $32 $F3 $DE $11 $D4 $A8 $C3 $8E $65
+;	.db $36 $00 $3E $01 $32 $F3 $DE $11 $D4 $A8 $C3 $8E $65
 	
 _LABEL_658E_PLOT_FLSCRN_MSG:	
 		push de
@@ -10232,7 +10247,7 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 	jp z, _LABEL_714D_	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
 	ld a, $04
 	ld (_RAM_FFFF_), a
-	ld hl, (_RAM_DE5B_)
+	ld hl, (_RAM_DE5B_COMBAT_MARK)
 	ld a, h
 	or l
 	ld de, _DATA_12306_HUD_LPART	;THIS IS THE NON-COMBAT TILES ON THE COMPASS.
@@ -11405,7 +11420,7 @@ _LABEL_799A_:
 	jr -
 
 _LABEL_79DB_:
-	ld hl, _RAM_D600_
+	ld hl, _RAM_D600_ITEMNTRAP_TYPES
 	ld de, $0005
 -:
 	ld a, (hl)
@@ -11414,32 +11429,33 @@ _LABEL_79DB_:
 	add hl, de
 	jr -
 
-_LABEL_79E7_SPAWN_ITEMTRAP:
-	ld hl, _DATA_7B16_
-	ld de, _RAM_D600_
-	ld b, $96
+_LABEL_79E7_SPAWN_ITEMTRAP:	;Puts traps and boxes in the game. Traps activate only once when you are in a level, but if you fix the RAM value, and return into the room, the trap is there again. Item numbers correlate with the equipment you can give to your party. I guess the level data contains the coordinates where the boxes, and traps are, but D600 has the item types.
+	ld hl, _DATA_7B16_ITEMNTRAP	;Source
+	ld de, _RAM_D600_ITEMNTRAP_TYPES	;Dest.
+	ld b, $96	;150 bytes.
 -:
-	ld a, (hl)
-	and a
-	jr z, _LABEL_7A01_
-	ld c, $04
-	ldi
-	ldi
-	ldi
-	ldi
-	ldi
-	jr -
+	ld a, (hl)	;Read a byte from the source.
+	and a		;Lose carry.
+	jr z, _LABEL_7A01_	;Jump if the byte is zero. Wonder what is this...
+	ld c, $04		;If not, load 4 into C.
+	ldi			;Load one
+	ldi			;two
+	ldi			;three
+	ldi			;four
+	ldi			;five bytes.
+	jr -			;Jump back. Since this is LDI, all addresses were incremented in the background.
 
-_LABEL_7A01_:
-	xor a
-	ld hl, _DATA_AB_
+_LABEL_7A01_:	;Well, even if this is ret'd, nothing noticeable happens.
+	;ret
+	xor a	;Reset a.
+	ld hl, _DATA_AB_	;Get this address into HL.
 	ld c, $05
 	ldi
 	ldi
 	ldi
 	ldi
-	ldi
-	djnz _LABEL_7A01_
+	ldi			;Increment both HL and DE, and copy the content to DE. Also decrease C.
+	djnz _LABEL_7A01_	;Loop back, until b=0.
 	ret
 
 _LABEL_7A14_:
@@ -11480,7 +11496,7 @@ _LABEL_7A33_:
 	push hl
 	push ix
 	push iy
-	ld hl, _RAM_D600_
+	ld hl, _RAM_D600_ITEMNTRAP_TYPES
 	ld de, $0005
 	ld c, a
 -:
@@ -11626,7 +11642,7 @@ _LABEL_7AFE_:
 	ret
 
 ; Data from 7B16 to 7D0A (501 bytes)
-_DATA_7B16_:
+_DATA_7B16_ITEMNTRAP:
 .db $18 $01 $40 $00 $00 $17 $01 $17 $00 $00 $1C $02 $37 $00 $00 $10
 .db $02 $09 $00 $14 $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
 .db $01 $00 $00 $2C $04 $10 $00 $40 $45 $04 $12 $00 $80 $44 $04 $08
@@ -11701,11 +11717,102 @@ _LABEL_7D42_LOAD_PLYRSTAT:	;SIMPLY LOAD FROM ROM INTO RAM THE PLAYER STATS.
 
 ; Data from 7D6C to 7E73 (264 bytes)
 _DATA_7D6C_PLYRSTATS:
-.dsb 16, $00
-.db $01 $01 $00 $00 $13 $13 $00 $05 $00 $05 $0C $0C $10 $0C $0E $11
+;.dsb 264,$00
+;Goldmoon's starting details.
+.dsb 16, $00	;Items.
+.db $01 $01 	;Starting item. 01 seems to be the Blue Crystal Staff.
+.db $00 $00 	;If this is non-zero, the inventory will taken as full.
+.db $13 $13 	;Hitpoints.
+.db $00 $05 
+.db $00 $05 
+.db $0C $0C 	;12
+.db $10 $0C 
+.db $0E $11
 .db $06
+;00-No Ranged Weapon.
+;01-Blue Crystal Staff.
+;02-Staff of Magius.
+;03-Bow.
+;04-Longsword.
+;05-Dagger.
+;06-Hoopak.
+;07-Jo Stick. Hm, never seen this in the game.
+;08-Hunting Knife.
+;09-Spear.
+;0A-Two handed sword. I never seen this either!
+;0B-Hand Axe.
+;0C-Sword.
+;0D-Also Sword.
+;0E-Green Quiver.	-->This is for the bow.
+;0F-Red Quiver.		-->Same.
+;10-Pouch.
+;11-Bracelet.
+;12-Shield.
+;13-Shield again.
+;14-Shield.
+;15-Shield. how many of these are there?
+;16-=.=
+;17-Gem.
+;18-Gem.	;Maybe there is a list of items that are in the game, and this gets them in the pockets of the Companions.
+;19-Gem.
+;1A-Gem.
+;1B-Gem.
+;1C-Gold bar.
+;1D-Silver bar.
+;1E-Gold Chalice.
+;1F-Silver Chalice.
+;20-Coins.
+;21-TBD		Oh interesting! So this is not implemented, or it is, but unused?
+;22-TBD
+;23-TBD
+;24-TBD
+;25-TBD
+;26-TBD
+;27-TBD		Lot of empty slots here.
+;28-Bow
+;29-Longsword
+;2A-Sword.
+;2B-Dagger.
+;2C-Hunting Knife.
+;2D-Scroll.
+;2E-Scroll.
+;2F-Green Potion
+;30-Orange Potion.
+;31-Red Potion
+;32-Blue Potion
+;33-Yellow potion.
+;34-Ring.
+;35-Gem Ring.	-never seen this either,
+;36-Wand.
+;37-Disks of Mishakal
+;38-Brown Potion
+;39-Glitches the game out.
+;3A-No name displayed.
+;3B-Glitched name.
+;3C-Same.
+;3D-same.
+;3E-same.
+;3F-glitch+ goldmoon's name at the end.
+;40-Sturm	You can use others as well!
+;41-Caramon
+;42-Raistlin
+;43-Tanis
+;44-Tasslehoff
+;45-Riverwind
+;46-Flint
+;47-Dead Character
+;48-Glitch
+;The rest might be just glitches, and invalid things, so that's where I stop.
+
 .dsb 16, $00
-.db $0A $00 $00 $00 $1D $1D $02 $06 $00 $05 $11 $0E $0B $10 $0C $0C
+.db $0A $00 
+.db $00 $00 
+.db $1D $1D 
+.db $02 $06 
+.db $00 $05 
+.db $11 $0E 
+.db $0B $10 
+.db $0C $0C
 .db $05
 .dsb 16, $00
 .db $04 $09 $00 $00 $24 $24 $02 $06 $00 $05 $14 $0C $0A $11 $0B $0F
@@ -11786,13 +11893,13 @@ _LABEL_7E9A_REGION_CHKSETUP:
 _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	xor a
 	ld l, a
-	ld h, a
-	ld (_RAM_DE5B_), hl
-	ld (_RAM_DE74_PT_FOR_CMBT), hl
+	ld h, a			;Reset HL.
+	ld (_RAM_DE5B_COMBAT_MARK), hl	;No combat.
+	ld (_RAM_DE74_PT_FOR_CMBT), hl	;Reset points for combat.
 	ld (_RAM_DE76_CR_DMGLINK), a	;THIS SEEMS TO BE THE "LINK" BETWEEN CARAMON AND RAISTLIN. IF THIS IS ZERO, THE TWO WON'T GET DAMAGED TOGETHER.
 ;.DSB 3,$00
-	ld (_RAM_DE96_), a	;NOT NOTICEABLE.
-	ld (_RAM_DE56_), a	;THIS NEITHER.
+	ld (_RAM_DE96_STOPGAME), a	;This stops the game compleretely. Nor the enemies or the player is able to move. Music play continues. Oh yes, if this value is non-zero.
+	ld (_RAM_DE56_WINPOINT_ADD), a	;Adds 10k points to items if this is not zero. I guess when you win the game, it gives you this amount.
 	ld (_RAM_DE55_WATERFALL), a
 	ld (_RAM_DEE5_MENUORGAME), a		;NO EFFECT AS NOW.
 	ld (_RAM_DEEE_PROT_EVIL_TIMER), a
@@ -11802,13 +11909,13 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (_RAM_DEF3_ENEMY_MOV_ENA), a	;NON-ZERO VALUE WILL PREVENT ENEMIES FROM MOVING.
 	ld (_RAM_DEF2_HOLD_PLYR), a	;THIS ONE ALSO STOPS THE PLAYER IN PLACE.
 	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a
-	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT.
+	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT. After two months, I still have no idea what this does.
 	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
 	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
-	ld a, (_RAM_DE6D_)
+	ld a, (_RAM_DE6D_GAME_WIN)
 	ld (_RAM_DE6C_NME_MOVE7BIT), a	;BIT 7 WILL STOP ENEMIES FROM MOVING. BIT 6 DOES NOTHING YET.
 	xor a
-	ld (_RAM_DE6D_), a
+	ld (_RAM_DE6D_GAME_WIN), a	;In case we have won, the winning flag is cleared.
 	ld a, $FF
 	ld (_RAM_DEE6_), a
 	ld (_RAM_DEE8_PROJECTILE_TYPE), a		
@@ -11829,7 +11936,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ret
 
 ; Data from 7F3A to 7FEF (182 bytes)
-.dsb 182, $00	;We have a lot of empty space at the end of the very first bank to play with.
+;.dsb 182, $00	;We have a lot of empty space at the end of the very first bank to play with.
 
 .BANK 1 SLOT 1
 .ORG $0000
@@ -11947,7 +12054,9 @@ _DATA_A871_MENUTXT:	;THIS IS RELATED SOMEHOW TO THE INGAME MENU, WHEN YOU OPEN I
 	.db $61 $6C $20 $73 $74 $61 $66 $66 $20 $73 $70 $65 $6C $6C $73 $0D
 	.db $55 $73 $65 $0D $54 $61 $6B $65 $0D $47 $69 $76 $65 $0D $44 $72
 	.db $6F $70 $0D $53 $63 $6F $72 $65 $0D $45 $78 $69 $74 $20 $6D $65
-	.db $6E $75 $FF $0D $0D $0D $54 $68 $65 $20 $6D $6F $6E $73 $74 $65
+	.db $6E $75 $FF 
+_DATA_A8D4_:	
+	.DB $0D $0D $0D $54 $68 $65 $20 $6D $6F $6E $73 $74 $65
 	.db $72 $73 $20 $61 $70 $70 $65 $61 $72 $0D $0D $74 $6F $20 $73 $6C
 	.db $6F $77 $20 $64 $6F $77 $6E $FF $0D $0D $0D $54 $68 $65 $20 $70
 	.db $6F $74 $69 $6F $6E $20 $63 $75 $72 $65 $73 $0D $0D $73 $6F $6D
