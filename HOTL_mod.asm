@@ -20,22 +20,22 @@ BANKS 30
 
 .enum $C000 export
 _RAM_C000_RAM_START dsb $20			;Holds many things from mapdata to palettes.
-_RAM_C020_ db
+_RAM_C020_INTROSCR_NR db			;This number holds the screen number in the intro. I mean which screen to show. Some values are written here during gameplay.
+;Apperently this is also used by some menu tilemap thing. I have to get to that part later on. Sometimes the memory management part is not the best,
 .ende
 
 .enum $C040 export
 _RAM_C040_SELECTED_MENUITEMINRAM_PAL dsb $f	;This is also used to check what menu item was selected in the ingame menu. Also, the character introduction screens are using this memory to store the characters palettes.
-_RAM_C04E_ DB					;Used for menus so far.
-_RAM_C04F_LAST_ENTERED_MENU db			;Stores what was the last menu before we entered a submenu.
-_RAM_C050_ dsb $10				;Check this later.
+_RAM_C04E_ACTIVE_MENUITEM DB	;Active menu item number. Used for both the magic and clerical things.
+_RAM_C04F_LAST_ENTERED_MENU db			;Stores what was the last menu before we entered a submenu. You know, so we know where we were, and what to select again.
+_RAM_C050_ dsb $10				;Check this later. Some menu items are handled here as well. Not sure why 16 bytes are used for this, but it will be clearer later, i'm sure.
 .ende
-
 .enum $C0FE export
-_RAM_C0FE_UNUSED dw					;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
+_RAM_C0FE_UNUSED dw		;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
 .ende
 
 .enum $C100 export
-_RAM_C100_LEVEL_TILEMAP1 db						;This is one part of the tilemap used by the engine. These are scattered around RAM, i don't know why exactly.
+_RAM_C100_LEVEL_TILEMAP1 db	;This is one part of the tilemap used by the engine. These are scattered around RAM, i don't know why exactly.
 .ende
 
 .enum $C1FE export
@@ -57,25 +57,25 @@ _RAM_C300_LEVEL_TILEMAP3 DB						;Third part of the tilemap engine.
 
 
 .enum $C3FE export
-_RAM_C3FE_ dw
-_RAM_C400_ db								;Another part of the tilemap, or similar. Every $100th there is a small array for something. Why would you do this at all? There must be a logical reason....
+_RAM_C3FE_ dw		;Does not seem to be used, just written once.
+_RAM_C400_TILEMAP db								;Another part of the tilemap, or similar. Every $100th there is a small array for something. Why would you do this at all? There must be a logical reason....
 .ende
 
 .enum $C4FE export
 _RAM_C4FE_ dw
-_RAM_C500_ db
+_RAM_C500_TILEMAP db
 .ende
 
 .enum $C5FE export
 _RAM_C5FE_ dw
-_RAM_C600_ db
+_RAM_C600_TILEMAP db
 .ende
-
+			;These are not marked in the code, yet seems to be used to draw the tilemap on the gameplay screen. I wonder what was the decision to scatter these so far apart. Maybe to load longer levels?
 .enum $C6FE export
-_RAM_C6FE_ dw
+_RAM_C6FE_ dw		;Again, this is just written once, not seems to be used at all.
 .ende
 .enum $C700 export
-_RAM_C700_SELECTED_HERO_TILES db ;This array is used to store the tiles of the selected companion on the HUD. What I don't really understand, that 
+_RAM_C700_SELECTED_HERO_TILES db ;This array is used to store the tiles of the selected companion on the HUD. What I don't really understand, that this is used for the tilemaps in the game as well. How many bytes does it use for it?! If the values are frozen, then of course the selected hero's tiles will be garbled.
 .ende
 
 .enum $C720 export
@@ -85,19 +85,19 @@ _RAM_C720_NEW_HERO_SELECTIONTILES db	;Used to hold the tiles of the hero, while 
 .enum $C7FE export
 _RAM_C7FE_HEROSELECT_VAR db
 _RAM_C7FF_FIRST_SELECTED_COMPANION db
-_RAM_C800_ dsb $24
+_RAM_C800_ dsb $24		;This is the actual tilemap for the screen! If you modify these, the relevant 16x16 metatiles are changed. Starting at $C800 would modify the very first metatile.
 _RAM_C824_ dsb $10
 _RAM_C834_ dsb $4
 .ende
 
 .enum $C924 export
-_RAM_C924_ dsb $10
+_RAM_C924_ dsb $10		;This is also the part of the screen map.
 _RAM_C934_ dsb $4
 .ende
 
 .enum $D000 export
-_RAM_D000_ dsb $100
-_RAM_D100_ db
+_RAM_D000_IN_RAM_SPRITETABLE dsb $100
+_RAM_D100_IN_RAM_SPRITETABLE dsb $100	;This is the second sprite table, and also used for decompressed images before sending them to the VDP. A second sprite table is needed to handle sprite flickers, so you see less of it. This way, the game runs on a lower framerate, but could handle more enemies on screen.
 _RAM_D101_ db
 .ende
 
@@ -107,11 +107,11 @@ _RAM_D104_ db
 .ende
 
 .enum $D120 export
-_RAM_D120_ dsb $8
+_RAM_D120_ART_DECOMP dsb $8	;Used with the art decompression.
 .ende
 
 .enum $D12C export
-_RAM_D12C_ db
+_RAM_D12C_IN_RAM_SPRITETABLE db			;This seems like to control where the second sprite array's sprites would be drawn on the screen. Also, there is a whole sprite array here as well!
 .ende
 
 .enum $D1AC export
@@ -119,8 +119,8 @@ _RAM_D1AC_ db
 .ende
 
 .enum $D200 export
-_RAM_D200_ dsb $200
-_RAM_D400_ dsb $100
+_RAM_D200_INRAM_TILEMAP dsb $200		;512 bytes. This is also some tilemap stuff. How many damn memory addresses are needed to decode level data?!
+_RAM_D400_IN_RAM_SPRITETABLE dsb $100		;Another sprite table! I know the game can handle things, but this is ridiculous.
 .ende
 
 .enum $D600 export
@@ -130,45 +130,110 @@ _RAM_D601_ db
 
 .enum $D900 export
 _RAM_D900_CHARA_COORD db
-_RAM_D901_ db
-_RAM_D902_ dw
-_RAM_D904_ db
+_RAM_D901_SCREEN_NR db		;As the level is split into several screens sometimes, this is what it represents. The screen will try to scroll to this part, and if there is no such screen, the level ends, and it won't get further. Monsters, that are "awake" will pursue you, and they go off screen to catch up with you.
+_RAM_D902_HERO_GROUNDLEVEL1 dw
+_RAM_D904_HERO_DIRECTION db			;0-right, 01-left
 .ende
 
 .enum $D907 export
-_RAM_D907_ db
+_RAM_D907_HERO_ANIM_FRAME db			;What this says on the tin. There might be other addresses for the enemy animations too.
 .ende
 
 .enum $D909 export
 _RAM_D909_FIRST_COMPANION db	;Who is the first companion in the list.
-_RAM_D90A_ db
-_RAM_D90B_ db
+_RAM_D90A_HERO_ACTION db			;This is the player's actions.
+				;00-standing still
+				;01-walking
+				;02-running
+				;03-walking backward\moonwalking
+				;04-turning around
+				;05-jumping
+				;06-getting weapon out. Strangely, the weapons just appear in the hands of the warriors usually.
+				;07-same
+				;08-upper sword swing\attack
+				;09-middle swing
+				;0A-low swing
+				;0B-duck
+				;0C-getting bow ready.
+				;0D-looks like getting attacked\falling, then gets a spear ready. This is for Sturm. Otherwise fire the bow. I guess this is firing with the secondary weapon.
+				;0E-damage frame.
+				;0F-falling. Not just the falling anim, it checks for collision, and kill the player, if this is not the "transition" level.
+				;10-Using a second weapon? Swords disappear, so this might be attack without the weapon ready.
+				;11-Blocking.
+				;12-Turning up for taking a route\door that is pointing up.
+				;13-Same, but down.
+				;14-Getting the staff\spear ready to throw. For Raistlin, he teleports backwards half a screen!
+				;15-Raistlin blinks out a bit, then comes back. For everyone else, it's the spear throw. Even for Sturm.
+				;16-Nothing. It may have anim frames, but does nothing.
+				;17-Walk forward a bit.
+				;18-Raistlin does some really awesome ninja attack! Never seen it before.
+					;Goldmoon runs a bit.
+					;Other walk, or moonwalk.
+				;19-moonwalking.
+				;1A-looking down
+				;1B-Same as 18, may be invalid.
+				;Anything over these values seem to provide random outcomes.
+
+_RAM_D90B_ANIM_FRAME_COUNTER db		;This is a counter, that counts down the animation frames, and the player action is not stopped, until this counter is zero.
 .ende
 
 .enum $D910 export
-_RAM_D910_ dw
-_RAM_D912_ dw
+_RAM_D910_SECOND_HERO_COORD dw		;This contains the second copy of the player coordinates, to be used with the system, that draws sprites on the screen.
+_RAM_D912_HERO_GROUNDLEVEL2 dw				;The second "frame"'s hero ground level. If this is changed, then the player's character will jump up and down, as the game puts these together. If the second byte is not zero, the hero sprite is not drawn.
 .ende
 
 .enum $D91C export
-_RAM_D91C_ db
+_RAM_D91C_NME_COORD_ARRAY db		;This is the first enemy's X coordinate. The next byte is the screen number, similarly to how the player movement works.
+			;The next, third byte is the "ground" level for the enemy. Some of the enemies are floating, so this is why this might be important.
+			;Fourth byte hides the enemy.
+			;Fifth byte is the direction the enemy is facing. 01 is left, 00 is right.
+			;Sixth freezes it.
+			;Seventh does nothing so far. (human enemy)
+			;Eighth is the animation frame.
+			;Ninth is the health of the enemy.
+			;Tenth is the enemy state:
+				;00-standing still.
+				;01-walking\following.
+				;02-stops in its tracks.
+				;03-upper attack.
+				;04-attack2
+				;05-middle attack.
+				;06-thrusting attack.
+				;07-another upper attack.
+				;08-upper attack 4.
+				;09-upper thrust.
+				;0A-lower thrust attack.
+				;0B-lower slash attack.
+				;0C-lower thrust attack 2.
+				;0D-the enemy sticks the sword to his body.
+				;0E-lifts the sword. what is strange, that the upper part of the sword is not visible.
+				;0F-seems like a little walk, then a dodge.
+				;10-backpedalling\moonwalking
+				;11-dies?
+				;12-nothing
+				;13-some broken walking animation.
+				;14-also some backpedalling
+				;15-small walking.
+				;16 and over seems to be invalid values.
+			;11th byte is the animation frame of the action.
+			;Other monsters are after this one. There might be other details, but this was my finding at the moment.
 .ende
 
 .enum $D920 export
-_RAM_D920_ db
+_RAM_D920_MNE1_DIR db		;Enemy 1 direction.
 .ende
 
 .enum $D9A8 export
-_RAM_D9A8_ db
+_RAM_D9A8_PROJECTILE_ARRAY db	;I have to fix the rom, but this is the part where the player and possibly the enemy projectiles are stored.
 .ende
 
 .enum $D9B0 export
-_RAM_D9B0_ db ;This is the timer for the 'Find Traps' spell.
+_RAM_D9B0_FINDTRAPS_TIME db ;This is the timer for the 'Find Traps' spell.
 .ende
 
 .enum $DA50 export
-_RAM_DA50_ dsb $c
-_RAM_DA5C_ db
+_RAM_DA50_NME_COORD_ARRAY2 dsb $c		;Another array for player positions and so on.
+_RAM_DA5C_NME_ARRAY_VAL db			;This also stores the array for the second player, enemy coordinates as well, to be used by the game engine.
 .ende
 
 .enum $DBA0 export
@@ -185,7 +250,7 @@ _RAM_DBB5_GOLDMOON_HP db
 .ende
 
 .enum $DBB9 export
-_RAM_DBB9_ db
+_RAM_DBB9_PLYRSTATS_RELATED db
 _RAM_DBBA_ dsb $e
 .ende
 
@@ -228,7 +293,7 @@ _RAM_DCE0_TRAPARRAY db	;This seems like an array for the traps in a given room. 
 .ende
 
 .enum $DCF2 export
-_RAM_DCF2_UNUSED dsb $20	;Hm, checking this does not seem to reveal anything. The code does not write here anything other than zeroes, so I think this is unused. More strange that here, 32 bytes are assigned to this, but only 16 bytes are written.
+_RAM_DCF2_DEAD_CHARS dsb $20	;Hm, checking this does not seem to reveal anything. The code does not write here anything other than zeroes, so I think this is unused. More strange that here, 32 bytes are assigned to this, but only 16 bytes are written.
 _RAM_DD12_MUS_ENA db	;Does as what's written on the tin.
 _RAM_DD13_MUSIC_NR db	;Valid from 1-4. 0 is silence, and anything over that too. Goes to FF after you enter the character bio screens, then disables music, but that's it.
 _RAM_DD14_SFX_PLAY db	;These are the sound the player and the enemies will make, but not the environment. The number here always starts as $Ex.
@@ -269,7 +334,7 @@ _RAM_DDEA_ db
 
 .enum $DE06 export
 _RAM_DE06_ db
-.ende
+.ende	;These are all sound related.
 
 .enum $DE22 export
 _RAM_DE22_RESET db
@@ -337,7 +402,7 @@ _RAM_DE6D_GAME_WIN db		;If this is not zero, the game is won automatically.
 _RAM_DE6E_ db
 _RAM_DE6F_ dw
 _RAM_DE71_ db
-_RAM_DE72_LVL_LOAD dw	;This is used in the level transition routine. Freezing it will however not present anyone from going elsewhere in the game.
+_RAM_DE72_LVL_LOAD dw	;This is used in the level transition routine. Freezing it will however not prevent anyone from going elsewhere in the game.
 _RAM_DE74_PT_FOR_CMBT dw
 _RAM_DE76_CR_DMGLINK db
 _RAM_DE77_PT_FOR_ITEMS dw
@@ -603,7 +668,7 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	call _LABEL_4CF_LOAD2PALS	;LOAD SAID PALETTE.
 	xor a
 	ld (_RAM_C000_RAM_START), a
-	ld (_RAM_C020_), a
+	ld (_RAM_C020_INTROSCR_NR), a
 _LABEL_275_:
 	ld bc, $01F4		;SET UP A TIMER.
 -:
@@ -622,10 +687,10 @@ _LABEL_275_:
 	jr Nz, -			;JUMP IF TIMER IS EXPIRED. (SWITCH SCREENS IN THE INTRO, AND GO TO DEMO THEN.)
 	;IF THIS IS Z, PICTURES WILL SHOW FOR A VERY LITTLE TIME, AS THE PROGRAM THINKS THE TIMER IS EXPIRED ALREADY.
 	call _LABEL_4F9_PALETTE	;FADE OUT SCREEN.
-	ld a, (_RAM_C020_)
+	ld a, (_RAM_C020_INTROSCR_NR)
 	inc a
 	and $03
-	ld (_RAM_C020_), a
+	ld (_RAM_C020_INTROSCR_NR), a
 	jp z, _LABEL_2ED_GAME_DEMO	;IF WE HAVE SEEN ALL SCREENS, COMMENCE TO GAME DEMO.
 	;IF SET TO NZ, THE GAME DEMO STARTS AFTER THE FIRST LEGAL SCREEN.
 	ld a, (_RAM_C000_RAM_START)
@@ -1159,7 +1224,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD.
 _LABEL_726_LEVEL_WARP_LOAD:
-	call _LABEL_5819_		;I CAN'T SEEM TO FIND WHAT THIS DOES EXACTLY. COPIES 32 BYTES OF SOMETHING, BUT IT'S ALL ZEROES SO FAR. COMMENTING IT OUT DOES NOT DO ANYTHING NOTICEABLE ON THE GAMEPLAY. NOT EVEN ON THE SPELLS OR ANYTHING.
+	call _LABEL_5819_MARKDEAD_PERMADEAD		;I CAN'T SEEM TO FIND WHAT THIS DOES EXACTLY. COPIES 32 BYTES OF SOMETHING, BUT IT'S ALL ZEROES SO FAR. COMMENTING IT OUT DOES NOT DO ANYTHING NOTICEABLE ON THE GAMEPLAY. NOT EVEN ON THE SPELLS OR ANYTHING.
 	;NOP
 	;NOP
 	;NOP
@@ -1281,7 +1346,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	cp $02
 	jr nz, +
 	ld a, $FF
-	ld (_RAM_D907_), a
+	ld (_RAM_D907_HERO_ANIM_FRAME), a
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 +:
 	and $03
@@ -1313,7 +1378,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld l, (iy+4)
 	ld e, (iy+5)
 	ld a, (iy+6)
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 	ld a, $01
 	ld ix, $D900
 	call _LABEL_3AAF_DRAWPROJECTILE
@@ -1380,7 +1445,7 @@ _LABEL_8B9_GAME_OVER:	;THIS GETS CALLED, WHEN ALL CHARS ARE DEAD\PERMADEAD.
 	ld c, $01
 	call _LABEL_6242B_SET_MUS	;PLAY THE GAME OVER TUNE.
 	ld hl, $3808			;TILEMAP ON THE SCREEN. IF YOU OPEN A TILEMAP MONITOR IN AN EMULATOR, YOU CAN SEE THIS VALUE DIRECTLY CORRELATES WITH THE TILE\TEXT POSITION ON THE SCREEN LATER.
-	ld de, _DATA_AEF2_		;THIS IS A BLOCK OF TEXT AND OTHER DATA. BASICALLY THE CODE SETS UP THIS REGISTER TO POINT TO THE 'YOU'VE FAILED' MESSAGE.
+	ld de, _DATA_AEF2_MISSION_FAILEDTXT		;THIS IS A BLOCK OF TEXT AND OTHER DATA. BASICALLY THE CODE SETS UP THIS REGISTER TO POINT TO THE 'YOU'VE FAILED' MESSAGE.
 --:	;CHANGED!
 	ld a, $1F
 	ld (_RAM_FFFF_), a		;BANKSWITCH TO THE BANK THAT HAS THIS DATA.
@@ -1414,7 +1479,7 @@ _LABEL_906_GOOD_END: ;Ending screen.
    ld hl, $3808    ; This is a tilemap part. 3
    ld de, $AF25    ; Load value $AF25 into register pair DE 3
    ld a, $01       ; Load value $01 into register A 2
-   ld ($DE56), a ; Store value of A into memory address specified by DE+$DE56 3
+   ld (_RAM_DE56_WINPOINT_ADD), a ; Store value of A into memory address specified by DE+$DE56 3
    jp -- ;$08dc; Jump to address $08DC 3
 ;.dsb 27,$00
 _LABEL_924_UPDATE_GAME_SCRN:	
@@ -1422,15 +1487,18 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $01
 	jr nz, +	;IF THIS IS NOT ZERO, JUMP.
-	ld hl, (_RAM_D900_CHARA_COORD)	;THIS IS SOME CHARACTER COORDINATE ON SCREEN, AND WHAT THEY DO, LIKE JUMP OR SOMETHING.
+	ld hl, (_RAM_D900_CHARA_COORD)	;Read from the player's X position.
 	ld de, $0220
 	and a
 	sbc hl, de
 	jr c, +
 	ld c, $01
-	call _LABEL_5689_
+	call _LABEL_5689_HITDETECT
+	;nop
+	;nop
+	;nop
 	ld c, $08
-	call _LABEL_57CC_
+	call _LABEL_57CC_DAMAGE_OTHERS
 +:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02			
@@ -1440,10 +1508,10 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld (_RAM_DE57_), a
 	and $03
 	jr nz, +
-	ld a, (_RAM_D904_)
+	ld a, (_RAM_D904_HERO_DIRECTION)
 	push af
 	xor a
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 	ld b, $10
 	ld l, $78
 	ld d, $12
@@ -1454,7 +1522,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld ix, $D900
 	call _LABEL_3AAF_DRAWPROJECTILE
 	pop af
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 +:				;THIS IS $02, THEN STONES FALL ON THE CHARACTER'S HEAD, LIKE IN THE ENDING.
 ;---DRAGON BREATH PROTECTION TIMER.
 	ld a, (_RAM_DEF0_DEFLECT_DRGN_BREATH)	;Get the dragon breath timer.
@@ -1518,7 +1586,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 +:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
-	call z, _LABEL_374B_
+	call z, _LABEL_374B_AB_DEBUG_BUTTON
 	call _LABEL_53A3_
 	call _LABEL_5223_
 	call _LABEL_369E_
@@ -1529,16 +1597,17 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	jp _LABEL_757_GAME_MAIN
 
 _LABEL_A10_:
+	;ret
 	ld de, (_RAM_DEA9_)
 	push de
 	ld hl, $0040
 	add hl, de
 	ld (hl), $D0
-	ld a, (_RAM_DA5C_)
+	ld a, (_RAM_DA5C_NME_ARRAY_VAL)
 	ld c, a
 	ld b, $00
 	ex de, hl
-	ld de, _RAM_D12C_
+	ld de, _RAM_D12C_IN_RAM_SPRITETABLE
 	and a
 	jr z, +
 	ldir
@@ -1599,7 +1668,7 @@ _LABEL_A10_:
 	inc de
 	dec hl
 	djnz -
-	ld hl, _RAM_D12C_
+	ld hl, _RAM_D12C_IN_RAM_SPRITETABLE
 	ld (_RAM_DEA9_), hl
 ++:
 	call _LABEL_59B_MAIN
@@ -1824,16 +1893,16 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and wh
 	;NOP
 	;NOP
 	;NOP
-	ld hl, _RAM_D000_
-	ld de, _RAM_D000_ + 1
+	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
+	ld de, _RAM_D000_IN_RAM_SPRITETABLE + 1
 	;LD BC, $00FF	;255 BYTES ARE ALSO WORKING...
 	ld bc, $01FF	;512 BYTES
 	ld (hl), c
 	ldir		;THIS LDIR COMMENTED OUT WILL MESS UP THE DRAWN TILEMAP.
 	;NOP
 	;NOP
-	ld hl, _RAM_D200_
-	ld de, _RAM_D200_ + 1
+	ld hl, _RAM_D200_INRAM_TILEMAP
+	ld de, _RAM_D200_INRAM_TILEMAP + 1
 	LD BC, $03FF
 	;ld bc, $03FF	;1024 BYTES.
 	ld (hl), c
@@ -2023,7 +2092,7 @@ _LABEL_D89_:
 	inc h
 	inc h
 	push hl
-	ld hl, _RAM_D200_
+	ld hl, _RAM_D200_INRAM_TILEMAP
 	ld a, d
 	ld b, d
 	and $03
@@ -2037,7 +2106,7 @@ _LABEL_D89_:
 	inc a
 	cp $B4
 	jp nz, +
-	ld hl, _RAM_D200_
+	ld hl, _RAM_D200_INRAM_TILEMAP
 	jr _LABEL_DF6_
 
 +:
@@ -2354,7 +2423,7 @@ _LABEL_F50_:
 	ld (_RAM_DE48_), a
 	ld (_RAM_DE3B_), a
 	ld (_RAM_DE3A_COLUMN_00_01), a
-	ld hl, _RAM_D12C_
+	ld hl, _RAM_D12C_IN_RAM_SPRITETABLE
 	ld (hl), $FF
 	ld (_RAM_DE38_), hl
 	ret
@@ -3707,8 +3776,8 @@ _DATA_2ACC_:
 _LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. THERE ARE TWO TABLES. IF THIS IS DISABLED, I CAN'T SEE ANY MAJOR DIFFERENCE. PROBABLY HERE TO BE SAFE, OR THERE IS A BUG ALONG THE WAY THAT THIS FIXES.
 	xor a
 	ld (_RAM_DEB5_), a
-	ld hl, _RAM_D400_
-	ld de, _RAM_D400_ + 1
+	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
+	ld de, _RAM_D400_IN_RAM_SPRITETABLE + 1
 	ld bc, $00FF
 	ld (hl), $D0	;THIS SEEMS LIKE THE INRAM SAT TABLE.
 	ldir
@@ -3731,7 +3800,7 @@ _LABEL_2C1A_:
 	xor $40
 	ld (_RAM_DEB5_), a
 	ld de, $0000
-	ld hl, _RAM_D400_
+	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
 	jr z, +
 	ld de, $0800
 +:
@@ -3740,7 +3809,7 @@ _LABEL_2C1A_:
 	ld hl, (_RAM_DE42_)
 	ld (_RAM_DE44_), hl
 	ld hl, _RAM_D900_CHARA_COORD
-	ld de, _RAM_DA50_
+	ld de, _RAM_DA50_NME_COORD_ARRAY2
 	ld bc, $0150
 	ldir
 	ret
@@ -3752,7 +3821,7 @@ _LABEL_2C46_:
 		xor a
 		ld (_RAM_DEB5_), a
 		ld a, $D0
-		ld (_RAM_D400_), a
+		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
 		ret
 	
 _LABEL_2C50_:	
@@ -3772,7 +3841,7 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 	;NOP
 	;NOP
 	ld (_RAM_DEAF_), a
-	ld ix, _RAM_DA50_
+	ld ix, _RAM_DA50_NME_COORD_ARRAY2
 	ld b, $0C
 -:
 	push ix
@@ -4025,7 +4094,7 @@ _LABEL_2DE2_:
 	ld bc, $0004
 	exx
 	ld ix, _RAM_D900_CHARA_COORD
-	ld hl, _RAM_D000_
+	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld (_RAM_DEB7_), hl
 	ld b, $0C
 	ld c, $00
@@ -4146,7 +4215,7 @@ _LABEL_2DE2_:
 	ret
 
 _LABEL_2EB1_:
-	ld hl, _RAM_D000_
+	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld (_RAM_DEB7_), hl
 	ld c, Port_VDPAddress
 	ld hl, (_RAM_DEB3_)
@@ -4158,7 +4227,7 @@ _LABEL_2EB1_:
 	jr _LABEL_2EDF_
 
 _LABEL_2EC8_:
-	ld hl, _RAM_D000_
+	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld (_RAM_DEB7_), hl
 _LABEL_2ECE_:
 	ld c, Port_VDPAddress
@@ -4547,7 +4616,7 @@ _LABEL_2FB7_DRAWSPRITES:	;THIS IS THE SPRITE DRAW ROUTINE.
 	ret		;THIS WILL DRAW ALL 64 SPRITES ON THE SCREEN, PRETTY NICE WITH ALL THE UNROLLED LOOPS, THEY HAD THE SPACE FOR IT.
 
 _LABEL_314E_FINE_CHAR_MVMNT:
-	ld ix, _RAM_DA50_	;THIS LOOKS LIKE A VALUE FOR FINE CHAR MOVEMENT. IF THIS IS FROZEN, THE MOVEMENTS BECOME REALLY JAGGED.
+	ld ix, _RAM_DA50_NME_COORD_ARRAY2	;THIS LOOKS LIKE A VALUE FOR FINE CHAR MOVEMENT. IF THIS IS FROZEN, THE MOVEMENTS BECOME REALLY JAGGED.
 	ld b, $0C		;12, BUT NO IDEA YET WHAT IT AMOUNS TO.
 	ld de, $001C
 _LABEL_3157_:
@@ -4708,7 +4777,7 @@ _LABEL_325E_:
 _LABEL_3262_:
 	ld c, $F4
 +:
-	ld ix, _RAM_D100_
+	ld ix, _RAM_D100_IN_RAM_SPRITETABLE
 	ld a, e
 	sub $04
 	and $F0
@@ -4862,17 +4931,17 @@ _LABEL_334C_DECOMPRESS_ART:	;$14 OR $01 AT FIRST. 0001 0100 OR 0000 0001
 	add hl, hl	;0000 1000	WE ROLL SOME BYTES IN L.
 	ld de, _DATA_64000_COMP_GFX
 	add hl, de	;64008
-	ld de, _RAM_D120_
+	ld de, _RAM_D120_ART_DECOMP
 	ld bc, $0008
 	ldir		;COPY EIGHT BYTES TO RAM.
-	ld ix, _RAM_D120_	;LOAD IT INTO THE INDEX REG.
+	ld ix, _RAM_D120_ART_DECOMP	;LOAD IT INTO THE INDEX REG.
 	ld h, (ix+0)		;$80
 	ld l, (ix+1)		;$C0	SET UP A SOURCE ADDRESS. HL IS $80C0.
 	ld b, (ix+2)		;$02
 	ld c, (ix+3)		;$1D	SET UP THE BYTE AMOUNT.	BC IS $021D.
 	dec bc			;$1C
 	ld e, $20		;021C
-	ld iy, _RAM_D100_
+	ld iy, _RAM_D100_IN_RAM_SPRITETABLE
 	ld a, (ix+6)	;$D126
 	add a, $19	;We calculate the correct bank to switch to.
 	ld (_RAM_FFFF_), a
@@ -4946,7 +5015,7 @@ _LABEL_33A6_DECOMPRESS:
 	jr -
 
 _LABEL_33F6_:
-	ld iy, _RAM_D100_
+	ld iy, _RAM_D100_IN_RAM_SPRITETABLE
 	push bc
 	ld b, $08
 -:
@@ -5020,7 +5089,7 @@ _LABEL_341D_:
 	jr -
 
 _LABEL_346F_:
-	ld iy, _RAM_D100_
+	ld iy, _RAM_D100_IN_RAM_SPRITETABLE
 	ld a, (iy+0)
 	out (Port_VDPData), a
 	ld a, (iy+2)
@@ -5354,7 +5423,7 @@ _LABEL_369E_:
 	exx
 	ld b, $05
 	ld de, (_RAM_D900_CHARA_COORD)
-	ld ix, _RAM_D91C_
+	ld ix, _RAM_D91C_NME_COORD_ARRAY
 _LABEL_36B9_:
 	ld a, (ix+9)
 	and a
@@ -5445,7 +5514,7 @@ _LABEL_36B9_:
 	ld (_RAM_DE42_), a
 	ret
 
-_LABEL_374B_:				;Some button checkin' thingo.
+_LABEL_374B_AB_DEBUG_BUTTON:				;Checks for button 2, and either opens the menu of the game, or does the debug warp.
 	call _LABEL_552_CHECK_AB_BUTTONS	;Check if we've pressed the A or B buttons.
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
@@ -5552,10 +5621,10 @@ _LABEL_37C8_:
 	pop bc
 	pop af
 	ld (_RAM_D900_CHARA_COORD), hl
-	ld (_RAM_D910_), hl
+	ld (_RAM_D910_SECOND_HERO_COORD), hl
 	ld (_RAM_DE34_SCRN_SCROLL), de
 	ld (_RAM_DE52_ROOM_NR), bc
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 	ld (ix+2), $74
 	ld (ix+3), $00
 	ld (ix+18), $74
@@ -5919,7 +5988,7 @@ _LABEL_3AA1_:
 	jp _LABEL_3786_
 
 _LABEL_3AAF_DRAWPROJECTILE:
-	ld iy, _RAM_D9A8_
+	ld iy, _RAM_D9A8_PROJECTILE_ARRAY
 	push af
 	push bc
 	push de
@@ -5927,14 +5996,14 @@ _LABEL_3AAF_DRAWPROJECTILE:
 	ld b, $04;$06
 -:
 	;$D9B0 is the timer for the animation on the find traps spell.
-	ld a, (iy+9)	;$D9B1 _RAM_D9B0_ is marked as a timer.
+	ld a, (iy+9)	;$D9B1 _RAM_D9B0_FINDTRAPS_TIME is marked as a timer.
 	cp $14
 	jr nz, +
 	add iy, de	;What's up with this in-between bytes?
 	djnz -
 	pop de
 	pop bc
-	ld iy, _RAM_D9A8_
+	ld iy, _RAM_D9A8_PROJECTILE_ARRAY
 	ld a, b
 	cp $0F
 	jr z, ++
@@ -6081,7 +6150,7 @@ _LABEL_3B77_:
 	add hl, hl
 	add hl, hl
 	ld (_RAM_D900_CHARA_COORD), hl
-	ld (_RAM_D910_), hl
+	ld (_RAM_D910_SECOND_HERO_COORD), hl
 	ld de, $0080
 	and a
 	sbc hl, de
@@ -6096,25 +6165,25 @@ _LABEL_3B77_:
 	ld hl, (_RAM_D900_CHARA_COORD)
 	ld de, (_RAM_DE34_SCRN_SCROLL)
 	ld bc, (_RAM_DE52_ROOM_NR)
-	ld a, (_RAM_D904_)
+	ld a, (_RAM_D904_HERO_DIRECTION)
 	push af
 	push bc
 	push de
 	push hl
 	xor a
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 	ld bc, $0057
 	ld (_RAM_DE52_ROOM_NR), bc
 	ld de, $0000
 	ld (_RAM_DE34_SCRN_SCROLL), de
 	ld hl, $0000
 	ld (_RAM_D900_CHARA_COORD), hl
-	ld (_RAM_D910_), hl
+	ld (_RAM_D910_SECOND_HERO_COORD), hl
 	ld a, $0F
-	ld (_RAM_D90A_), a
+	ld (_RAM_D90A_HERO_ACTION), a
 	ld hl, $0040
-	ld (_RAM_D902_), hl
-	ld (_RAM_D912_), hl
+	ld (_RAM_D902_HERO_GROUNDLEVEL1), hl
+	ld (_RAM_D912_HERO_GROUNDLEVEL2), hl
 	jp _LABEL_726_LEVEL_WARP_LOAD
 
 _LABEL_3C32_:
@@ -6225,7 +6294,7 @@ _DATA_3CC4_:
 .db $00 $03 $07 $00 $05 $04 $06 $00 $01 $02 $08
 
 _LABEL_3CCF_:
-	ld ix, _RAM_D91C_
+	ld ix, _RAM_D91C_NME_COORD_ARRAY
 	ld b, $05
 -:
 	ld a, (ix+9)
@@ -6378,7 +6447,7 @@ _DATA_3DE7_:
 _LABEL_3DFD_:
 	xor a
 	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
-	ld (_RAM_D920_), a
+	ld (_RAM_D920_MNE1_DIR), a
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	and a
 	jr nz, +
@@ -6836,7 +6905,7 @@ _LABEL_522E_:
 	jp z, _LABEL_5321_
 	cp $47
 	jr z, _LABEL_5294_
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $05
 	jp z, _LABEL_539C_
 	inc hl
@@ -6859,7 +6928,7 @@ _LABEL_522E_:
 	push ix
 	push bc
 	push de
-	ld ix, _RAM_D9A8_
+	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
 	ld b, $06
 -:
 	ld a, (ix+24)
@@ -6892,7 +6961,7 @@ _LABEL_5294_:
 	inc hl
 	inc hl
 	ld a, (hl)
-	ld ix, _RAM_D100_
+	ld ix, _RAM_D100_IN_RAM_SPRITETABLE
 	ld l, a
 	ld h, $00
 	add hl, hl
@@ -6901,7 +6970,7 @@ _LABEL_5294_:
 	add hl, hl
 	ld (ix+0), l
 	ld (ix+1), h
-	ld hl, (_RAM_D902_)
+	ld hl, (_RAM_D902_HERO_GROUNDLEVEL1)
 	ld (ix+2), l
 	ld (ix+3), h
 	ld (ix+4), $00
@@ -6921,10 +6990,10 @@ _LABEL_52D5_:
 	cp $48
 	jp nz, _LABEL_531C_
 	ld hl, _RAM_D900_CHARA_COORD
-	ld de, _RAM_D100_
+	ld de, _RAM_D100_IN_RAM_SPRITETABLE
 	ld bc, $001C
 	ldir
-	ld ix, _RAM_D100_
+	ld ix, _RAM_D100_IN_RAM_SPRITETABLE
 	ld l, (ix+0)
 	ld h, (ix+1)
 	ld de, $0100
@@ -6965,7 +7034,7 @@ _LABEL_5321_:
 	inc hl
 	inc hl
 	ld a, (hl)
-	ld ix, _RAM_D100_
+	ld ix, _RAM_D100_IN_RAM_SPRITETABLE
 	ld l, a
 	ld h, $00
 	add hl, hl
@@ -6974,7 +7043,7 @@ _LABEL_5321_:
 	add hl, hl
 	ld (ix+0), l
 	ld (ix+1), h
-	ld hl, (_RAM_D902_)
+	ld hl, (_RAM_D902_HERO_GROUNDLEVEL1)
 	ld (ix+2), l
 	ld (ix+3), h
 	ld b, $14
@@ -7002,10 +7071,10 @@ _LABEL_536C_:
 	jr nz, +
 	inc b
 +:
-	ld a, (_RAM_D904_)
+	ld a, (_RAM_D904_HERO_DIRECTION)
 	push af
 	xor a
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 	ld l, $64
 	ld d, $10
 	ld a, $02
@@ -7015,7 +7084,7 @@ _LABEL_536C_:
 	ld ix, $D900
 	call _LABEL_3AAF_DRAWPROJECTILE
 	pop af
-	ld (_RAM_D904_), a
+	ld (_RAM_D904_HERO_DIRECTION), a
 	call _LABEL_799A_
 	ret
 
@@ -7025,7 +7094,7 @@ _LABEL_539C_:
 	jp _LABEL_522E_
 
 _LABEL_53A3_:
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $05
 	jr nz, +
 	ld a, (ix+11)
@@ -7099,7 +7168,7 @@ _LABEL_53F6_:
 	ld a, (ix+10)
 	cp $05
 	jp z, _LABEL_5442_
-	ld ix, _RAM_D91C_
+	ld ix, _RAM_D91C_NME_COORD_ARRAY
 	ld b, $05
 -:
 	ld a, (ix+9)
@@ -7131,7 +7200,7 @@ _LABEL_5442_:
 	ld hl, (_RAM_D900_CHARA_COORD)
 	ld e, (iy+0)
 	ld d, $00
-	ld a, (_RAM_D904_)
+	ld a, (_RAM_D904_HERO_DIRECTION)
 	and a
 	jr z, +
 	sbc hl, de
@@ -7163,9 +7232,9 @@ _LABEL_5442_:
 	pop hl
 	jr nc, _LABEL_543A_
 	ld a, (ix+9)
-	call _LABEL_5851_
+	call _LABEL_5851_APPLYDAMAGE
 	ld l, a
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	sub $08
 	ld h, (iy+2)
 	jr z, +
@@ -7207,7 +7276,7 @@ _LABEL_5442_:
 +:
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the character we are playing with.
 	call _LABEL_6573_CALC_DMG		;Calculate the new damage value.
-	ld de, _RAM_DBB9_
+	ld de, _RAM_DBB9_PLYRSTATS_RELATED
 	add hl, de
 	ld e, (hl)
 	ld d, $00
@@ -7290,7 +7359,7 @@ _LABEL_5573_:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	jp nz, _LABEL_5442_
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $0F
 	jp z, _LABEL_5442_
 	ld a, (ix+9)
@@ -7383,7 +7452,7 @@ _LABEL_5573_:
 +:
 	ld c, (iy+4)
 ++:
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $0B
 	jr nz, +
 	ld a, c
@@ -7392,7 +7461,7 @@ _LABEL_5573_:
 	ld c, a
 +:
 	ld a, (_RAM_D909_FIRST_COMPANION)
-	call _LABEL_5851_
+	call _LABEL_5851_APPLYDAMAGE
 	cp c
 	jp c, _LABEL_5442_
 	ld a, $08
@@ -7409,7 +7478,7 @@ _LABEL_5573_:
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 	cp $01
 	jr z, +
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $04
 	jr z, ++
 	cp $12
@@ -7417,21 +7486,21 @@ _LABEL_5573_:
 	cp $13
 	jr z, ++
 	ld a, $0E
-	ld (_RAM_D90A_), a
+	ld (_RAM_D90A_HERO_ACTION), a
 	xor a
-	ld (_RAM_D90B_), a
+	ld (_RAM_D90B_ANIM_FRAME_COUNTER), a
 	jr ++
 
 +:
 	srl c
 ++:
-	call _LABEL_57CC_
-	call _LABEL_5689_
+	call _LABEL_57CC_DAMAGE_OTHERS
+	call _LABEL_5689_HITDETECT
 	ld a, $01
 	call _LABEL_2FF_PREPNPLAYSFX
 	jp _LABEL_5442_
 
-_LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. RET'D, AND YOU WILL BE INVINCIBLE.
+_LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. RET'D, AND YOU WILL BE INVINCIBLE.
 							;RAISTLIN WILL STILL GET HURT FOR SOME REASON.
 	;ret
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)		;READ FROM THE CHARA LIST. I GUESS WHICH ONE IS AT THE FRONT.
@@ -7462,7 +7531,7 @@ _LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. R
 	ld a, b
 	cp e
 	jr nc, -
-	ld a, (_RAM_D904_)
+	ld a, (_RAM_D904_HERO_DIRECTION)
 	and a
 	jr z, +
 	dec hl
@@ -7607,11 +7676,11 @@ _LABEL_5689_:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. R
 	ld (_RAM_DEC3_), a
 	ld hl, (_RAM_DE6F_)
 	ld (_RAM_D900_CHARA_COORD), hl
-	ld (_RAM_D910_), hl
+	ld (_RAM_D910_SECOND_HERO_COORD), hl
 	xor a
-	ld (_RAM_D90A_), a
-	ld (_RAM_D907_), a
-	ld (_RAM_D90B_), a
+	ld (_RAM_D90A_HERO_ACTION), a
+	ld (_RAM_D907_HERO_ANIM_FRAME), a
+	ld (_RAM_D90B_ANIM_FRAME_COUNTER), a
 	ret
 
 _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
@@ -7645,24 +7714,26 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	call _LABEL_5BA7_RIVERWIND_PROT_SCRN
 	ret
 
-_LABEL_57CC_:
-	push bc
+_LABEL_57CC_DAMAGE_OTHERS: 
+	;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. If this is disabled, no other parties are damaged by the first companion's damage received.
+	;ret
+	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
 	ld a, c
-	srl a
-	srl a
-	srl a
-	ld c, a
-	srl a
-	add a, c
-	jr z, ++
-	ld c, a
+	srl a			;4
+	srl a			;2
+	srl a			;Divide by 2 three times. 1
+	ld c, a			;c-->1
+	srl a			;1/2=0
+	add a, c		;0+1=1
+	jr z, ++		;The jump is not taken.
+	ld c, a			;Put this 1 to c.
 	push de
 	push hl
-	push ix
-	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
-	ld b, $03
+	push ix			;Save registers.
+	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
+	ld b, $03		;Three of them
 -:
-	ld a, (ix+1)
+	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
 	call _LABEL_6573_CALC_DMG
 	ld de, _RAM_DBB5_GOLDMOON_HP
 	add hl, de
@@ -7686,18 +7757,18 @@ _DATA_5800_:
 .dsb 16, $00
 .db $01 $05 $02 $03 $03 $04 $04 $05 $05
 
-_LABEL_5819_:
-	ld b, $08
+_LABEL_5819_MARKDEAD_PERMADEAD:	;When you leave the level\screen, the dead characters are marked permanently, so you can't revive them.
+	ld b, $08	;Player numbers.
 	ld hl, _RAM_DBB5_GOLDMOON_HP
 -:
 	ld a, (hl)	;READ GOLDMOON'S HEALTH INTO A.
 	and a
-	jr Nz, +	;IF THIS IS Z, PLAYERS ARE SHOWN AS PERMADEAD.
-	dec hl
+	jr Nz, +	;IF THIS IS Z, PLAYERS ARE SHOWN AS PERMADEAD. If she's not dead, then jump ahead.
+	dec hl		;Whoops, she's dead.
 	ld a, (hl)
-	inc hl
+	inc hl		;It's nothing there...Hm.
 	and a
-	jr z, +		;DOES NOT DO ANYTHING WHEN CHANGED
+	jr z, +		;Jump if it's zero.
 	push hl
 	push bc
 	dec hl
@@ -7712,23 +7783,24 @@ _LABEL_5819_:
 	ldir
 	pop bc
 	pop hl
-+:		;DOES NOT DO ANYTHING NOTICEABLE AT THE MOMENT.
-	;ret
++:	
+	
 	ld de, $0028
 	add hl, de
 	djnz -
-	ld hl, _RAM_DCF2_UNUSED
-	ld de, _RAM_DCF2_UNUSED + 1
+	ld hl, _RAM_DCF2_DEAD_CHARS		;When a character dies, this array gets filled. The tombstone coordinate is also here that I see too.
+	ld de, _RAM_DCF2_DEAD_CHARS + 1
 	ld (hl), $00
 	ld bc, $001F
-	ldir			;This does not do anything, and marked as unused.
+	ldir			
 	ret
 
-_LABEL_5851_:
+_LABEL_5851_APPLYDAMAGE:	;Runs whenever damage should apply, for the player, for the enemies and the traps as well.
+	;ret
 	cp $12
 	jr nz, +
 	ld a, $20
-	ret
+	;ret
 
 +:
 	cp $15
@@ -7847,7 +7919,7 @@ _LABEL_58DA_SHOWTRAP_LOOP:			;This is the loop for the spell. My guess that it g
 		inc hl
 		inc hl	;Go to the next trap addess.
 		ld a, (hl)	;Read the first byte from array.
-		ld ix, _RAM_D100_	;IX is now this array's address. I suspect this holds the in-ram sprite map.
+		ld ix, _RAM_D100_IN_RAM_SPRITETABLE	;IX is now this array's address. I suspect this holds the in-ram sprite map.
 		ld l, a			;Put the first byte into L.
 		ld h, $00		;So, the first format is like $00xx
 		add hl, hl		;2x
@@ -8111,7 +8183,7 @@ _LABEL_5A2B_RESURRECT:
 		add a, a
 		ld e, a
 		ld d, $00
-		ld hl, _RAM_DCF2_UNUSED ;$DCF2		;Hm, there is a RAM value for this, but the disassy made it hardcoded... also CHANGED
+		ld hl, _RAM_DCF2_DEAD_CHARS ;$DCF2		;Hm, there is a RAM value for this, but the disassy made it hardcoded... also CHANGED
 		add hl, de
 		ld (hl), $00
 		inc hl
@@ -8615,7 +8687,7 @@ _LABEL_5D6F_SELECT_HERO_LOOP:
 		ld (_RAM_C7FE_HEROSELECT_VAR), a
 		and a
 		jr nz, +
-		ld a, (_RAM_D90A_)
+		ld a, (_RAM_D90A_HERO_ACTION)
 		cp $0F
 		jr nz, +
 		ld a, (_RAM_DE54_HOLD_PLYR)
@@ -8673,7 +8745,7 @@ _LABEL_5DD4_OLDHERO_SELECTLOOP:
 		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
 		and a
 		jr nz, +
-		ld a, (_RAM_D90A_)
+		ld a, (_RAM_D90A_HERO_ACTION)
 		cp $0F
 		jr nz, +
 		ld a, (_RAM_DE54_HOLD_PLYR)
@@ -8768,9 +8840,6 @@ _LABEL_5E64_MOVE_CHARSELECT_CURSOR:
 		push ix
 		push de
 		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
-		;nop
-		;nop
-		;nop
 		pop de
 		pop ix
 		ei
@@ -8968,8 +9037,8 @@ _DATA_5F98_RECTANGLE1BITTILE:
 	
 ; 1st entry of Jump Table from 6CD5 (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _LABEL_5FE0_SPELLIST_JUMPS:	;Based on what we've selected, we'll go to the appropriate spell's code. This is used for both the Magical and Clerical stuff too.
-		call _LABEL_6046_WAIT4GAMEPAD
-		ld a, (_RAM_C04E_)
+		call _LABEL_6046_WAIT4GAMEPAD		;Get the gamepad's values.
+		ld a, (_RAM_C04E_ACTIVE_MENUITEM)
 		and a
 		jr z, ++
 		dec a
@@ -9072,7 +9141,7 @@ _LABEL_605C_MAGICUSERSPELLMENU:
 		ld a, $01
 		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		dec a
-		ld (_RAM_C04E_), a
+		ld (_RAM_C04E_ACTIVE_MENUITEM), a
 		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
 -:	
 		ld a, (ix+0)
@@ -9153,7 +9222,7 @@ _LABEL_60B0_:
 		ld de, _DATA_AE69_
 		ld iy, $6CF9
 +:	
-		ld (_RAM_C04E_), a
+		ld (_RAM_C04E_ACTIVE_MENUITEM), a
 		jp _LABEL_6A41_
 	
 _LABEL_6106_:	
@@ -9297,7 +9366,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	ld l, (ix+0)
 	ld h, (ix+1)
 	ld c, $00
-	ld de, _RAM_D100_	;THIS IS A TILEMAP IN RAM, THE FORMAT MIGHT BE A LITTLE DIFFERENT, DUNNO.
+	ld de, _RAM_D100_IN_RAM_SPRITETABLE	;THIS IS A TILEMAP IN RAM, THE FORMAT MIGHT BE A LITTLE DIFFERENT, DUNNO.
 	push bc
 	call _LABEL_6E09_SCORESCRN_PRINT	;THIS PRINTS THE NUMBER OF KILLS ON THE SCORE SCREEN.
 	ld de,_RAM_D103_
@@ -9313,7 +9382,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	ld hl, (_RAM_DE74_PT_FOR_CMBT)	;THIS IS THE POINTS FOR COMBAT VALUE.
 	ld a, (_RAM_DE76_CR_DMGLINK)	;HM, WHAT DOES THIS HAVE TO DO WITH THIS? CHANGING THIS NUMBER WILL MESS THE SCREEN UP REALLY BAD.
 	ld c, a
-	ld de, _RAM_D100_
+	ld de, _RAM_D100_IN_RAM_SPRITETABLE
 	call _LABEL_6E09_SCORESCRN_PRINT	;THIS WILL PRINT THE 'POINTS FOR COMBAT' POINTS.
 	ld de, _RAM_D101_
 	ld hl, $3B72				;A POINT ON THE TILEMAP, FOUR TILES BEFORE THE 'POINTS FOR COMBAT ' SCORE NUMBER, SO THE SCORE NUMBER IS FOUR CHARS LONG.
@@ -9376,7 +9445,7 @@ _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\W
 	ld hl, (_RAM_DE77_PT_FOR_ITEMS)
 	ld a, (_RAM_DE79_KILLCNT_ARRAY)
 	ld c, a
-	ld de, _RAM_D100_
+	ld de, _RAM_D100_IN_RAM_SPRITETABLE
 	call _LABEL_6E09_SCORESCRN_PRINT	;THIS PRINT THE SCORE AT THE 'POINTS FOR ITEMS' LINE ON THE SCORE SCREEN.
 	ld de, _RAM_D101_
 	ld hl, $3BB2
@@ -9577,6 +9646,7 @@ _DATA_6809_:
 	.db $6F $6E $0D $FF
 	
 _LABEL_6A1D_:	
+		;ret
 		ld (ix+0), e
 		ld (ix+1), d
 		ld (ix+2), c
@@ -9914,7 +9984,7 @@ _LABEL_6B6D_DRAW_HERODETAILS:	;Wew this is long....
 		push hl
 		call _LABEL_6C61_
 		pop hl
-		ld de, _RAM_D100_
+		ld de, _RAM_D100_IN_RAM_SPRITETABLE
 		ld h, $00
 		ld c, h
 		call _LABEL_6E09_SCORESCRN_PRINT
@@ -9924,7 +9994,7 @@ _LABEL_6B6D_DRAW_HERODETAILS:	;Wew this is long....
 		pop hl
 		ld h, $00
 		ld c, h
-		ld de, _RAM_D100_
+		ld de, _RAM_D100_IN_RAM_SPRITETABLE
 		call _LABEL_6E09_SCORESCRN_PRINT
 		ld hl, $3B28
 		ld de, _RAM_D101_
@@ -10003,7 +10073,7 @@ _LABEL_6C61_:
 		jr nc, -
 		ld c, a
 +:	
-		ld de, _RAM_D100_
+		ld de, _RAM_D100_IN_RAM_SPRITETABLE
 		xor a
 		ld (de), a
 		inc de
@@ -10030,7 +10100,7 @@ _LABEL_6C61_:
 		ld a, $FF
 		ld (de), a
 		pop hl
-		ld de, _RAM_D100_
+		ld de, _RAM_D100_IN_RAM_SPRITETABLE
 		call _LABEL_35A6_RANDOM
 		ret
 	
@@ -10684,7 +10754,7 @@ _LABEL_71E8_:
 
 _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	ld b, $05	;$05
-	ld ix, _RAM_D91C_
+	ld ix, _RAM_D91C_NME_COORD_ARRAY
 	ld de, $001C
 -:
 	ld (ix+9), $00	;D925
@@ -10696,7 +10766,7 @@ _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	add ix, de	;D938
 	djnz -		;INITING SOME RAM VALUES TO ZERO.
 	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NUMBER. EXAMPLE ROOM 1.
-	ld ix, _RAM_D91C_		;SET THE IX TO THE TABLE'S FIRST ADDRESS WE JUST RESET.
+	ld ix, _RAM_D91C_NME_COORD_ARRAY		;SET THE IX TO THE TABLE'S FIRST ADDRESS WE JUST RESET.
 	ld hl, _DATA_72D1_
 	inc hl	;$72D2
 	ld b, a	;1-->B
@@ -10819,7 +10889,7 @@ _DATA_72D1_:
 
 _LABEL_7565_:
 	ld b, $06
-	ld ix, _RAM_D9A8_
+	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
 _LABEL_756B_:
 	ld a, (ix+9)
 	and a
@@ -10901,7 +10971,7 @@ _LABEL_756B_:
 	and a
 	sbc hl, de
 	ex de, hl
-	ld iy, _RAM_D91C_
+	ld iy, _RAM_D91C_NME_COORD_ARRAY
 	push bc
 	ld b, $05
 _LABEL_761C_:
@@ -10950,7 +11020,7 @@ _LABEL_761C_:
 	sub $08
 	ld c, a
 	ld a, (iy+9)
-	call _LABEL_5851_
+	call _LABEL_5851_APPLYDAMAGE
 	cp c
 	jr c, _LABEL_76C6_
 	ld a, (ix+24)
@@ -11181,7 +11251,7 @@ _LABEL_77CB_:
 	push bc
 	push de
 	ld de, $001C
-	ld ix, _RAM_D9A8_
+	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
 	ld b, $06
 -:
 	ld a, (ix+24)
@@ -11228,13 +11298,13 @@ _LABEL_7851_:
 	ld a, (_RAM_D909_FIRST_COMPANION)
 	and a
 	jp z, _LABEL_78F3_
-	ld a, (_RAM_D90A_)
+	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $11
 	jp z, _LABEL_78F3_
 	ld a, (_RAM_D900_CHARA_COORD)
 	add a, $0E
 	ld l, a
-	ld a, (_RAM_D901_)
+	ld a, (_RAM_D901_SCREEN_NR)
 	adc a, $00
 	ld h, a
 	and a
@@ -11271,13 +11341,13 @@ _LABEL_7851_:
 	cp $40
 	jr nc, _LABEL_78F3_
 ++:
-	ld a, (_RAM_D902_)
+	ld a, (_RAM_D902_HERO_GROUNDLEVEL1)
 	ld c, a
 	ld a, $78
 	sub c
 	ld c, a
 	ld a, (_RAM_D909_FIRST_COMPANION)
-	call _LABEL_5851_
+	call _LABEL_5851_APPLYDAMAGE
 	cp c
 	jr c, _LABEL_78F3_
 	ld a, (ix+24)
@@ -11364,13 +11434,13 @@ _LABEL_795C_:
 	ld c, a
 	push ix
 	ld ix, $D900
-	call _LABEL_5689_
+	call _LABEL_5689_HITDETECT
 	pop ix
 	jp _LABEL_76D1_
 
 _LABEL_7971_INIT_TRAPS:
 	ld b, $06
-	ld ix, _RAM_D9A8_
+	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
 	ld de, $001C
 -:
 	ld (ix+9), $00
@@ -11465,7 +11535,7 @@ _LABEL_7A14_:
 	push hl
 	push ix
 	ld b, $06
-	ld ix, _RAM_D9A8_
+	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
 -:
 	call _LABEL_7A33_
 	ld de, $001C
@@ -11924,8 +11994,8 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld bc, $0015
 	ld (hl), $00
 	ldir		;SO, THIS INITS THE MONSTER KILLCOUNT ARRAY, THAT IS SHOWN AT THE SCORE\GAME OVER SCREEN IN THE MENU.		
-	ld hl, _RAM_DCF2_UNUSED
-	ld de, _RAM_DCF2_UNUSED + 1
+	ld hl, _RAM_DCF2_DEAD_CHARS
+	ld de, _RAM_DCF2_DEAD_CHARS + 1
 	ld bc, $001F
 	ld (hl), $00	;THIS RAM PART IS WRITTEN WITH NULLS ONLY SO FAR. Marked as unused.
 	ldir
@@ -12231,8 +12301,8 @@ _DATA_AE69_:
 
 
 ; Data from AEF2 to BFFF (4366 bytes)
-_DATA_AEF2_:
-;.incbin "HOTL_mod_DATA_AEF2_.inc"
+_DATA_AEF2_MISSION_FAILEDTXT:
+;.incbin "HOTL_mod_DATA_AEF2_MISSION_FAILEDTXT.inc"
 
 	.db $59 $6F $75 $20 $66 $61 $69 $6C $65 $64 $20 $69 $6E $20 $79 $6F
 	.db $75 $72 $20 $71 $75 $65 $73 $74 $0D $66 $6F $72 $20 $74 $68 $65
