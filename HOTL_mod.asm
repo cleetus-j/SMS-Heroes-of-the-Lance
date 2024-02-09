@@ -341,12 +341,12 @@ _RAM_DE22_RESET db
 _RAM_DE23_CONSOLE_REGION db
 _RAM_DE24_NTSC_COMP db
 _RAM_DE25_MUSIC_COUNTER db
-_RAM_DE26_ db
+_RAM_DE26_ db			;This does nothing at all. Even if it's zeroed, no difference in gameplay behaviour.
 .ende
 
 .enum $DE29 export
-_RAM_DE29_ db
-_RAM_DE2A_ dw
+_RAM_DE29_ db			;Some level loading stuff, but not sure what it is.
+_RAM_DE2A_ dw			;Also used with level loading.
 .ende
 
 .enum $DE2E export
@@ -436,7 +436,7 @@ _RAM_DEAF_ db
 
 .enum $DEB3 export
 _RAM_DEB3_ dw
-_RAM_DEB5_ db
+_RAM_DEB5_FRAMESET db
 _RAM_DEB6_ db
 _RAM_DEB7_ dw
 _RAM_DEB9_ANIM_POINTER dw		;Some pointer, that helps with animations, but the connecting data is not obvious what it is now.
@@ -850,8 +850,8 @@ _LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM? It is not used though.
 		di
 		ld a, $1F	;Bank 31.
 		ld (_RAM_FFFF_), a
-		ld de, $8000
-		ld bc, $4000
+		ld de, $8000	;This is the beginning of Slot 2 ROM page.
+		ld bc, $4000	;16k of data.
 		ld hl, $0000
 		call --
 -:	
@@ -1035,13 +1035,13 @@ _LABEL_59B_MAIN:
 ; Data from 5E8 to 5F3 (12 bytes)
 .dsb 12, $FF
 
-_LABEL_5F4_RESET:	;I REMEMBER THIS FOR NOW, THIS HANDLES THE RESET.
+_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. The SMS2 doesn't, and neither the MD--->SMS adapter.
 	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
 	and $10			;MASK OUT ALL OTHER BUTTONS.
 	ld c, a
 	ld a, (_RAM_DE22_RESET)
 	sub c
-	ret z
+	ret z			;If the button is not pressed, then we should just return.
 	ld a, c
 	ld (_RAM_DE22_RESET), a
 	bit 4, a
@@ -1051,7 +1051,7 @@ _LABEL_5F4_RESET:	;I REMEMBER THIS FOR NOW, THIS HANDLES THE RESET.
 	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
 	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
 	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
-
+;The devs thought about this, I think they programmed this on an SMS1, otherwise they would not bother with this small feature.
 _LABEL_612_MUTE_PSG:
 	;RET
 	ld hl, _DATA_61B_MUTEPSG
@@ -1101,7 +1101,7 @@ _LABEL_63B_CLEAR_SAT:	;THIS GOES TO THE VDP AS I CAN SEE.
 	out (Port_VDPData), a
 	ret
 
-_LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will load the next part of the game. I'll look into this later, but does not seem to be that difficult.
+_LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will load the next part of the game. I'll look into this later, but does not seem to be that difficult.Boy I was wrong..
 	push bc
 	push de
 	push hl			;Save the registers for later.
@@ -1184,32 +1184,33 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;THIS CAN BE DISABLED, THE GAME WORKS THE SAME EITHER WAY.
 	ld ix, _RAM_D900_CHARA_COORD
-	ld (ix+9), $01
-	ld (ix+7), $06	;06
-	ld (ix+0), $64
-	ld (ix+1), $00
-	ld (ix+2), $74
-	ld (ix+3), $00
-	ld (ix+16), $64
+	;Why are the numbers so spread apart?
+	ld (ix+9), $01			;Show the player. If this is zero, the companions are not shown.
+	ld (ix+7), $06			;Action nr. This handles what the player is doing at the moment.
+	ld (ix+0), $64			;This is the X coordinate of the companion, but on a given screenful of a map. 
+	ld (ix+1), $00			;Map nr. A level is composed of these screens, so this is not a stage number or anything similar.
+	ld (ix+2), $74			;Ground level. If this is less than $74, then the companion will "float, so to speak".
+	ld (ix+3), $00			;Same, if this is not $00, then the companion is not shown. Maybe this is also the "screen" value.
+	ld (ix+16), $64			;Last frame's X coordinate. As the game runs on 25FPS, this stores the previous frame's X value.
 	ld (ix+17), $00
 	ld (ix+18), $74
-	ld (ix+19), $00	;THESE PARAMETERS HAVE TO BE MAPPED LATER, SO TODO
+	ld (ix+19), $00			;This is all the same for the second frame.
 	ld hl, $0000
-	ld (_RAM_DE3C_), hl
-	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;THESE DON'T DO ANYTHING NOTICEABLE
+	ld (_RAM_DE3C_), hl		
+	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;Reset the maximum stage length.
 	xor a
 	ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
 -:
 	ld (hl), a
 	inc hl
 	inc a
-	cp $08	;08
+	cp $08	
 	jr nz, -
 	call _LABEL_59B_MAIN
 	;NOP
 	;NOP
 	;NOP
-	ld a, $08	;08
+	ld a, $08	
 	ld (_RAM_DE9F_TIMER), a
 	xor a
 	ld (_RAM_DE9E_), a
@@ -1224,17 +1225,14 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD.
 _LABEL_726_LEVEL_WARP_LOAD:
-	call _LABEL_5819_MARKDEAD_PERMADEAD		;I CAN'T SEEM TO FIND WHAT THIS DOES EXACTLY. COPIES 32 BYTES OF SOMETHING, BUT IT'S ALL ZEROES SO FAR. COMMENTING IT OUT DOES NOT DO ANYTHING NOTICEABLE ON THE GAMEPLAY. NOT EVEN ON THE SPELLS OR ANYTHING.
-	;NOP
-	;NOP
-	;NOP
+	call _LABEL_5819_MARKDEAD_PERMADEAD		;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead.
 	call _LABEL_59B_MAIN
 	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES, AND KEEP SPAWNING THEM, IF NEEDED.
 	call _LABEL_7971_INIT_TRAPS	;COMMENTING OUT THIS WILL GET RID OF THE TRAPS.
-	ld a, (_RAM_DE55_WATERFALL)
+	ld a, (_RAM_DE55_WATERFALL)	;See if the loaded new screen will be a waterfall\healing for the party.
 	and $01
-	jr z, +			;check for waterfall
-	call _LABEL_5BBE_CHECKWTRFALL	;NOT WATERFALL, SO THIS WILL BE SOMETHING ELSE.
+	jr z, +			;If it's not, jump and load the level instead.
+	call _LABEL_5BBE_CHECKWTRFALL	
 	ld a, $02
 	ld (_RAM_DE55_WATERFALL), a
 	jr ++
@@ -1246,9 +1244,9 @@ _LABEL_726_LEVEL_WARP_LOAD:
 	ld (_RAM_DE44_), a
 	ld h, a
 	ld l, a
-	ld (_RAM_DE42_), hl
+	ld (_RAM_DE42_), hl	;Stop the character in place.
 	ei
-	call _LABEL_2C1A_	;no function to this yet.
+	call _LABEL_2C1A_FRAMESET_COPY	;no function to this yet.
 	ld ($DE27), sp
 _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	ld a, (_RAM_DE97_)
@@ -1482,8 +1480,7 @@ _LABEL_906_GOOD_END: ;Ending screen.
    ld (_RAM_DE56_WINPOINT_ADD), a ; Store value of A into memory address specified by DE+$DE56 3
    jp -- ;$08dc; Jump to address $08DC 3
 ;.dsb 27,$00
-_LABEL_924_UPDATE_GAME_SCRN:	
-	;jp _LABEL_757_GAME_MAIN
+_LABEL_924_UPDATE_GAME_SCRN:	;We have much more things now, so we can dissect this.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $01
 	jr nz, +	;IF THIS IS NOT ZERO, JUMP.
@@ -1494,33 +1491,64 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	jr c, +
 	ld c, $01
 	call _LABEL_5689_HITDETECT
-	;nop
-	;nop
-	;nop
 	ld c, $08
 	call _LABEL_57CC_DAMAGE_OTHERS
 +:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02			
-	jr nz, +
+	jr nz, +		;Jump of we don't want stones to fall on our heads.
 	ld a, (_RAM_DE57_)
 	inc a
 	ld (_RAM_DE57_), a
 	and $03
-	jr nz, +
-	ld a, (_RAM_D904_HERO_DIRECTION)
-	push af
-	xor a
-	ld (_RAM_D904_HERO_DIRECTION), a
-	ld b, $10
-	ld l, $78
-	ld d, $12
-	ld a, $02
-	ld c, $F0
-	ld e, $07
-	ld h, $00
-	ld ix, $D900
-	call _LABEL_3AAF_DRAWPROJECTILE
+	jr nz, +		;To be actually playable, the game uses some counter to delay the next stone's falling. Still, I think this is a bit too quick to evade.
+	ld a, (_RAM_D904_HERO_DIRECTION)	;Get the direction the player is facing.
+	push af					;Save it for later. I guess this is needed to draw the stone ahead of the player, so the damage can be dealth to him\her
+	xor a			
+	ld (_RAM_D904_HERO_DIRECTION), a	;Reset the direction, this was maybe facing right. At the ending, you need to run in that direction, so this is good anyways.
+	ld b, $10 ;$10	;Projectile type. $10 is the stone.
+	;$00- Arrow.
+	;$01- Arrow.
+	;$02- Fireball.
+	;$03- Red magic, this is maybe shot by Raistlin.
+	;$04- Grey projectile.
+	;$05- Small fireball\Firebolt.
+	;$06- Blue magic, like the one at some waterfall.
+	;$07- Bigger green animated magic.
+	;$08- Bigger firebolt.
+	;$09- Bigger green animated magic.
+	;$0A- Same.		I guess these are the various spells in the game, since each one is a separate entity.
+	;$0B- Spear. This also creates a box with said item, like if the player had thrown this one. The game gets to be funny looking if you let too many spears fall on the ground, since there isn't more than one in the game.
+	;$0C- Hoopak projectile, but looks like a small pebble to me.
+	;$0D- Flint's axe. Similarly to the Spear, this also leaves a box.
+	;$0E- Animated Dragon breath. This one is very big, and is used by the end boss obviously.
+	;$0F- Staff of Magius.
+	;$10- The normal big stone.
+	;$11- Three falling stones.
+	;$12- Big falling fireball.
+	;$13- Arrow.
+	;$14- Falling smaller blue magic.
+	;$15- Small firebolt.
+	;$16- Arrow.
+	;$17- Hoopak ammo.
+	;$18- A treasure chest and tombstone combined, but looks like it works as a big falling stone, without the damage.
+	;$19- Arrow.
+	;$1A- Fireball.
+	;$1B- Small red magic.
+	;$1C- Grey projectile.
+	;$1D- Small firebolt.
+	;$1E- Similar.
+	;$1F- Arrow.
+	;$20- Hoopak ammo.
+	;Others might be there, but these are not really valid or used at all.
+	ld l, $78		;Might be very well the height where the projectile falls from. Yup.
+	ld d, $12		;Fall speed. The damage is still applied everytime the projectile moves.
+	ld a, $02		;Looks like some wait time after five projectiles until the next batch comes down.
+	ld c, $F0		;X coordinate of the stones.
+	ld e, $07		;How far the projectile goes. If this is low enough, then the players will not be damaged.
+	ld h, $00		;This is like an angle from the source of the stone to where it lands. The bigger the value, the bigger this angle is. This is good, as you can make these stones easier to dodge while running.
+	ld ix, _RAM_D900_CHARA_COORD ;$D900	;CHANGED! Use the variable instead of a hardcoded address. We also need to know the X coordinate of the player.
+	call _LABEL_3AAF_DRAWPROJECTILE	;We have everything, draw the stone, and then animate it as well.
 	pop af
 	ld (_RAM_D904_HERO_DIRECTION), a
 +:				;THIS IS $02, THEN STONES FALL ON THE CHARACTER'S HEAD, LIKE IN THE ENDING.
@@ -1538,18 +1566,18 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld a, (_RAM_DEEE_PROT_EVIL_TIMER)
 	sub $01
 	adc a, $00		;If this is commented out, the falling traps are only damaging you once, and not every other frame almost, so it's a lot more forgiving that way.
-	ld (_RAM_DEEE_PROT_EVIL_TIMER), a	;Decrease this value. Some counter.. Maybe some spell.
-+:	;The code is here when the value is zero.
+	ld (_RAM_DEEE_PROT_EVIL_TIMER), a	;Decrease the protection from evil timer, if the spell is active.
++:	
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the first companion from the list.
 	inc a					;Increment the value, aka get the next Companion value.
 	ld (_RAM_D909_FIRST_COMPANION), a	;Put this to the first companion value.
 	call _LABEL_2DE2_			;This seems to draw and\or animate the character. If this is commented out, the character is not updated while moving. So it may control animation. If the whole function is just a ret, then no sprites are drawn\updated.
 	
-	ld hl, _DATA_314_
-	ld (_RAM_DEB9_ANIM_POINTER), hl
+	ld hl, _DATA_314_			;These data statements should mean something, but not for now.
+	ld (_RAM_DEB9_ANIM_POINTER), hl		;Load this address into HL.
 	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_6F3B__UPD_HUD
-	call _LABEL_A10_
+	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
 	call _LABEL_2EC8_
 	
@@ -1558,7 +1586,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
 	call _LABEL_2ECE_
-	call _LABEL_A10_
+	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
 	call _LABEL_2ECE_
 	
@@ -1567,10 +1595,10 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
 	call _LABEL_2ECE_
-	call _LABEL_A10_
+	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0C
 	call _LABEL_2ECE_
-	call _LABEL_2C1A_
+	call _LABEL_2C1A_FRAMESET_COPY
 	
 	ld hl, _DATA_377_
 	ld (_RAM_DEB9_ANIM_POINTER), hl
@@ -1592,42 +1620,42 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	call _LABEL_369E_
 ++:
 	call _LABEL_31DF_
-	call _LABEL_A10_
+	call _LABEL_A10_ANIM_SPRITES
 	;call _LABEL_A95_UPDATE_SCREEN ;This was not here originally.
 	jp _LABEL_757_GAME_MAIN
 
-_LABEL_A10_:
+_LABEL_A10_ANIM_SPRITES:			;This runs a few times a frame, so let's see if this is anything legible to me. Yes, this is some sprite move\copy thing.
 	;ret
-	ld de, (_RAM_DEA9_)
-	push de
-	ld hl, $0040
-	add hl, de
-	ld (hl), $D0
-	ld a, (_RAM_DA5C_NME_ARRAY_VAL)
-	ld c, a
+	ld de, (_RAM_DEA9_)	;In other parts, these were used for one of the in-ram sprites.
+	push de			;Save this address for later.
+	ld hl, $0040		;64- I guess this is how many sprites are to copy or move.
+	add hl, de		;Add this 64 to that source address.
+	ld (hl), $D0		;D0 marks the end of the sprite drawing for the VDP.
+	ld a, (_RAM_DA5C_NME_ARRAY_VAL)	;Read from this array. This is how many sprites there are for the player, it seems. The player's sprites are almost never flickering, just the enemies, and they have priority over everything.
+	ld c, a		;Get that number to the counter register. (I know it's just c but whatever, you get the idea.)
 	ld b, $00
 	ex de, hl
 	ld de, _RAM_D12C_IN_RAM_SPRITETABLE
 	and a
-	jr z, +
-	ldir
-+:
+	jr z, +		;Jump ahead if we have no sprite to draw.
+	ldir		;Else copy the tiles.
++:			;We have no tiles left at this line.
 	ld c, a
-	ld a, $D0
-	ld (de), a
-	dec hl
+	ld a, $D0	;Load the 'End of Sprite list' value.
+	ld (de), a	
+	dec hl		
 	ld b, $FF
 -:
-	inc b
-	inc hl
-	ld a, (hl)
+	inc b		;So b is now $00
+	inc hl		;HL is the same now as before.
+	ld a, (hl)	;Get that value from HL.
 	and $D0
-	cp $D0
-	jr nz, -
-	ld a, b
+	cp $D0		;Check if that's the end of the sprite list.
+	jr nz, -	;If there is anything else there, then jump back.
+	ld a, b		;This part hit the end of the sprite list.
 	and a
-	jr z, ++
-	push bc
+	jr z, ++	;Skip, if B is zero.
+	push bc		;Save B's value.
 -:
 	dec hl
 	ld a, (hl)
@@ -2319,12 +2347,12 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	ld b, $40
 	di
 	call _LABEL_2EB1_
-	call _LABEL_2C1A_
+	call _LABEL_2C1A_FRAMESET_COPY
 	di
 	ld b, $40
 	call _LABEL_2EB1_
 	call _LABEL_2DE2_
-	call _LABEL_2C1A_
+	call _LABEL_2C1A_FRAMESET_COPY
 	call _LABEL_2C54_CHARA_ANIM
 	;NOP
 	;NOP
@@ -3775,7 +3803,7 @@ _DATA_2ACC_:
 
 _LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. THERE ARE TWO TABLES. IF THIS IS DISABLED, I CAN'T SEE ANY MAJOR DIFFERENCE. PROBABLY HERE TO BE SAFE, OR THERE IS A BUG ALONG THE WAY THAT THIS FIXES.
 	xor a
-	ld (_RAM_DEB5_), a
+	ld (_RAM_DEB5_FRAMESET), a
 	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
 	ld de, _RAM_D400_IN_RAM_SPRITETABLE + 1
 	ld bc, $00FF
@@ -3788,21 +3816,21 @@ _LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. T
 	ld bc, $014F
 	ld (hl), $00
 	ldir
-	call _LABEL_2C1A_
+	call _LABEL_2C1A_FRAMESET_COPY
 	;NOP
 	;NOP
 	;NOP
 	
 	ret
 
-_LABEL_2C1A_:
-	ld a, (_RAM_DEB5_)
+_LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinates and other things for the second frame, for the smoother but slower animation.
+	ld a, (_RAM_DEB5_FRAMESET)	;It seems, this checks if we are in the first, or second set of frames.
 	xor $40
-	ld (_RAM_DEB5_), a
+	ld (_RAM_DEB5_FRAMESET), a
 	ld de, $0000
 	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
 	jr z, +
-	ld de, $0800
+	ld de, $0800		;Okay, so if we are in the second set, then set the destination at 2k away. This is where that bad ram usage seems to come from.
 +:
 	ld (_RAM_DEB3_), de
 	ld (_RAM_DEA9_), hl
@@ -3810,39 +3838,38 @@ _LABEL_2C1A_:
 	ld (_RAM_DE44_), hl
 	ld hl, _RAM_D900_CHARA_COORD
 	ld de, _RAM_DA50_NME_COORD_ARRAY2
-	ld bc, $0150
+	ld bc, $0150		;366 bytes This copies enemy coordinates and sprite values. If there is any less of this, then they won't be shown, but they can and will hit you. Copy more, and the player details will suffer, and random thins will happen to the companions.
 	ldir
 	ret
 
 ; Data from 2C46 to 2C53 (14 bytes)
 ;.db $AF $32 $B5 $DE $3E $D0 $32 $00 $D4 $C9 $CD $E2 $2D $C9
 
-_LABEL_2C46_:	
+_LABEL_2C46_:	;This does not seem to be used.	
 		xor a
-		ld (_RAM_DEB5_), a
-		ld a, $D0
+		ld (_RAM_DEB5_FRAMESET), a	;Set it to the first frameset.
+		ld a, $D0			;This marks the end of sprite drawing. If the VDP gets this on the sprite list, it stops drawing them, and won't look any further.
 		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
 		ret
 	
-_LABEL_2C50_:	
-		call _LABEL_2DE2_
+_LABEL_2C50_:	;Not used.
+		call _LABEL_2DE2_ ;This is still a long one... But since this is not used, i'll get there eventually.
 		ret
 
 _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF THE CODE.
 	ld hl, (_RAM_DEA9_)	;OKAY, THIS AGAIN.
 	ld (hl), $D0
 	ld (_RAM_DEAB_), hl
-	ld de, $0080
+	ld de, $0080	;128 bytes.
 	add hl, de
-	;NOP
 	ld (_RAM_DEAD_), hl
-	ld a, (_RAM_DEB5_)
+	ld a, (_RAM_DEB5_FRAMESET)	;Original frameset value.
 	xor $40
 	;NOP
 	;NOP
-	ld (_RAM_DEAF_), a
+	ld (_RAM_DEAF_), a		;"inverted", the other frameset value.
 	ld ix, _RAM_DA50_NME_COORD_ARRAY2
-	ld b, $0C
+	ld b, $0C	;12
 -:
 	push ix
 	push bc
@@ -3876,7 +3903,7 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 ; Data from 2CA0 to 2CA6 (7 bytes)
 ;.db $16 $00 $CB $7B $C8 $15 $C9
 
-_LABEL_2CA0_:	
+_LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
 		ld d, $00
 		bit 7, e
 		ret z
@@ -4025,7 +4052,9 @@ _LABEL_2D7E_:
 	jr +++
 
 ; Data from 2D92 to 2D93 (2 bytes)
-.db $18 $13
+_LABEL_2D92_:
+	JR ++++
+;.db $18 $13
 
 +:
 	cp $F8
@@ -4215,6 +4244,7 @@ _LABEL_2DE2_:
 	ret
 
 _LABEL_2EB1_:
+	;jr _LABEL_2EDF_
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld (_RAM_DEB7_), hl
 	ld c, Port_VDPAddress
@@ -4226,21 +4256,21 @@ _LABEL_2EB1_:
 	ld de, $0020
 	jr _LABEL_2EDF_
 
-_LABEL_2EC8_:
+_LABEL_2EC8_:		;This is one part where the code jumps here.
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
-	ld (_RAM_DEB7_), hl
+	ld (_RAM_DEB7_), hl	;Copy here the address of this part of the inram sprite table.
 _LABEL_2ECE_:
-	ld c, Port_VDPAddress
+	ld c, Port_VDPAddress	;Get the VDP's address.
 	ld hl, (_RAM_DEB3_)
-	di
-	out (c), l
-	ld a, h
-	set 6, a
-	out (Port_VDPAddress), a
+	di			;Disable interrupts for safe operation.
+	out (c), l		;Send out whatever is in L to the VDP. This should be an address' first part.
+	ld a, h			;The high address will be the second part of the command.
+	set 6, a		;This will be either a normal VRAM write, or a color ram write, depending on the second byte, but I suspect this is the former.
+	out (Port_VDPAddress), a;Send the byte out.
 	ei
-	ld de, $0020
+	ld de, $0020		;32
 _LABEL_2EDF_:
-	exx
+	exx			;Save the contents in the shadow registers.
 	ld hl, (_RAM_DEB7_)
 	ld a, (hl)
 	cp $AA
@@ -4616,7 +4646,7 @@ _LABEL_2FB7_DRAWSPRITES:	;THIS IS THE SPRITE DRAW ROUTINE.
 	ret		;THIS WILL DRAW ALL 64 SPRITES ON THE SCREEN, PRETTY NICE WITH ALL THE UNROLLED LOOPS, THEY HAD THE SPACE FOR IT.
 
 _LABEL_314E_FINE_CHAR_MVMNT:
-	ld ix, _RAM_DA50_NME_COORD_ARRAY2	;THIS LOOKS LIKE A VALUE FOR FINE CHAR MOVEMENT. IF THIS IS FROZEN, THE MOVEMENTS BECOME REALLY JAGGED.
+	ld ix, _RAM_DA50_NME_COORD_ARRAY2	;THIS LOOKS LIKE A VALUE FOR FINE CHAR MOVEMENT. IF THIS IS FROZEN, THE MOVEMENTS BECOME REALLY JAGGED. (The second sprite array is used, that's why.)
 	ld b, $0C		;12, BUT NO IDEA YET WHAT IT AMOUNS TO.
 	ld de, $001C
 _LABEL_3157_:
