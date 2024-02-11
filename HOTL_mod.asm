@@ -438,7 +438,7 @@ _RAM_DEAF_ db
 _RAM_DEB3_ dw
 _RAM_DEB5_FRAMESET db
 _RAM_DEB6_ db
-_RAM_DEB7_ dw
+_RAM_DEB7_INRAM_SPRITETABLE_TEMP dw
 _RAM_DEB9_ANIM_POINTER dw		;Some pointer, that helps with animations, but the connecting data is not obvious what it is now.
 _RAM_DEBB_DEBUG db
 _RAM_DEBC_INRAM_HUD_PORTRAITS db
@@ -1579,25 +1579,25 @@ _LABEL_924_UPDATE_GAME_SCRN:	;We have much more things now, so we can dissect th
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
-	call _LABEL_2EC8_
+	call _LABEL_2EC8_RELOAD_SPR_TMP
 	
 	ld hl, _DATA_335_
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
-	call _LABEL_2ECE_
+	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD
 	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
-	call _LABEL_2ECE_
+	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD
 	
 	ld hl, _DATA_356_
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
-	call _LABEL_2ECE_
+	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD
 	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0C
-	call _LABEL_2ECE_
+	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD
 	call _LABEL_2C1A_FRAMESET_COPY
 	
 	ld hl, _DATA_377_
@@ -2346,11 +2346,11 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	call _LABEL_2DE2_
 	ld b, $40
 	di
-	call _LABEL_2EB1_
+	call _LABEL_2EB1_SETVRAM_ADDR_THENLOAD
 	call _LABEL_2C1A_FRAMESET_COPY
 	di
 	ld b, $40
-	call _LABEL_2EB1_
+	call _LABEL_2EB1_SETVRAM_ADDR_THENLOAD
 	call _LABEL_2DE2_
 	call _LABEL_2C1A_FRAMESET_COPY
 	call _LABEL_2C54_CHARA_ANIM
@@ -4124,7 +4124,7 @@ _LABEL_2DE2_:
 	exx
 	ld ix, _RAM_D900_CHARA_COORD
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
-	ld (_RAM_DEB7_), hl
+	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl
 	ld b, $0C
 	ld c, $00
 -:
@@ -4217,7 +4217,7 @@ _LABEL_2DE2_:
 	ld (ix+21), a
 	push de
 	pop iy
-	ld hl, (_RAM_DEB7_)
+	ld hl, (_RAM_DEB7_INRAM_SPRITETABLE_TEMP)
 	ld c, (ix+4)
 -:
 	ld a, (iy+0)
@@ -4240,26 +4240,27 @@ _LABEL_2DE2_:
 	exx
 	djnz -
 	ld (hl), $AA
-	ld (_RAM_DEB7_), hl
+	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl
 	ret
 
-_LABEL_2EB1_:
-	;jr _LABEL_2EDF_
+_LABEL_2EB1_SETVRAM_ADDR_THENLOAD:
+	;jr _LABEL_2EDF_VDP_DATA_LOADLOOP
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
-	ld (_RAM_DEB7_), hl
+	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl	;Save the sprite table's address.
 	ld c, Port_VDPAddress
-	ld hl, (_RAM_DEB3_)
+	ld hl, (_RAM_DEB3_)				;This address holds the source address for the data load.
 	out (c), l
 	ld a, h
 	set 6, a
-	out (Port_VDPAddress), a
-	ld de, $0020
-	jr _LABEL_2EDF_
+	out (Port_VDPAddress), a			;This is a normal VDP write setup.
+	ld de, $0020					;32.
+	jr _LABEL_2EDF_VDP_DATA_LOADLOOP
 
-_LABEL_2EC8_:		;This is one part where the code jumps here.
+_LABEL_2EC8_RELOAD_SPR_TMP:		;This is one part where the code jumps here. The whole things looks like a copy mechanism for sprites\tiles or whatever.
+;At this stage, we reload the original address.
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
-	ld (_RAM_DEB7_), hl	;Copy here the address of this part of the inram sprite table.
-_LABEL_2ECE_:
+	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl	;Copy here the address of this part of the inram sprite table.
+_LABEL_2ECE_SET_VDP_ADDR_ANDLOAD:	;This is the part without the address reloading part.
 	ld c, Port_VDPAddress	;Get the VDP's address.
 	ld hl, (_RAM_DEB3_)
 	di			;Disable interrupts for safe operation.
@@ -4269,38 +4270,38 @@ _LABEL_2ECE_:
 	out (Port_VDPAddress), a;Send the byte out.
 	ei
 	ld de, $0020		;32
-_LABEL_2EDF_:
+_LABEL_2EDF_VDP_DATA_LOADLOOP:	;This part, we enter into a data load loop.
 	exx			;Save the contents in the shadow registers.
-	ld hl, (_RAM_DEB7_)
+	ld hl, (_RAM_DEB7_INRAM_SPRITETABLE_TEMP)	;HL is still D000
 	ld a, (hl)
 	cp $AA
-	ret z
-	inc hl
+	ret z			;If this is 10101010 then return, else
+	inc hl			;get the next address.
 	ld c, a
-	ld a, (hl)
+	ld a, (hl)		;A has this address which will be shortly an interesting thing.
+	inc hl			;Switch to the third byte.
+	add a, $0B		;Add 11 to that second byte.
+	ld (_RAM_FFFF_), a	;Do a bankswitch. $0B is an offset.
+	ld e, (hl)		;This third byte goes to E.
 	inc hl
-	add a, $0B
-	ld (_RAM_FFFF_), a
-	ld e, (hl)
+	ld d, (hl)		;We have DE now.
 	inc hl
-	ld d, (hl)
-	inc hl
-	ld (_RAM_DEB7_), hl
-	ex de, hl
+	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl	;Fifth byte is fed back to HL then to this value, which was used at the beginning of the routine.
+	ex de, hl		;Switch register pair contents.
 	ld a, c
 	and a
-	jr nz, +
+	jr nz, +		;
 	ld bc, $4000 | Port_VDPData
 -:
 	outi
 	djnz -
 	exx
 	add hl, de
-	djnz _LABEL_2EDF_
+	djnz _LABEL_2EDF_VDP_DATA_LOADLOOP
 	ld (_RAM_DEB3_), hl
 	ret
 
-+:
++:				;If C is not zero, then jump here.
 	ld d, $01
 	ld e, (hl)
 	ld a, (de)
@@ -4429,11 +4430,11 @@ _LABEL_2EDF_:
 	ld e, (hl)
 	ld a, (de)
 	inc l
-	out (Port_VDPData), a
+	out (Port_VDPData), a		;32 outs, so this is one tile's worth of OUTs.
 	exx
 	add hl, de
-	dec b
-	jp nz, _LABEL_2EDF_
+	dec b				;B holds how many tiles are needed to be loaded. I guess these are tiles, and not something else.
+	jp nz, _LABEL_2EDF_VDP_DATA_LOADLOOP		;If we have anything left, jump back, and do this all over again.
 	ld (_RAM_DEB3_), hl
 	ret
 
