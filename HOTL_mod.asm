@@ -386,7 +386,7 @@ _RAM_DE59_LEFT_DEBUG_NR db
 _RAM_DE5A_ db
 _RAM_DE5B_COMBAT_MARK dw	;If this is not zero, we are in combat, and able to attack.
 _RAM_DE5D_ db
-_RAM_DE5E_ dw
+_RAM_DE5E_FLOORFALLXCOORD dw
 _RAM_DE60_ dw
 _RAM_DE62_ db
 _RAM_DE63_ db
@@ -1579,13 +1579,13 @@ _LABEL_924_UPDATE_GAME_SCRN:	;We have much more things now, so we can dissect th
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
-	call _LABEL_2EC8_RELOAD_SPR_TMP
+	call _LABEL_2EC8_RELOAD_SPR_TMP		;We could save those loads by putting them in that routine, but it doesn't matter.
 	
 	ld hl, _DATA_335_
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	ld b, $0D
-	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD
+	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD	;Here as well.
 	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
 	call _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD
@@ -1604,21 +1604,24 @@ _LABEL_924_UPDATE_GAME_SCRN:	;We have much more things now, so we can dissect th
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
 	call _LABEL_3238_
-	ld a, (_RAM_DE96_STOPGAME)
+	ld a, (_RAM_DE96_STOPGAME)		;This value makes the whole game stop.
 	and a
-	jr z, +
-	dec a
-	ld (_RAM_DE96_STOPGAME), a
+	jr z, +	;If this is zero, the game shall commence normally.
+	dec a	;Decrement the value.
+	ld (_RAM_DE96_STOPGAME), a	;Put it back and jump ahead.
 	jr ++
 
-+:
++:	;Normal flow.
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
-	call z, _LABEL_374B_AB_DEBUG_BUTTON
-	call _LABEL_53A3_
-	call _LABEL_5223_
-	call _LABEL_369E_
-++:
+	call z, _LABEL_374B_AB_DEBUG_BUTTON	;If the player can move, call that routine with the debug parts.
+	call _LABEL_53A3_FLOORCOLLISION		;Run the floor collision check.
+	call _LABEL_5223_CHECKTRAP		;Run the trap check on the floor.
+	call _LABEL_369E_NME_N_TRAP			;If this is commented out, then the screen scrolling won't be performed.
+	;nop
+	;nop
+	;nop
+++:	;Stop.
 	call _LABEL_31DF_
 	call _LABEL_A10_ANIM_SPRITES
 	;call _LABEL_A95_UPDATE_SCREEN ;This was not here originally.
@@ -2039,7 +2042,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, and wh
 	inc hl
 	ld d, (hl)
 	inc hl
-	ld (_RAM_DE5E_), de
+	ld (_RAM_DE5E_FLOORFALLXCOORD), de
 	ld e, (hl)
 	inc hl
 	ld d, (hl)
@@ -2369,13 +2372,13 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	call _LABEL_4BB_VDP_RAM_WRITESETUP
 	ld de, (_RAM_DE2F_)
 	ld hl, (_RAM_DE34_SCRN_SCROLL)
-	call _LABEL_7AE7_
+	call _LABEL_7AE7_RSHIFTHL
 	ld a, l
 	ld (_RAM_DE50_COLUMN_DRW_NR), a
 	add hl, de
 	ex de, hl
 	ld hl, (_RAM_DE36_)
-	call _LABEL_7AE7_
+	call _LABEL_7AE7_RSHIFTHL
 	ld h, l
 	ld l, $00
 	ld a, h
@@ -5444,9 +5447,12 @@ _DATA_366C_CHAR_DATA:
 .db $38 $04 $21 $A6 $11 $10 $48 $04 $3A $A4 $13 $12 $58 $04 $76 $A2
 .db $00 $00
 
-_LABEL_369E_:
-	call _LABEL_7565_
-	call _LABEL_3CCF_
+_LABEL_369E_NME_N_TRAP:	;Some enemy thingy here.
+	call _LABEL_7565_TRAP_INIT	;Well, this one simply won't let the traps work, so maybe it's not that simple as I thought. It handles trap types, and things like that.
+	;nop
+	;nop
+	;nop
+	call _LABEL_3CCF_	;The enemies spawn, but they are not moving, so this is likely the "AI" of the enemy. AI is a very fashionable word today.
 	exx
 	ld hl, $0000
 	ld (_RAM_DE5B_COMBAT_MARK), hl
@@ -5577,17 +5583,17 @@ _LABEL_374B_AB_DEBUG_BUTTON:				;Checks for button 2, and either opens the menu 
 
 +:					;No debug mode here.
 	call _LABEL_5C07_
-_LABEL_3786_:
+_LABEL_3786_:	;This is where we are, if the fall should be in progress. Also runs every frame.
 	ld ix, _RAM_D900_CHARA_COORD
-	ld c, (ix+0)
-	ld b, (ix+1)
-	ld a, (ix+9)
-	dec a
-	add a, a
+	ld c, (ix+0)	;Get the X coord.
+	ld b, (ix+1)	;Get which screen are we on.
+	ld a, (ix+9)	;Who the first companion is. Example: 1
+	dec a		;Get the next one in line.	0
+	add a, a	;2X. 0
 	ld e, a
-	ld d, $00
-	ld hl, _DATA_51FD_
-	add hl, de
+	ld d, $00	;DE is now $0004 for example.
+	ld hl, _DATA_51FD_	;HL now has this address, and stays that way if Goldmoon is active.
+	add hl, de		;Add the companion value.
 	ld a, (hl)
 	inc hl
 	ld h, (hl)
@@ -5794,7 +5800,7 @@ _LABEL_3908_:
 	ld (ix+7), $00
 	ret
 
-_LABEL_3938_:
+_LABEL_3938_:	;IX is D900
 	ld (ix+7), $00
 	ld a, (_RAM_DE90_GAMEPAD)
 	ld (_RAM_DE93_), a
@@ -6235,7 +6241,7 @@ _LABEL_3C43_:
 
 _LABEL_3C54_:
 	ld hl, (_RAM_D900_CHARA_COORD)
-	call _LABEL_7AE7_
+	call _LABEL_7AE7_RSHIFTHL
 	ld c, l
 	ld hl, (_RAM_DE60_)
 -:
@@ -6276,6 +6282,7 @@ _LABEL_3C54_:
 	ret
 
 _LABEL_3C89_:
+	;ret
 	ld a, (_RAM_DE90_GAMEPAD)
 	ld e, a
 	and $0A
@@ -6324,20 +6331,46 @@ _LABEL_3C89_:
 _DATA_3CC4_:
 .db $00 $03 $07 $00 $05 $04 $06 $00 $01 $02 $08
 
-_LABEL_3CCF_:
+_LABEL_3CCF_:		;So, if this seems to be the enemy AI routine, If this is commented out, then the enemies won't move or attack.
 	ld ix, _RAM_D91C_NME_COORD_ARRAY
 	ld b, $05
 -:
-	ld a, (ix+9)
+	ld a, (ix+9)	;D925 seems to be the first monster type.
+			;Monster types:
+				;00-nothing
+				;01-Goldmoon. Yes, even players can be monsters. When killed, it remains on screen.
+				;02-Sturm.
+				;03-Caramon
+				;04-Raistlin
+				;05-Tanis
+				;06-Tasslehoff
+				;07-Riverwind
+				;08-Flint
+				;09-Baaz This grey gargoyle with a sword.
+				;0A-Blue gargoyle with magic shots.
+				;0B-Troll
+				;0C-Blue Ghost
+				;0D-This transparent soldier, that is almost impossible kill.
+				;0E-Larger dwarf.
+				;0F-Smaller dwarf.
+				;10-Soldier.
+				;11-Spider.
+				;12-Smaller dragon.
+				;13-empty
+				;14-empty
+				;15-confined dragon.
+				;16-nothing.
+				;17-glitch
+				;Anything above this will just reset the game, invalid.
 	and a
 	jr z, +
 	push bc
 	call ++
 	pop bc
 +:
-	ld de, $001C
+	ld de, $001C	;28 bytes, so maybe every 28 bytes, there is space for a new one.
 	add ix, de
-	djnz -
+	djnz -		;So it seems that we load this, and there is a limit how many monsters are on a given stage. Five or six is more than enough, as the engine uses way too much CPU time.
 	ret
 
 ++:
@@ -6637,14 +6670,14 @@ _LABEL_3F18_:
 	ld de, $0008
 	add hl, de
 	add hl, bc
-	call _LABEL_7AE7_
+	call _LABEL_7AE7_RSHIFTHL
 	ld a, (ix+9)
 	ld c, $00
 	cp $12
 	jr nz, +
 	ld c, $01
 +:
-	ld de, (_RAM_DE5E_)
+	ld de, (_RAM_DE5E_FLOORFALLXCOORD)
 -:
 	ld a, (de)
 	and a
@@ -6920,41 +6953,41 @@ _DATA_51FD_:
 .dw _DATA_5083_ _DATA_50A7_ _DATA_50CB_ _DATA_50EF_ _DATA_5113_ _DATA_5137_ _DATA_515B_ _DATA_517F_
 .dw _DATA_51A3_ _DATA_51C7_ _DATA_51C7_
 
-_LABEL_5223_:
-	ld hl, (_RAM_D900_CHARA_COORD)
-	call _LABEL_7AE7_
+_LABEL_5223_CHECKTRAP:		;Defo some trap stuff.
+	ld hl, (_RAM_D900_CHARA_COORD)	;Yup, get first companion X coordinate.
+	call _LABEL_7AE7_RSHIFTHL
 	ld c, l
 	ld ix, _RAM_DCE0_TRAPARRAY
-_LABEL_522E_:
+_LABEL_522E_ACTIVATE_TRAP:
 	ld l, (ix+0)
 	ld h, (ix+1)
-	ld a, h
+	ld a, h	;Read from the trap array.
 	or l
-	ret z
-	ld a, (hl)
-	cp $46
-	jp z, _LABEL_5321_
-	cp $47
-	jr z, _LABEL_5294_
+	ret z	;Return, if there is no trap in the pipe.
+	ld a, (hl)	;There is a trap this way. $D628 is HL-s current address that we've read from.. And the value is $45. This will be the trap type.
+	cp $46		;$46 is the upward going magic thing with a pattern, that you have to jump through.
+	jp z, _LABEL_5321_UPWARD_MGC_TRAP	;This cannot be jumped over, since it just spawns over and over again.
+	cp $47		;Fire on the ground.
+	jr z, _LABEL_5294_FIRE_ON_FLOOR_TRAP
 	ld a, (_RAM_D90A_HERO_ACTION)
 	cp $05
-	jp z, _LABEL_539C_
+	jp z, _LABEL_539C_INC_TRAP_ARRAY_ADDR	;If we jump, don't activate the trap, adjust to the next one.
 	inc hl
 	inc hl
 	ld a, (hl)
 	cp c
-	jp nz, _LABEL_539C_
-	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
+	jp nz, _LABEL_539C_INC_TRAP_ARRAY_ADDR
+	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	
 	cp $05
-	jr nz, +++
+	jr nz, +++	;Jump, if we are not playing with Tasslehoff.
 	ld a, $64
 	call _LABEL_652_LOAD_NEW_SCRN
 	cp $46
-	jr nc, +++
+	jr nc, +++	;He can and will disable traps for you.
 	dec hl
 	dec hl
 	ld a, (hl)
-	cp $48
+	cp $48		;Arrows hitting the player.
 	jr nz, ++
 	push ix
 	push bc
@@ -6963,7 +6996,7 @@ _LABEL_522E_:
 	ld b, $06
 -:
 	ld a, (ix+24)
-	cp $13
+	cp $13	;These are also stones.
 	jr nz, +
 	ld (ix+9), $00
 +:
@@ -6972,18 +7005,18 @@ _LABEL_522E_:
 	pop de
 	pop bc
 	pop ix
-++:
+++:	;The falling traps will be deactivated.
 	ld (hl), $00
 	call _LABEL_799A_
 	jp _LABEL_5BA2_TASSLEHOFF_TRAP_SCRN
 
-+++:
++++:	;The falling traps will be activated.
 	dec hl
 	dec hl
 	ld a, (hl)
 	cp $47
-	jp nz, _LABEL_52D5_
-_LABEL_5294_:
+	jp nz, _LABEL_52D5_FALLINGTRAP_ACTIVATE
+_LABEL_5294_FIRE_ON_FLOOR_TRAP:
 	push ix
 	ld a, $20
 	call _LABEL_652_LOAD_NEW_SCRN
@@ -7015,9 +7048,9 @@ _LABEL_5294_:
 	call _LABEL_3AAF_DRAWPROJECTILE
 +:
 	pop ix
-	jp _LABEL_539C_
+	jp _LABEL_539C_INC_TRAP_ARRAY_ADDR
 
-_LABEL_52D5_:
+_LABEL_52D5_FALLINGTRAP_ACTIVATE:
 	cp $48
 	jp nz, _LABEL_531C_
 	ld hl, _RAM_D900_CHARA_COORD
@@ -7052,13 +7085,13 @@ _LABEL_52D5_:
 _LABEL_531C_:
 	cp $46
 	jp nz, _LABEL_536C_
-_LABEL_5321_:
+_LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are harming the player upon contact.
 	push ix
 	ld a, (_RAM_DE58_)
 	inc a
 	ld (_RAM_DE58_), a
 	and $3F
-	cp $30
+	cp $30	;48 Wait 48 frames I guess, then launch another projectile.
 	jr nc, +
 	and $03
 	jr nz, +
@@ -7084,12 +7117,12 @@ _LABEL_5321_:
 	ld h, $00
 	ld d, $EC
 	ld l, $00
-	call _LABEL_3AAF_DRAWPROJECTILE
+	call _LABEL_3AAF_DRAWPROJECTILE	;After everything is set, launch the proj.
 	ld a, $03
-	call _LABEL_2FF_PREPNPLAYSFX
+	call _LABEL_2FF_PREPNPLAYSFX	;Play that annoying sound.
 +:
 	pop ix
-	jp _LABEL_539C_
+	jp _LABEL_539C_INC_TRAP_ARRAY_ADDR
 
 _LABEL_536C_:
 	jp nz, +
@@ -7119,39 +7152,40 @@ _LABEL_536C_:
 	call _LABEL_799A_
 	ret
 
-_LABEL_539C_:
+_LABEL_539C_INC_TRAP_ARRAY_ADDR:
 	inc ix
 	inc ix
-	jp _LABEL_522E_
+	jp _LABEL_522E_ACTIVATE_TRAP
 
-_LABEL_53A3_:
+_LABEL_53A3_FLOORCOLLISION: ;If this is just a return, then the floor collision won't work, and you won't die.
+	;ret
 	ld a, (_RAM_D90A_HERO_ACTION)
-	cp $05
-	jr nz, +
-	ld a, (ix+11)
+	cp $05	;$05 means we are in a jump.
+	jr nz, +	;Jump if we are not jumping. No pun intended.
+	ld a, (ix+11)	;So, this might be a jump check?
 	ld b, a
-	ld a, (_RAM_DE6E_)
+	ld a, (_RAM_DE6E_)	;FF is we are standing.
 	cp b
 	ret nc
 	jr ++
 
-+:
-	cp $0F
++:	;We are not jumping.
+	cp $0F	;Are we falling? Return if yes.	 I guess if we are falling, then there is no need for any collision anymore, the player will die anyways.
 	ret z
-++:
+++:	;We are not falling.
 	ld a, (_RAM_DE6C_NME_MOVE7BIT)
-	bit 6, a
-	ret nz
-	ld hl, (_RAM_D900_CHARA_COORD)
+	bit 6, a	;Is bit 6 set?
+	ret nz		;Return if not.
+	ld hl, (_RAM_D900_CHARA_COORD)	;Read the player's X coordinate.
 	ld de, $0008
-	add hl, de
-	call _LABEL_7AE7_
-	ld de, (_RAM_DE5E_)
+	add hl, de	;Add eight to it.
+	call _LABEL_7AE7_RSHIFTHL	;This is some shift right thing on DE.
+	ld de, (_RAM_DE5E_FLOORFALLXCOORD)	;Store the result here. This is the X coordinate, where the player will fall and die.
 -:
-	ld a, (de)
+	ld a, (de)	;Read from DE, where the floor is missing, the "deadzone"
 	and a
-	jr z, +
-	cp $02
+	jr z, +		;If this is zero, then jump. I guess this is the distance between the player and the pit's edge. If this is nz, the calculation is not valid anymore, and you won't fall down. 
+	cp $02		;This is not zero, check if it's 2.
 	sbc a, $00
 	ld h, a
 	inc de
@@ -7165,10 +7199,10 @@ _LABEL_53A3_:
 	jr nc, -
 	ld ix, _RAM_D900_CHARA_COORD
 	ld (ix+11), $00
-	ld (ix+10), $0F
-	jp _LABEL_3786_
+	ld (ix+10), $0F	;Now this looks like something. Set the character to fall and die.
+	jp _LABEL_3786_	;This does many things, and is at many places, but I can't tell exactly what.
 
-+:
++:	;We don't execute any fall, and lang here.
 	ld hl, (_RAM_D900_CHARA_COORD)
 	ld (_RAM_DE6F_), hl
 	ret
@@ -10918,10 +10952,10 @@ _DATA_72D1_:
 .db $00 $00 $04 $52 $00 $06
 .dsb 14, $00
 
-_LABEL_7565_:
+_LABEL_7565_TRAP_INIT:	;This seems to be related to the traps as well. Based on a quick look, maybe this is the projectile moving code. This runs on every frame.
 	ld b, $06
 	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
-_LABEL_756B_:
+_LABEL_756B_PROC_TRAPS:
 	ld a, (ix+9)
 	and a
 	jp z, _LABEL_76D2_
@@ -10980,24 +11014,24 @@ _LABEL_756B_:
 	add hl, de
 	ld (ix+0), l
 	ld (ix+1), h
-	ld a, (ix+24)
-	cp $09
+	ld a, (ix+24)	;This is the type of the trap.
+	cp $09		;Green magic. Does not do damage.
 	jp z, _LABEL_76D2_
-	cp $0A
+	cp $0A		;Same green magic, but it disappears shortly after it spawned. This time, the trap does do some damage.
 	jp z, _LABEL_7851_
-	cp $0E
+	cp $0E		;Dragon breath. Does not do damage, but I think it's because it goes in an arc, and does not touch the players.
 	jp z, _LABEL_7851_
-	cp $10
+	cp $10		;Big stone, but maybe a bit lighter, my eyes may deceive me. Does not do damage.
 	jp z, _LABEL_7851_
-	cp $11
+	cp $11		;The animated rock fall, this does damages.
 	jp z, _LABEL_7851_
-	cp $12
+	cp $12		;Fire falling down. This spawns on the ground usually, but falling also works for it.
 	jp z, _LABEL_7851_
-	cp $13
+	cp $13		;An arrow. It does little damage, but the arrow trap is pretty deadly, and it's difficult or impossible to dodge it.
 	jp z, _LABEL_7851_
-	cp $14
+	cp $14		;Small blue magic, but does not do damage so far.
 	jp z, _LABEL_7851_
-	cp $15
+	cp $15		;Smaller firebolt, does damage very well.
 	jp z, _LABEL_7851_
 	and a
 	sbc hl, de
@@ -11038,7 +11072,7 @@ _LABEL_761C_:
 	jr c, _LABEL_76C6_
 	jp _LABEL_7771_DRAGONDEAD_STONES
 
-+:
++:	;This is for the falling stones at the end of the game.
 	ld a, h
 	and a
 	jp nz, _LABEL_76C6_
@@ -11055,7 +11089,7 @@ _LABEL_761C_:
 	cp c
 	jr c, _LABEL_76C6_
 	ld a, (ix+24)
-	cp $03
+	cp $03		;Arrow.
 	jp z, _LABEL_771A_
 	cp $06
 	jp z, _LABEL_76DC_
@@ -11099,7 +11133,7 @@ _LABEL_76D2_:
 	ld de, $001C
 	add ix, de
 	dec b
-	jp nz, _LABEL_756B_
+	jp nz, _LABEL_756B_PROC_TRAPS
 	ret
 
 _LABEL_76DC_:
@@ -11706,8 +11740,8 @@ _LABEL_7A33_:
 	pop af
 	ret
 
-_LABEL_7AE7_:
-	ex de, hl
+_LABEL_7AE7_RSHIFTHL:
+	ex de, hl	;Exchange, so DE has HL's value now.
 	call _LABEL_7AED_
 	ex de, hl
 	ret
