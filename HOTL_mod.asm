@@ -872,7 +872,14 @@ _LABEL_4BD_VDP_OUTSETUP:		;This is used to do general VDP tasks, nor just write.
 
 ; Data from 4C6 to 4CE (9 bytes)
 ;.dsb 9, $00
-.db $11 $C4 $DE $01 $20 $00 $ED $B0 $C9
+;.db $11 $C4 $DE $01 $20 $00 $ED $B0 $C9
+
+_LABEL_4C6_:	
+		ld   de, _RAM_DEC4_PALETTE_LOAD_POINTER
+		ld   bc, $0020
+		ldir
+		ret
+
 .org $04CF
 _LABEL_4CF_LOAD2PALS:
 	xor a
@@ -1049,7 +1056,7 @@ _LABEL_59B_MAIN:
 	call _LABEL_62D_WRITE_VDP_REG
 	call _LABEL_5F4_RESET
 ; Data from 5E8 to 5F3 (12 bytes)
-;.dsb 12, $00	;This is what it gets disassembled to, but does not seem to be valid.
+;.dsb 12, $00	;This is what it gets disassembled to, but does not seem to be valid, since the jump is a bit far for it, and at the moment, I don't know where it would jump either.
 ;		ld   a, (_RAM_DE9E_)
 ;		and  a
 ;		jr   nz, --
@@ -12795,315 +12802,316 @@ _DATA_AF25_WINTEXT:	;Congratulations. You have recovered the Disks of Mishakal.
 	.db $20 $59 $6F $75 $20 $68 $61 $76 $65 $0D $72 $65 $63 $6F $76 $65
 	.db $72 $65 $64 $20 $74 $68 $65 $0D $44 $69 $73 $6B $73 $20 $6F $66
 	.db $20 $4D $69 $73 $68 $61 $6B $61 $6C $FF 
-_DATA_AF5F_:	;This is some data, but I'm not sure what it is exacly. They are lumped in the same part as the ending texts and such things.
-	.db $40 $00 $00 $00 $00 $00
-	.db $00 $00 $40 $00 $00 $90 $40 $0A $00 $40 $40 $00 $00 $00 $00 $08
-	.db $00 $00 $40 $00 $00 $00 $40 $0A $00 $00 $40 $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FA $FF $FF $FF $FF $FF $FA $FD $FF $FF $FF $FF $FF $FF $FF $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $FF $5F $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $FF $FF $5F $FE $F5 $FC $FF $DB $FF $FF $F5 $FE $F5 $FC $FF
-	.db $DB $FF $FF $D4 $FE $F5 $FC $FF $DB $FF $FF $D4 $7E $F5 $FE $FF
-	.db $DB $FF $FF $F4 $FE $F5 $FC $FF $DB $FF $FF $D4 $FE $F5 $FE $FF
-	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FC $FF
-	.db $DB $FF $FF $D4 $7E $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FE $FF
-	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $7E $F7 $FC $FF
-	.db $DB $FF $FF $F4 $FE $FD $FE $FF $DB $FF $DF $F4 $FE $F5 $FC $FF
-	.db $DB $FF $FE $F4 $FE $FD $FE $FF $DB $FF $FF $D4 $FE $F5 $FC $FF
-	.db $DB $FF $FE $F4 $50 $10 $0C $3F $0B $00 $00 $00 $00 $10 $00 $00
-	.db $0B $07 $40 $00 $50 $10 $0C $00 $0B $00 $00 $40 $08 $00 $00 $00
-	.db $0B $00 $50 $40 $70 $10 $0C $BF $0B $00 $00 $00 $40 $00 $00 $00
-	.db $0B $0F $50 $00 $00 $00 $00 $10 $0B $02 $40 $00 $1A $00 $00 $00
-	.db $0B $04 $50 $40 $50 $00 $0C $3F $0B $00 $00 $00 $40 $00 $00 $00
-	.db $0B $00 $50 $00 $40 $10 $00 $10 $0B $00 $00 $00 $08 $00 $00 $FF
-	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $02 $00 $F0 $00
-	.db $0B $04 $50 $00 $00 $10 $00 $10 $0B $00 $00 $00 $40 $10 $00 $00
-	.db $0B $04 $50 $40 $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FE $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $7F $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $50 $10 $0C $BF $09 $00 $00 $00 $00 $00 $00 $00
-	.db $0B $00 $00 $10 $70 $00 $0C $00 $0B $00 $00 $00 $0A $00 $00 $00
-	.db $0B $04 $50 $00 $50 $00 $0C $7F $4B $00 $00 $40 $00 $00 $00 $10
-	.db $0B $04 $50 $00 $00 $00 $00 $00 $1B $00 $00 $00 $4A $00 $00 $00
-	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $40 $00 $0C $00
-	.db $0B $0D $40 $00 $40 $10 $00 $00 $0B $00 $00 $40 $4A $10 $10 $00
-	.db $0B $04 $F0 $40 $70 $40 $0C $30 $0B $00 $00 $00 $48 $00 $00 $00
-	.db $0B $00 $50 $00 $00 $00 $00 $00 $0B $0A $50 $00 $48 $00 $00 $10
-	.db $0B $05 $50 $40 $40 $10 $08 $00 $00 $00 $00 $00 $00 $10 $00 $00
-	.db $0B $00 $00 $00 $40 $10 $0C $00 $08 $00 $00 $40 $4A $10 $00 $10
-	.db $0B $00 $40 $40 $00 $10 $0C $02 $00 $00 $00 $00 $40 $10 $00 $00
-	.db $0B $20 $00 $00 $00 $10 $00 $00 $09 $00 $00 $00 $00 $00 $00 $00
-	.db $0B $00 $50 $00 $00 $00 $0C $00 $00 $00 $00 $00 $50 $00 $00 $00
-	.db $0B $00 $08 $00 $00 $10 $0C $00 $01 $00 $00 $00 $40 $00 $00 $10
-	.db $0B $00 $40 $00 $10 $00 $08 $06 $00 $00 $00 $00 $00 $00 $00 $00
-	.db $0B $00 $40 $00 $40 $00 $00 $10 $09 $00 $00 $00 $00 $10 $00 $00
-	.db $0B $00 $40 $00 $FF $FF $FC
-	.dsb 15, $FF
-	.db $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $FF $BF $FC $FF $FF $FF $FF $FF $FF $FF $FE $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $FF $FF $FC
-	.dsb 25, $FF
-	.db $FB $FF $FF $FF $40 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
-	.db $01 $00 $00 $10 $00 $00 $0C
-	.dsb 9, $00
-	.db $49 $40 $00 $00 $00 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
-	.db $09 $00 $00 $00 $00 $10 $00 $20 $00 $00 $00 $00 $00 $00 $00 $00
-	.db $09 $00 $00 $00 $00 $00 $0C
-	.dsb 9, $00
-	.db $01 $00 $00 $00 $00 $00 $0C $10 $40 $00 $00 $00 $00 $00 $00 $00
-	.db $09 $00 $00 $00 $00 $00 $08 $00 $00 $00 $00 $00 $40 $00 $00 $00
-	.db $09
-	.dsb 15, $00
-	.db $09 $00 $00 $40 $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F0 $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF $FC $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $4F $FF $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $7B $FF $FF $D4 $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $7F
-	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $FD $DF $FF
-	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $FF $7F $75 $DF $FF
-	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $F5 $DF $FF
-	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $7F $7F $75 $DF $7F
-	.db $FA $F9 $7E $7F $7F $75 $DF $7F $FA $F9 $7E $7F $7F $FD $5E $F7
-	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $FF
-	.db $FA $F9 $7E $FF $FF $F7 $DF $FF $FA $F9 $FE $FF $7F $FD $DF $FF
-	.db $FA $F9 $7E $FF $50 $00 $0E $57 $0A $00 $00 $10 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $70 $00 $0E $40 $0A $00 $00 $40 $08 $00 $00 $40
-	.db $0A $00 $30 $40 $70 $00 $0F $7F $0A $00 $00 $00 $08 $00 $08 $50
-	.db $0A $11 $10 $40 $00 $00 $00 $50 $0A $00 $00 $40 $0E $00 $00 $40
-	.db $0A $00 $70 $40 $70 $00 $0E $57 $0A $00 $00 $40 $00 $00 $00 $40
-	.db $0A $11 $10 $10 $00 $00 $00 $00 $0A $00 $00 $10 $0C $00 $00 $5F
-	.db $0A $10 $70 $00 $70 $00 $0F $5F $0A $00 $00 $50 $04 $00 $D0 $40
-	.db $0A $00 $30 $10 $00 $00 $00 $40 $0A $00 $00 $00 $04 $00 $00 $50
-	.db $0A $00 $30 $40
-	.dsb 12, $FF
-	.db $FA $F9 $FF $FF $7F $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FD $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FD $FF $FF $7F $FF $FE $FF $FA $FF $FF $FF $DF $FF $FF $FF
-	.db $FA $F9 $FF $FF $FF $FF $FE $FF $FA $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FB $FF $FF $7F $FF $FF $7F $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FD $FF $FF $50 $00 $0A $57 $0A $00 $00 $00 $00 $00 $00 $40
-	.db $0A $00 $00 $40 $70 $00 $0E $40 $0A $00 $00 $00 $0C $00 $00 $40
-	.db $0A $00 $30 $00 $50 $00 $0E $57 $0A $00 $00 $00 $00 $00 $00 $40
-	.db $0A $40 $00 $00 $00 $00 $00 $50 $1A $10 $20 $40 $0E $00 $00 $40
-	.db $0A $0F $30 $50 $70 $00 $0F $5F $0A $00 $00 $40 $00 $00 $0E $40
-	.db $0A $10 $10 $40 $00 $00 $00 $40 $0A $00 $00 $40 $0E $00 $00 $40
-	.db $0A $40 $F0 $40 $50 $00 $0E $50 $0A $00 $00 $40 $08 $00 $00 $40
-	.db $0A $00 $10 $00 $00 $00 $00 $40 $0A $10 $00 $40 $00 $00 $00 $00
-	.db $0A $10 $10 $40 $00 $00 $0F $50 $00 $00 $00 $40 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $00 $00 $0E $50 $08 $10 $00 $50 $0F $00 $00 $40
-	.db $0A $00 $20 $40 $00 $00 $0E $C4 $08 $00 $00 $00 $00 $00 $00 $50
-	.db $0A $00 $00 $00 $00 $00 $00 $40 $0A $00 $00 $50 $00 $00 $00 $40
-	.db $0A $00 $10 $40 $00 $00 $0A $40 $00 $00 $00 $00 $70 $10 $00 $50
-	.db $0A $00 $00 $50 $00 $00 $0E $40 $0A $00 $00 $50 $10 $04 $00 $40
-	.db $0A $00 $60 $40 $00 $00 $0E $55 $08 $00 $00 $40 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $00 $00 $00 $50 $0A $10 $00 $40 $00 $00 $00 $40
-	.db $0A $00 $10 $50
-	.dsb 60, $FF
-	.db $FE
-	.dsb 31, $FF
-	.db $FA $FF $FF $FF $FF $FF $FE
-	.dsb 9, $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $FF $FF $FF $00 $00 $0A $40 $00 $00 $00 $40 $00 $00 $00 $50
-	.db $08 $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $40 $00 $08 $40 $40
-	.db $08 $00 $00 $40 $00 $00 $0A $40 $00 $10 $00 $00 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $00 $00 $00 $40 $08 $00 $00 $40 $00 $00 $00 $50
-	.db $0A $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $00 $00 $00 $00 $50
-	.db $0A $40 $00 $40 $00 $00 $0E $40 $08 $00 $00 $40 $00 $00 $00 $40
-	.db $08 $00 $00 $00 $00 $00 $0E $40 $40 $00 $00 $00 $00 $00 $D0 $50
-	.db $0A $00 $00 $40 $00 $00 $00 $40 $08 $00 $08 $40 $00 $10 $00 $40
-	.db $08 $00 $00 $10 $FF $FF $FE
-	.dsb 9, $FF
-	.db $FA
-	.dsb 15, $FF
-	.db $FE $FF $FF $FF $FF $FF $FE
-	.dsb 9, $FF
-	.db $FA
-	.dsb 15, $FF
-	.db $FA $F0
-	.dsb 14, $FF
-	.db $FA
-	.dsb 15, $FF
-	.db $FE $FF $0F $FF $FF $FF $FE
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FF $FF $7F $FE $FF $FB $FF $FE $F7 $F7 $F7 $FE $FF $FB $7F
-	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $F7 $D7 $DE $7F $FB $FF
-	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $77 $D7 $FE $7F $FB $7F
-	.db $FE $F3 $F7 $D7 $DE $7F $FB $FF $FE $D3 $F7 $D7 $DE $7F $FB $FF
-	.db $FE $F3 $F7 $D7 $DE $7F $FB $7F $FE $F3 $F7 $D7 $DE $3F $FB $7F
-	.db $FE $F1 $F7 $D7 $FE $7F $FB $7F $FE $F1 $F7 $D7 $FE $FF $FB $FF
-	.db $FE $F5 $FF $FF $FE $FF $FB $7F $FE $F3 $F7 $D7 $FE $FF $FB $7F
-	.db $FE $F3 $FF $F7 $FE $7F $FB $FF $FE $F3 $F7 $D7 $FE $FF $FB $FF
-	.db $FE $F7 $F7 $F7 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $40 $00 $D0 $00 $0B $10 $0E $01 $00 $40 $08 $00 $00 $10
-	.db $0E $01 $70 $40 $D0 $00 $0B $7F $0E $00 $00 $40 $08 $00 $00 $10
-	.db $0E $01 $50 $40 $00 $00 $00 $00 $0E $01 $00 $00 $0A $00 $00 $10
-	.db $0E $01 $F0 $00 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $70 $40 $00 $00 $00 $00 $0E $01 $00 $40 $08 $00 $20 $7F
-	.db $0E $01 $F0 $40 $D0 $00 $0B $3F $1E $00 $00 $40 $48 $00 $D0 $00
-	.db $0E $01 $70 $40 $00 $00 $00 $10 $0E $01 $40 $40 $00 $00 $00 $10
-	.db $0E $01 $70 $40 $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FE $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $7F $FF $FF
-	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $F7 $FF $FF $D0 $00 $0B $5F $0E $00 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $60 $50 $D0 $00 $0B $10 $1E $00 $00 $40 $08 $00 $00 $10
-	.db $0E $01 $70 $40 $D0 $10 $1B $1F $0E $01 $00 $00 $00 $00 $00 $10
-	.db $0E $01 $30 $00 $00 $00 $00 $00 $1E $01 $10 $40 $0A $00 $00 $10
-	.db $0E $0F $F0 $40 $D0 $00 $0B $1F $0E $01 $00 $00 $00 $00 $0B $10
-	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $00 $08 $00 $00 $10
-	.db $0E $01 $F0 $40 $D0 $00 $0B $70 $0E $01 $00 $00 $08 $00 $00 $10
-	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $50 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0A $00 $00 $40 $00 $00 $0B $00 $0A $00 $00 $40 $0E $00 $00 $10
-	.db $0E $00 $00 $40 $00 $00 $0B $11 $80 $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $40 $40 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $70 $40 $00 $00 $0B $10 $00 $00 $00 $40 $D0 $00 $00 $10
-	.db $0E $00 $00 $40 $00 $00 $0B $10 $0A $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $60 $40 $00 $00 $0B $1B $08 $00 $00 $40 $00 $00 $00 $00
-	.db $0E $00 $40 $08 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $50 $50 $FF $FF $FB
-	.dsb 9, $FF
-	.db $FA $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $DE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $00 $00 $0B $10 $00 $00 $00 $40 $00 $10 $00 $10
-	.db $02 $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0A $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0A $00 $00 $40 $00 $00 $00 $00 $10 $00 $00 $40 $00 $01 $00 $10
-	.db $1A $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $00 $00 $00 $00 $10
-	.db $02 $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $00 $40 $00 $00 $0B $10 $00 $00 $10 $40 $00 $00 $10 $10
-	.db $0A $00 $00 $40 $00 $00 $00 $10 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $00 $40 $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $F0 $FF $DF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $5F $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $D7 $DE $FF $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
-	.db $FB $F1 $FE $7F $DE $F7 $FB $75 $FB $F1 $FE $7F $DE $77 $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $D1 $FE $7F $DE $FF $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $5F $DE $77 $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $FF $FB $F5
-	.db $FB $F5 $FE $7F $DE $FF $FB $F5 $FB $F1 $FE $FF $DE $F7 $FB $F5
-	.db $FB $F1 $FE $7F $DE $FF $FB $FF $FB $F1 $FE $7F $DE $FF $FB $F5
-	.db $FB $F1 $FE $FF $50 $00 $0B $21 $03 $00 $00 $50 $00 $00 $00 $00
-	.db $03 $01 $00 $00 $50 $00 $0A $00 $03 $01 $00 $00 $02 $00 $00 $00
-	.db $0B $01 $20 $50 $D0 $00 $08 $85 $03 $00 $00 $40 $00 $00 $00 $00
-	.db $03 $01 $00 $00 $40 $00 $00 $00 $03 $01 $00 $10 $06 $00 $00 $00
-	.db $0B $01 $60 $10 $50 $00 $0A $C5 $0B $00 $00 $00 $00 $00 $00 $00
-	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $46 $00 $00 $E1
-	.db $03 $01 $40 $50 $D0 $00 $08 $A1 $03 $01 $00 $50 $06 $00 $F0 $00
-	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $04 $00 $00 $00
-	.db $43 $01 $60 $00 $DF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $DF $FF $FB $FF $FB $FF $FF $FF $FE $FF $FF $FF
-	.db $FB $FF $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $FF $FF $FB $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $DF $FF $FB $F5 $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $50 $00 $08 $01 $03 $00 $00 $10 $00 $10 $00 $00
-	.db $03 $01 $00 $50 $D0 $00 $08 $00 $03 $01 $00 $10 $02 $00 $00 $00
-	.db $03 $41 $40 $10 $50 $00 $08 $A1 $03 $01 $00 $00 $00 $00 $00 $00
-	.db $03 $41 $00 $40 $00 $00 $00 $00 $03 $01 $00 $40 $06 $00 $00 $00
-	.db $03 $0F $00 $60 $50 $00 $08 $A1 $03 $00 $00 $00 $02 $00 $08 $00
-	.db $03 $01 $00 $40 $00 $00 $00 $00 $03 $01 $00 $00 $06 $00 $00 $00
-	.db $03 $01 $F0 $40 $50 $00 $08 $A0 $03 $01 $00 $10 $00 $00 $00 $00
-	.db $03 $41 $00 $10 $40 $00 $00 $00 $0B $01 $00 $50 $00 $00 $00 $00
-	.db $03 $01 $00 $40 $00 $00 $0A $00 $00 $00 $00 $50 $00 $00 $00 $00
-	.db $03 $00 $00 $10 $00 $00 $08 $00 $03 $00 $00 $40 $06 $00 $00 $00
-	.db $03 $00 $00 $50 $10 $00 $0A $01 $00 $00 $00 $10 $00 $00 $00 $00
-	.db $03 $00 $00 $50 $00 $00 $10 $00 $03 $10 $00 $50 $00 $00 $00 $00
-	.db $0B $00 $00 $40 $00 $00 $2A $01 $00 $00 $00 $00 $50 $00 $00 $00
-	.db $03 $00 $00 $50 $00 $00 $0A $00 $03 $00 $00 $40 $00 $00 $00 $10
-	.db $03 $00 $00 $50 $10 $00 $08 $01 $01 $00 $00 $50 $10 $00 $00 $00
-	.db $03 $00 $00 $00 $00 $00 $00 $00 $03 $00 $00 $40 $10 $00 $40 $00
-	.db $0B $00 $00 $50 $FF $FF $FB
-	.dsb 15, $FF
-	.db $FB
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FB
-	.dsb 25, $FF
-	.db $FB $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $40 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
-	.db $01 $00 $00 $50 $00 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
-	.db $03 $00 $08 $40 $00 $00 $08 $00 $00 $00 $00 $50 $10 $00 $00 $00
-	.db $03 $40
-	.dsb 9, $00
-	.db $40 $00 $00 $00 $00 $01 $00 $00 $40 $00 $00 $09 $00 $00 $00 $00
-	.db $50 $00 $00 $00 $00 $03 $10 $00 $00 $00 $00 $0A $00 $00 $00 $00
-	.db $40 $00 $00 $00 $00 $03 $00 $10 $50 $00 $00 $0B $01 $00 $00 $00
-	.db $50 $00 $00 $70 $00 $03 $00 $00 $40 $50 $00 $00 $00 $01 $00 $04
-	.db $10 $00 $00 $00 $00 $03 $00 $10 $40 $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
-	.db $FB
-	.dsb 10, $FF
-	.db $7F $FF $FF $FF $FF $FB $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF
-	.db $FF $FF $FF $FB $FF $FB
-	.dsb 15, $FF
-	.db $FB $FF $0F $FF $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $5F
+	;CHANGED
+_DATA_AF5F_:	;This is some data, but seemingly nothing is read from here. Possibly level data, but the beginning is the ending text.
+;	.db $40 $00 $00 $00 $00 $00
+;	.db $00 $00 $40 $00 $00 $90 $40 $0A $00 $40 $40 $00 $00 $00 $00 $08
+;	.db $00 $00 $40 $00 $00 $00 $40 $0A $00 $00 $40 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FA $FD $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $5F $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $FF $5F $FE $F5 $FC $FF $DB $FF $FF $F5 $FE $F5 $FC $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FC $FF $DB $FF $FF $D4 $7E $F5 $FE $FF
+;	.db $DB $FF $FF $F4 $FE $F5 $FC $FF $DB $FF $FF $D4 $FE $F5 $FE $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FC $FF
+;	.db $DB $FF $FF $D4 $7E $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FE $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $7E $F7 $FC $FF
+;	.db $DB $FF $FF $F4 $FE $FD $FE $FF $DB $FF $DF $F4 $FE $F5 $FC $FF
+;	.db $DB $FF $FE $F4 $FE $FD $FE $FF $DB $FF $FF $D4 $FE $F5 $FC $FF
+;	.db $DB $FF $FE $F4 $50 $10 $0C $3F $0B $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $07 $40 $00 $50 $10 $0C $00 $0B $00 $00 $40 $08 $00 $00 $00
+;	.db $0B $00 $50 $40 $70 $10 $0C $BF $0B $00 $00 $00 $40 $00 $00 $00
+;	.db $0B $0F $50 $00 $00 $00 $00 $10 $0B $02 $40 $00 $1A $00 $00 $00
+;	.db $0B $04 $50 $40 $50 $00 $0C $3F $0B $00 $00 $00 $40 $00 $00 $00
+;	.db $0B $00 $50 $00 $40 $10 $00 $10 $0B $00 $00 $00 $08 $00 $00 $FF
+;	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $02 $00 $F0 $00
+;	.db $0B $04 $50 $00 $00 $10 $00 $10 $0B $00 $00 $00 $40 $10 $00 $00
+;	.db $0B $04 $50 $40 $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FE $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $7F $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $50 $10 $0C $BF $09 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $00 $10 $70 $00 $0C $00 $0B $00 $00 $00 $0A $00 $00 $00
+;	.db $0B $04 $50 $00 $50 $00 $0C $7F $4B $00 $00 $40 $00 $00 $00 $10
+;	.db $0B $04 $50 $00 $00 $00 $00 $00 $1B $00 $00 $00 $4A $00 $00 $00
+;	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $40 $00 $0C $00
+;	.db $0B $0D $40 $00 $40 $10 $00 $00 $0B $00 $00 $40 $4A $10 $10 $00
+;	.db $0B $04 $F0 $40 $70 $40 $0C $30 $0B $00 $00 $00 $48 $00 $00 $00
+;	.db $0B $00 $50 $00 $00 $00 $00 $00 $0B $0A $50 $00 $48 $00 $00 $10
+;	.db $0B $05 $50 $40 $40 $10 $08 $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $00 $00 $00 $40 $10 $0C $00 $08 $00 $00 $40 $4A $10 $00 $10
+;	.db $0B $00 $40 $40 $00 $10 $0C $02 $00 $00 $00 $00 $40 $10 $00 $00
+;	.db $0B $20 $00 $00 $00 $10 $00 $00 $09 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $50 $00 $00 $00 $0C $00 $00 $00 $00 $00 $50 $00 $00 $00
+;	.db $0B $00 $08 $00 $00 $10 $0C $00 $01 $00 $00 $00 $40 $00 $00 $10
+;	.db $0B $00 $40 $00 $10 $00 $08 $06 $00 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $40 $00 $40 $00 $00 $10 $09 $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $00 $40 $00 $FF $FF $FC
+;	.dsb 15, $FF
+;	.db $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $BF $FC $FF $FF $FF $FF $FF $FF $FF $FE $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 25, $FF
+;	.db $FB $FF $FF $FF $40 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $01 $00 $00 $10 $00 $00 $0C
+;	.dsb 9, $00
+;	.db $49 $40 $00 $00 $00 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $09 $00 $00 $00 $00 $10 $00 $20 $00 $00 $00 $00 $00 $00 $00 $00
+;	.db $09 $00 $00 $00 $00 $00 $0C
+;	.dsb 9, $00
+;	.db $01 $00 $00 $00 $00 $00 $0C $10 $40 $00 $00 $00 $00 $00 $00 $00
+;	.db $09 $00 $00 $00 $00 $00 $08 $00 $00 $00 $00 $00 $40 $00 $00 $00
+;	.db $09
+;	.dsb 15, $00
+;	.db $09 $00 $00 $40 $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F0 $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF $FC $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $4F $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $7B $FF $FF $D4 $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $7F
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $FD $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $FF $7F $75 $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $F5 $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $7F $7F $75 $DF $7F
+;	.db $FA $F9 $7E $7F $7F $75 $DF $7F $FA $F9 $7E $7F $7F $FD $5E $F7
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $FF
+;	.db $FA $F9 $7E $FF $FF $F7 $DF $FF $FA $F9 $FE $FF $7F $FD $DF $FF
+;	.db $FA $F9 $7E $FF $50 $00 $0E $57 $0A $00 $00 $10 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $70 $00 $0E $40 $0A $00 $00 $40 $08 $00 $00 $40
+;	.db $0A $00 $30 $40 $70 $00 $0F $7F $0A $00 $00 $00 $08 $00 $08 $50
+;	.db $0A $11 $10 $40 $00 $00 $00 $50 $0A $00 $00 $40 $0E $00 $00 $40
+;	.db $0A $00 $70 $40 $70 $00 $0E $57 $0A $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $11 $10 $10 $00 $00 $00 $00 $0A $00 $00 $10 $0C $00 $00 $5F
+;	.db $0A $10 $70 $00 $70 $00 $0F $5F $0A $00 $00 $50 $04 $00 $D0 $40
+;	.db $0A $00 $30 $10 $00 $00 $00 $40 $0A $00 $00 $00 $04 $00 $00 $50
+;	.db $0A $00 $30 $40
+;	.dsb 12, $FF
+;	.db $FA $F9 $FF $FF $7F $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $7F $FF $FE $FF $FA $FF $FF $FF $DF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FE $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FB $FF $FF $7F $FF $FF $7F $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $50 $00 $0A $57 $0A $00 $00 $00 $00 $00 $00 $40
+;	.db $0A $00 $00 $40 $70 $00 $0E $40 $0A $00 $00 $00 $0C $00 $00 $40
+;	.db $0A $00 $30 $00 $50 $00 $0E $57 $0A $00 $00 $00 $00 $00 $00 $40
+;	.db $0A $40 $00 $00 $00 $00 $00 $50 $1A $10 $20 $40 $0E $00 $00 $40
+;	.db $0A $0F $30 $50 $70 $00 $0F $5F $0A $00 $00 $40 $00 $00 $0E $40
+;	.db $0A $10 $10 $40 $00 $00 $00 $40 $0A $00 $00 $40 $0E $00 $00 $40
+;	.db $0A $40 $F0 $40 $50 $00 $0E $50 $0A $00 $00 $40 $08 $00 $00 $40
+;	.db $0A $00 $10 $00 $00 $00 $00 $40 $0A $10 $00 $40 $00 $00 $00 $00
+;	.db $0A $10 $10 $40 $00 $00 $0F $50 $00 $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $0E $50 $08 $10 $00 $50 $0F $00 $00 $40
+;	.db $0A $00 $20 $40 $00 $00 $0E $C4 $08 $00 $00 $00 $00 $00 $00 $50
+;	.db $0A $00 $00 $00 $00 $00 $00 $40 $0A $00 $00 $50 $00 $00 $00 $40
+;	.db $0A $00 $10 $40 $00 $00 $0A $40 $00 $00 $00 $00 $70 $10 $00 $50
+;	.db $0A $00 $00 $50 $00 $00 $0E $40 $0A $00 $00 $50 $10 $04 $00 $40
+;	.db $0A $00 $60 $40 $00 $00 $0E $55 $08 $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $00 $50 $0A $10 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $10 $50
+;	.dsb 60, $FF
+;	.db $FE
+;	.dsb 31, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $FF $FF $00 $00 $0A $40 $00 $00 $00 $40 $00 $00 $00 $50
+;	.db $08 $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $40 $00 $08 $40 $40
+;	.db $08 $00 $00 $40 $00 $00 $0A $40 $00 $10 $00 $00 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $00 $40 $08 $00 $00 $40 $00 $00 $00 $50
+;	.db $0A $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $00 $00 $00 $00 $50
+;	.db $0A $40 $00 $40 $00 $00 $0E $40 $08 $00 $00 $40 $00 $00 $00 $40
+;	.db $08 $00 $00 $00 $00 $00 $0E $40 $40 $00 $00 $00 $00 $00 $D0 $50
+;	.db $0A $00 $00 $40 $00 $00 $00 $40 $08 $00 $08 $40 $00 $10 $00 $40
+;	.db $08 $00 $00 $10 $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FA $F0
+;	.dsb 14, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FE $FF $0F $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FF $FF $7F $FE $FF $FB $FF $FE $F7 $F7 $F7 $FE $FF $FB $7F
+;	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $F7 $D7 $DE $7F $FB $FF
+;	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $77 $D7 $FE $7F $FB $7F
+;	.db $FE $F3 $F7 $D7 $DE $7F $FB $FF $FE $D3 $F7 $D7 $DE $7F $FB $FF
+;	.db $FE $F3 $F7 $D7 $DE $7F $FB $7F $FE $F3 $F7 $D7 $DE $3F $FB $7F
+;	.db $FE $F1 $F7 $D7 $FE $7F $FB $7F $FE $F1 $F7 $D7 $FE $FF $FB $FF
+;	.db $FE $F5 $FF $FF $FE $FF $FB $7F $FE $F3 $F7 $D7 $FE $FF $FB $7F
+;	.db $FE $F3 $FF $F7 $FE $7F $FB $FF $FE $F3 $F7 $D7 $FE $FF $FB $FF
+;	.db $FE $F7 $F7 $F7 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $40 $00 $D0 $00 $0B $10 $0E $01 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $70 $40 $D0 $00 $0B $7F $0E $00 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $00 $0E $01 $00 $00 $0A $00 $00 $10
+;	.db $0E $01 $F0 $00 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $70 $40 $00 $00 $00 $00 $0E $01 $00 $40 $08 $00 $20 $7F
+;	.db $0E $01 $F0 $40 $D0 $00 $0B $3F $1E $00 $00 $40 $48 $00 $D0 $00
+;	.db $0E $01 $70 $40 $00 $00 $00 $10 $0E $01 $40 $40 $00 $00 $00 $10
+;	.db $0E $01 $70 $40 $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FE $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $7F $FF $FF
+;	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F7 $FF $FF $D0 $00 $0B $5F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $60 $50 $D0 $00 $0B $10 $1E $00 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $70 $40 $D0 $10 $1B $1F $0E $01 $00 $00 $00 $00 $00 $10
+;	.db $0E $01 $30 $00 $00 $00 $00 $00 $1E $01 $10 $40 $0A $00 $00 $10
+;	.db $0E $0F $F0 $40 $D0 $00 $0B $1F $0E $01 $00 $00 $00 $00 $0B $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $00 $08 $00 $00 $10
+;	.db $0E $01 $F0 $40 $D0 $00 $0B $70 $0E $01 $00 $00 $08 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $0B $00 $0A $00 $00 $40 $0E $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $11 $80 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $40 $40 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $70 $40 $00 $00 $0B $10 $00 $00 $00 $40 $D0 $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $60 $40 $00 $00 $0B $1B $08 $00 $00 $40 $00 $00 $00 $00
+;	.db $0E $00 $40 $08 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $50 $50 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $DE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $00 $00 $0B $10 $00 $00 $00 $40 $00 $10 $00 $10
+;	.db $02 $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $00 $00 $10 $00 $00 $40 $00 $01 $00 $10
+;	.db $1A $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $00 $00 $00 $00 $10
+;	.db $02 $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $10 $00 $00 $10 $40 $00 $00 $10 $10
+;	.db $0A $00 $00 $40 $00 $00 $00 $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $00 $40 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F0 $FF $DF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $5F $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $D7 $DE $FF $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $F7 $FB $75 $FB $F1 $FE $7F $DE $77 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $D1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $5F $DE $77 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F5 $FE $7F $DE $FF $FB $F5 $FB $F1 $FE $FF $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $FF $FB $FF $FB $F1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F1 $FE $FF $50 $00 $0B $21 $03 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $01 $00 $00 $50 $00 $0A $00 $03 $01 $00 $00 $02 $00 $00 $00
+;	.db $0B $01 $20 $50 $D0 $00 $08 $85 $03 $00 $00 $40 $00 $00 $00 $00
+;	.db $03 $01 $00 $00 $40 $00 $00 $00 $03 $01 $00 $10 $06 $00 $00 $00
+;	.db $0B $01 $60 $10 $50 $00 $0A $C5 $0B $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $46 $00 $00 $E1
+;	.db $03 $01 $40 $50 $D0 $00 $08 $A1 $03 $01 $00 $50 $06 $00 $F0 $00
+;	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $04 $00 $00 $00
+;	.db $43 $01 $60 $00 $DF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $DF $FF $FB $FF $FB $FF $FF $FF $FE $FF $FF $FF
+;	.db $FB $FF $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FB $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $DF $FF $FB $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $50 $00 $08 $01 $03 $00 $00 $10 $00 $10 $00 $00
+;	.db $03 $01 $00 $50 $D0 $00 $08 $00 $03 $01 $00 $10 $02 $00 $00 $00
+;	.db $03 $41 $40 $10 $50 $00 $08 $A1 $03 $01 $00 $00 $00 $00 $00 $00
+;	.db $03 $41 $00 $40 $00 $00 $00 $00 $03 $01 $00 $40 $06 $00 $00 $00
+;	.db $03 $0F $00 $60 $50 $00 $08 $A1 $03 $00 $00 $00 $02 $00 $08 $00
+;	.db $03 $01 $00 $40 $00 $00 $00 $00 $03 $01 $00 $00 $06 $00 $00 $00
+;	.db $03 $01 $F0 $40 $50 $00 $08 $A0 $03 $01 $00 $10 $00 $00 $00 $00
+;	.db $03 $41 $00 $10 $40 $00 $00 $00 $0B $01 $00 $50 $00 $00 $00 $00
+;	.db $03 $01 $00 $40 $00 $00 $0A $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $00 $00 $10 $00 $00 $08 $00 $03 $00 $00 $40 $06 $00 $00 $00
+;	.db $03 $00 $00 $50 $10 $00 $0A $01 $00 $00 $00 $10 $00 $00 $00 $00
+;	.db $03 $00 $00 $50 $00 $00 $10 $00 $03 $10 $00 $50 $00 $00 $00 $00
+;	.db $0B $00 $00 $40 $00 $00 $2A $01 $00 $00 $00 $00 $50 $00 $00 $00
+;	.db $03 $00 $00 $50 $00 $00 $0A $00 $03 $00 $00 $40 $00 $00 $00 $10
+;	.db $03 $00 $00 $50 $10 $00 $08 $01 $01 $00 $00 $50 $10 $00 $00 $00
+;	.db $03 $00 $00 $00 $00 $00 $00 $00 $03 $00 $00 $40 $10 $00 $40 $00
+;	.db $0B $00 $00 $50 $FF $FF $FB
+;	.dsb 15, $FF
+;	.db $FB
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FB
+;	.dsb 25, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $40 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $01 $00 $00 $50 $00 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $00 $08 $40 $00 $00 $08 $00 $00 $00 $00 $50 $10 $00 $00 $00
+;	.db $03 $40
+;	.dsb 9, $00
+;	.db $40 $00 $00 $00 $00 $01 $00 $00 $40 $00 $00 $09 $00 $00 $00 $00
+;	.db $50 $00 $00 $00 $00 $03 $10 $00 $00 $00 $00 $0A $00 $00 $00 $00
+;	.db $40 $00 $00 $00 $00 $03 $00 $10 $50 $00 $00 $0B $01 $00 $00 $00
+;	.db $50 $00 $00 $70 $00 $03 $00 $00 $40 $50 $00 $00 $00 $01 $00 $04
+;	.db $10 $00 $00 $00 $00 $03 $00 $10 $40 $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB
+;	.dsb 10, $FF
+;	.db $7F $FF $FF $FF $FF $FB $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF
+;	.db $FF $FF $FF $FB $FF $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $0F $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $5F
 	
 
 .BANK 3		;THIS SEEMS TO BE THE LEVEL BACKGROUND. MAYBE FOR ALL LEVELS?
