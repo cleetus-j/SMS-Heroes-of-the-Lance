@@ -374,7 +374,7 @@ _RAM_DE3C_ dw
 _RAM_DE3E_MAX_LVL_LEN dw
 _RAM_DE40_ dw
 _RAM_DE42_ dw
-_RAM_DE44_ db
+_RAM_DE44_SCRNSCRL_2FRMSET db
 _RAM_DE45_ db
 _RAM_DE46_SCROLLBG db
 _RAM_DE47_ db
@@ -603,7 +603,7 @@ _LABEL_66_:
 .dsb 11, $00
 ;.org $00AB
 ; Data from AB to 1FF (341 bytes)
-_DATA_AB_:
+_DATA_AB_:	;This is used for many things, but I can't seem to pinpoint exactly what else it is used for.
 .dsb 32, $00
 .db $04 $A4 $00 $00 $04 $A4 $08 $00 $04 $A4 $10 $00 $04 $A4 $18 $00
 .db $75 $3F $1F $BD $0C $FD $0C $3F $FD $3F $0D $3D $0C $3D $0C $FD
@@ -697,7 +697,7 @@ _LABEL_275_:
 	or c
 	jr Nz, -			;JUMP IF TIMER IS EXPIRED. (SWITCH SCREENS IN THE INTRO, AND GO TO DEMO THEN.)
 	;IF THIS IS Z, PICTURES WILL SHOW FOR A VERY LITTLE TIME, AS THE PROGRAM THINKS THE TIMER IS EXPIRED ALREADY.
-	call _LABEL_4F9_PALETTE	;FADE OUT SCREEN.
+	call _LABEL_4F9_PALETTE_FADEOUT	;FADE OUT SCREEN.
 	ld a, ($C001)
 	inc a
 	and $03
@@ -732,7 +732,7 @@ _LABEL_275_:
 
 _LABEL_2D7_GAME_INIT:	;THIS IS WHEN YOU START A NORMAL GAME.
 	pop bc
-	call _LABEL_4F9_PALETTE	;FADE SCREEN OUT.
+	call _LABEL_4F9_PALETTE_FADEOUT	;FADE SCREEN OUT.
 	ld a, $18
 	ld (_RAM_FFFF_), a	;SELECT BANK 24.
 	ld a, $FF
@@ -898,10 +898,7 @@ _LABEL_4CF_LOAD2PALS:
 	djnz -
 	ret
 
-; Data from 4E7 to 4F8 (18 bytes)
-;.db $79 $D3 $BF $DD $7E $00 $3E $C0 $D3 $BF $DD $7E $00 $78 $D3 $BE
-;.db $FB $C9
-_LABEL_4E7_:	
+_LABEL_4E7_:	;This is not used by the code. Some VDP data loading. The indexing part is a bit strange, especially with the +0. Maybe this is some other error in the disassembly.	
 		ld a, c
 		out (Port_VDPAddress), a
 		ld a, (ix+0)
@@ -912,7 +909,7 @@ _LABEL_4E7_:
 		out (Port_VDPData), a
 		ei
 		ret
-_LABEL_4F9_PALETTE:
+_LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette details into the VDP. As it can be seen, this is a fadeout routine as well.
 	ld a, (_RAM_DED3_FADEOUT_VAR)
 	and a
 	ret z
@@ -1117,7 +1114,7 @@ _LABEL_62D_WRITE_VDP_REG:
 	out (Port_VDPAddress), a
 	ret
 
-_LABEL_63B_CLEAR_SAT:	;THIS GOES TO THE VDP AS I CAN SEE.
+_LABEL_63B_CLEAR_SAT:	;This clears the VDP's Sprite Attribute Table, and places a sprite terminator at the end, so no sprites are drawn at all.
 	ld bc, $FF05
 	call _LABEL_62D_WRITE_VDP_REG
 	neg
@@ -1189,8 +1186,8 @@ _LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will l
 	;nop	;This was not here.
 _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	di
-	ld hl, $3C00	;0011 1100 0000 0000	;This is for the sprite table I think.
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
+	ld hl, $3C00	;0011 1100 0000 0000	;Set the SAT as the destination address.
+	call _LABEL_4BB_VDP_RAM_WRITESETUP		;Setup a write.
 	ld bc, $0100				;256 bytes.
 	ld de, $00BF				;191
 -:
@@ -1212,7 +1209,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	call _LABEL_7D42_LOAD_PLYRSTAT	;Load player stats of course, I mapped some things at the data part.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
 	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
-	call _LABEL_2BF2_CLEAR_INRAMSAT	;THIS CAN BE DISABLED, THE GAME WORKS THE SAME EITHER WAY.
+	call _LABEL_2BF2_CLEAR_INRAMSAT	;We clear the SAT table stored in RAM. Since we'll use this later, this small clearing does not affect much.
 	ld ix, _RAM_D900_CHARA_COORD
 	;Why are the numbers so spread apart?
 	ld (ix+9), $01			;Show the player. If this is zero, the companions are not shown.
@@ -1235,7 +1232,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	inc hl
 	inc a
 	cp $08	
-	jr nz, -
+	jr nz, -		;Resetting the list of the heroes.
 	call _LABEL_59B_MAIN
 	ld a, $08	
 	ld (_RAM_DE9F_TIMER), a
@@ -1251,11 +1248,11 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	call _LABEL_6242B_SET_MUS	;SELECT MUSIC BANK, MUSIC AND START IT.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD.
-_LABEL_726_LEVEL_WARP_LOAD:
-	call _LABEL_5819_MARKDEAD_PERMADEAD		;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead.
+_LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
+	call _LABEL_5819_MARKDEAD_PERMADEAD		;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. Since at the moment we start the game, this will have no effect.
 	call _LABEL_59B_MAIN
-	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES, AND KEEP SPAWNING THEM, IF NEEDED.
-	call _LABEL_7971_INIT_TRAPS	;COMMENTING OUT THIS WILL GET RID OF THE TRAPS.
+	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES.
+	call _LABEL_7971_INIT_TRAPS	
 	ld a, (_RAM_DE55_WATERFALL)	;See if the loaded new screen will be a waterfall\healing for the party.
 	and $01
 	jr z, +			;If it's not, jump and load the level instead.
@@ -1268,10 +1265,10 @@ _LABEL_726_LEVEL_WARP_LOAD:
 	call _LABEL_C43_LEVEL_LOAD
 ++:
 	xor a
-	ld (_RAM_DE44_), a
+	ld (_RAM_DE44_SCRNSCRL_2FRMSET), a ;The game marks $01 with scrolling right, and $FF with left scroll. Also, this seems to be a frame later than what's happening on the screen. In a nutshell, this will stop the screen from scrolling.
 	ld h, a
 	ld l, a
-	ld (_RAM_DE42_), hl	;Stop the character in place.
+	ld (_RAM_DE42_), hl	;Stop the character in place. Also, no scrolling if this is frozen,but no apparent function. It is used in movement, and scroll too.
 	ei
 	call _LABEL_2C1A_FRAMESET_COPY	;no function to this yet.
 	ld ($DE27), sp
@@ -1762,26 +1759,26 @@ _LABEL_A95_UPDATE_SCREEN:
 	ret
 
 +:
-	ld a, (_RAM_DE44_)
+	ld a, (_RAM_DE44_SCRNSCRL_2FRMSET)
 	bit 7, a
 	jr nz, +
 	and a
 	jr z, ++
 	call _LABEL_B39_CHECK_MAP_RIGHT_BORDER
-	ld a, (_RAM_DE44_)
+	ld a, (_RAM_DE44_SCRNSCRL_2FRMSET)
 	cp $02
 	call nc, _LABEL_B39_CHECK_MAP_RIGHT_BORDER
-	ld a, (_RAM_DE44_)
+	ld a, (_RAM_DE44_SCRNSCRL_2FRMSET)
 	cp $03
 	call nc, _LABEL_B39_CHECK_MAP_RIGHT_BORDER
 	jr ++
 
 +:
 	call _LABEL_B47_CHECK_MAP_LEFT_BORDER
-	ld a, (_RAM_DE44_)
+	ld a, (_RAM_DE44_SCRNSCRL_2FRMSET)
 	cp $FF
 	call c, _LABEL_B47_CHECK_MAP_LEFT_BORDER
-	ld a, (_RAM_DE44_)
+	ld a, (_RAM_DE44_SCRNSCRL_2FRMSET)
 	cp $FE
 	call c, _LABEL_B47_CHECK_MAP_LEFT_BORDER
 ++:
@@ -3814,7 +3811,7 @@ _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinat
 	ld (_RAM_DEB3_), de
 	ld (_RAM_DEA9_), hl
 	ld hl, (_RAM_DE42_)
-	ld (_RAM_DE44_), hl
+	ld (_RAM_DE44_SCRNSCRL_2FRMSET), hl
 	ld hl, _RAM_D900_CHARA_COORD
 	ld de, _RAM_DA50_NME_COORD_ARRAY2
 	ld bc, $0150		;366 bytes This copies enemy coordinates and sprite values. If there is any less of this, then they won't be shown, but they can and will hit you. Copy more, and the player details will suffer, and random thins will happen to the companions.
@@ -5248,7 +5245,7 @@ _LABEL_3520_CHAR_SHOW:	;THIS SHOWS THE COMPANIONS, AND SHOWS BIOS, PICTURES AND 
 	or b
 	jr z, -
 	push bc
-	call _LABEL_4F9_PALETTE
+	call _LABEL_4F9_PALETTE_FADEOUT
 	pop bc
 	pop hl
 	ld a, b
@@ -10291,7 +10288,7 @@ _LABEL_6A6C_AFTERMSG_SCR_LOADLVLBCK:	;We get here from the non-healing waterfall
 	xor a
 	;nop
 	ld (_RAM_DE42_), a
-	ld (_RAM_DE44_), a				;This will restore the characters where they were, and load the level also.
+	ld (_RAM_DE44_SCRNSCRL_2FRMSET), a				;This will restore the characters where they were, and load the level also.
 	call _LABEL_C43_LEVEL_LOAD
 	ld hl, (_RAM_DE64_)
 	ld (_RAM_DE62_), hl
