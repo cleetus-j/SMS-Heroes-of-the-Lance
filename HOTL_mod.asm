@@ -361,7 +361,7 @@ _RAM_DE2A_ dw			;Also used with level loading.
 .ende
 
 .enum $DE2E export
-_RAM_DE2E_BANKSWITCH db
+_RAM_DE2E_BANKSWITCH_LEVEL db
 _RAM_DE2F_ dw
 _RAM_DE31_BANKSWITCH2 db	;These two are used for bankswitching. I'll check later what it does exactly.
 _RAM_DE32_ dw
@@ -1755,7 +1755,7 @@ _LABEL_A95_UPDATE_SCREEN:
 	ld b, a
 	ld a, (_RAM_DE47_)
 	cp b
-	call nz, _LABEL_10B1_
+	call nz, _LABEL_10B1_LOADNEW_FLOOR_COLLMAP
 	ret
 
 +:
@@ -2010,7 +2010,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	;The default now, is that 02 is in slot 2, as it should be when the game is booted. Maybe this is for where the program should return to? I don't know yet.
 	inc hl
 	ld a, (hl)		;03.
-	ld (_RAM_DE2E_BANKSWITCH), a
+	ld (_RAM_DE2E_BANKSWITCH_LEVEL), a
 	inc hl
 	ld a, (hl)
 	ld (_RAM_DE29_), a	;05
@@ -2070,7 +2070,7 @@ _LABEL_D29_:
 	add hl, de
 	ex de, hl
 	exx
-	ld a, (_RAM_DE2E_BANKSWITCH)
+	ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
 	ld (_RAM_FFFF_), a
 	ld de, (_RAM_DE2F_)
 	ld a, (ix+0)
@@ -2088,7 +2088,7 @@ _LABEL_D4F_:
 	ld c, $04
 	push de
 _LABEL_D52_:
-	ld a, (_RAM_DE2E_BANKSWITCH)
+	ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
 	ld (_RAM_FFFF_), a
 	ld a, (de)
 	add a, $D0
@@ -2365,8 +2365,8 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	ld hl, _RAM_C800_
 	ld (_RAM_DE2F_), hl
 	ld a, $02
-	ld (_RAM_DE2E_BANKSWITCH), a
-	ld a, (_RAM_DE2E_BANKSWITCH)
+	ld (_RAM_DE2E_BANKSWITCH_LEVEL), a
+	ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
 	ld (_RAM_FFFF_), a
 	ld hl, $3800
 	call _LABEL_4BB_VDP_RAM_WRITESETUP
@@ -2516,7 +2516,7 @@ _LABEL_FFC_SCRL_LEFT:	;THIS IS THE SCROLL LEFT PART. EVERYTHING IS THE SAME AS T
 	ret
 
 _LABEL_1032_:
-
+	;ret
 	ld a, $01
 	ld (_RAM_DE4F_), a
 	ld hl, (_RAM_DE36_)
@@ -2587,22 +2587,22 @@ _LABEL_106D_:
 	dec (hl)
 	ret
 
-_LABEL_10B1_:
-	ld a, (_RAM_DE2E_BANKSWITCH)
-	ld (_RAM_FFFF_), a
-	ld a, (_RAM_DE4E_SCROLL_DIR)
+_LABEL_10B1_LOADNEW_FLOOR_COLLMAP:	;So, if this is disabled, then only one screenful of tilemap is loaded. So one screen is loaded, then it gets repeated. When the screen tries to scroll, this is called. This routine is continously called, until all tilemaps are loaded for that part. If the wrong bank is selected, the floor collision gets funky. Also, the tilemap is handled here somehow.
+	ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
+	ld (_RAM_FFFF_), a			;Load a bank, where this data is stored. During gameplay, only $02 and for a moment $03 is used. Any other bank seems to be invalid. So it seems the collision data is stored in the first 48k of the ROM.
+	ld a, (_RAM_DE4E_SCROLL_DIR)	;We get the scroll direction. 1 is right, and 2 is left.
 	cp $02
-	jp z, ++
-	ld hl, (_RAM_DE2F_)
-	ld de, (_RAM_DE50_COLUMN_DRW_NR)
-	add hl, de
+	jp z, ++					;Jump if we are scrolling left.
+	ld hl, (_RAM_DE2F_)			;Othewise we are scrolling rigt here.
+	ld de, (_RAM_DE50_COLUMN_DRW_NR)	;We check how many columns are we from the beginning of the room. If we are at the left side of the room, it is $00. 
+	add hl, de	;Hm, add the column nr. to the scroll direction.
 	ld de, $000F
-	add hl, de
-	ld a, (_RAM_DE3A_COLUMN_00_01)
-	ld b, $C2
+	add hl, de	;Add another 16.
+	ld a, (_RAM_DE3A_COLUMN_00_01)	;The game loads columns in two alternating columns. As the name implies, this only changes between 01 and 00.
+	ld b, $C2						;This is some kind of offset for the tilemap, as this is the second column to be loaded.
 	and a
-	jr z, +
-	ld b, $C0
+	jr z, +	;Jump if this value is 00.
+	ld b, $C0					;First column offset for the loading.
 	inc hl
 +:
 	push hl
@@ -2762,7 +2762,7 @@ _LABEL_116F_:
 	ret
 
 _LABEL_11C5_:	
-		ld a, (_RAM_DE2E_BANKSWITCH)
+		ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
 		ld (_RAM_FFFF_), a
 		ld a, (_RAM_DE4F_)
 		cp $02
