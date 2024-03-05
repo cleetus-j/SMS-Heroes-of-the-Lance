@@ -12085,7 +12085,7 @@ _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this might just deallocate tra
 	ret
 
 _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used are not removed at the end of their fall, and remain at ground level, but at least they don't damage the player.
-	
+	;Note: This might be a nice entry point at some other time to understand how the trap array works in RAM, or howm its stored in ROM.
 	ld (ix+9), $00
 	ld a, (ix+24)
 	cp $0B
@@ -12229,7 +12229,7 @@ _LABEL_7AED_:
 	ret
 
 _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the companion does die, and this is just a RET, then there is no tombstone put on the stage.
-	;ret
+	;Note: The tombstone part is also nice, but not really necessary IMO. If the player dies, the same portrait indicator is fine, but just the tombstone... However you still need to pick up things after dead players, which is not convenient. I would rather give the default gear back, and not hassle with that other thing they implemented.
 	ld a, (_RAM_DE52_ROOM_NR)	;Sample: 01 as level
 	add a, a	;2
 	ld hl, _DATA_1343_LVL_POINTERS - 2	;Get the level pointers-2 bytes. I think there is a label there for that too.
@@ -12250,6 +12250,7 @@ _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the co
 
 ; Data from 7B16 to 7D0A (501 bytes)
 _DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll check later what are the attributes. There's a lot of stuff here.
+;Another note: This part could also be compressed. I have to check how much of this is actually used, or what is the byte format, how many bytes are needed for one item\trap whatever else there is.
 .db $18 $01 $40 $00 $00 $17 $01 $17 $00 $00 $1C $02 $37 $00 $00 $10
 .db $02 $09 $00 $14 $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
 .db $01 $00 $00 $2C $04 $10 $00 $40 $45 $04 $12 $00 $80 $44 $04 $08
@@ -12295,6 +12296,8 @@ _DATA_7D2C_:	;This is connected to some trap processing on the stages, or projec
 .db $13 $1C $1E $11 $01 $07
 
 _LABEL_7D42_LOAD_PLYRSTAT:	;Loads the player stats, inventory and all into RAM.
+;Note to self: When doing the game hack, compress the player stats, then just decompress it to ram, so this code will become redundant. Another thing, is that maybe here is the key why Raistlin jump bigger than the others.
+;Possible other thing is to boost the stats a little for an easier game.
 	ld hl, _DATA_7D6C_PLYRSTATS
 	ld de, _RAM_DBA0_PLYR_STATS
 	ld b, $08	;08	;HOW MANY PLAYERS ARE TOTALLY.
@@ -12553,7 +12556,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 .BANK 2
 .ORG $0000
 
-; Data from 8000 to A739 (10042 bytes)	;Still no idea what this does.
+; Data from 8000 to A739 (10042 bytes)	;I have a bit more about this one, so this very well may be tilemaps and similar stuff, related to levels. A big blob of data, so i'm not sure what is the exact format.
 .incbin "HOTL_mod_DATA_8000_.inc"
 
 ;.org $A73A
