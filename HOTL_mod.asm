@@ -1620,7 +1620,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld hl, _DATA_377_
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
-	call _LABEL_3238_
+	call _LABEL_3238_COPYCOORDS
 	ld a, (_RAM_DE96_STOPGAME)		;This value makes the whole game stop.
 	and a
 	jr z, +	;If this is zero, the game shall commence normally.
@@ -1636,7 +1636,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	call _LABEL_5223_CHECKTRAP		;Run the trap check on the floor.
 	call _LABEL_369E_NME_N_TRAP			;If this is commented out, then the screen scrolling won't be performed.
 ++:	;Stop.
-	call _LABEL_31DF_
+	call _LABEL_31DF_FINEMOTION	;If this is commented out, then the character fine movement is disabled, and movements become very chunky.
 	call _LABEL_A10_ANIM_SPRITES
 	jp _LABEL_757_GAME_MAIN
 
@@ -2604,12 +2604,12 @@ _LABEL_10B1_LOADNEW_FLOOR_COLLMAP:	;So, if this is disabled, then only one scree
 	jr z, +	;Jump if this value is 00.
 	ld b, $C0					;First column offset for the loading.
 	inc hl
-+:
++:			;This is the zero column draw.
 	push hl
 	ld hl, (_RAM_DE4C_)
 	ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
 	ld a, e
-	add a, $3E
+	add a, $3E	;62
 	and $3F
 	ld e, a
 	add hl, de
@@ -2623,7 +2623,7 @@ _LABEL_10B1_LOADNEW_FLOOR_COLLMAP:	;So, if this is disabled, then only one scree
 	ld a, (_RAM_DE3A_COLUMN_00_01)
 	ld b, $C0
 	and a
-	jr z, +
+	jr z, +	;If this is nz, then some tiles are not being mirrored, like the half of the pillars that are put together.
 	ld b, $C2
 +:
 	push hl
@@ -2701,7 +2701,7 @@ _LABEL_111A_:
 	jp nz, _LABEL_111A_
 	ret
 
-_LABEL_116F_:
+_LABEL_116F_:	;We come here from the column calculations and other shenanigans, and from a quick look, this should draw\send data to the VDP. During normal scrolling or gameplay, this is not executed as I could see.
 	push bc
 	ld a, l
 	out (Port_VDPAddress), a
@@ -2761,7 +2761,7 @@ _LABEL_116F_:
 	jp nz, _LABEL_116F_
 	ret
 
-_LABEL_11C5_:	
+_LABEL_11C5_:	;This does not seem to be executed either. Some drawing routines, and scrolling, yet the game does not jump here. However, after redirecting the code here, it seems this works just as well as the used one. I wonder what happened that this is not used.
 		ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
 		ld (_RAM_FFFF_), a
 		ld a, (_RAM_DE4F_)
@@ -2884,7 +2884,7 @@ _LABEL_123F_:
 		jp nz, _LABEL_123F_
 		ret
 	
-_LABEL_128F_:	
+_LABEL_128F_:	;This is connected to the unused routine, so this is also probably never executed either. Looks like some drawing routine.
 		push bc
 		ld a, (de)
 		inc de
@@ -3439,9 +3439,6 @@ _DATA_1743_:
 ; 87th entry of Pointer Table from 1343 (indexed by _RAM_DE52_ROOM_NR)
 ; Data from 174D to 2ACB (4991 bytes)
 _DATA_174D_:
-;.incbin "HOTL_mod_DATA_174D_.inc"
-
-;_DATA_174D_:	
 	.db $10 $05 $57 $17 $00 $00 $00 $00 $00 $00 $00 $01 $02 $03 $0D $17
 	.db $00 $2D $37 $00 $00 $01 $07 $29 $33 $00 $31 $34 $00 $01 $05 $00
 	.db $04 $07 $00 $03 $05 $0B $0D $13 $15 $1B $1D $00 $06 $0A $00 $3D
@@ -3758,7 +3755,7 @@ _DATA_174D_:
 	
 
 ; Data from 2ACC to 2BF1 (294 bytes)
-_DATA_2ACC_:
+_DATA_2ACC_:	;No idea what this is, but used with the level loading. The last stage when you exit from a menu glitches out.
 .dsb 15, $00
 .db $04
 .dsb 11, $00
@@ -4089,7 +4086,7 @@ _LABEL_2D92_:
 	ret
 
 _LABEL_2DE2_:
-
+	
 	ld hl, (_RAM_DEB3_)
 	ld de, $0020
 	ld bc, $0004
@@ -4708,9 +4705,10 @@ _LABEL_31D7_:
 	jp nz, _LABEL_3157_
 	ret
 
-_LABEL_31DF_:
+_LABEL_31DF_FINEMOTION:
+	
 	ld ix, _RAM_D900_CHARA_COORD
-	ld b, $0C
+	ld b, $0C	;Changing this value does various strange things. Lower the value and traps are moving slower and more janky.
 -:
 	push bc
 	ld (ix+26), $00
@@ -4755,9 +4753,9 @@ _LABEL_31DF_:
 	ld l, $FF
 	ret
 
-_LABEL_3238_:
-	ld b, $0C
-	ld de, $001C
+_LABEL_3238_COPYCOORDS:
+	ld b, $0C	;	12 characters on screen?		This seems like how many characters are to copy over and smooth out between the two frames. If the value is bigger, then the game may start to get jaggy, and character movement will get janky. Likely it runs out of time.
+	ld de, $001C	;One character is 28 bytes? It seems so. This may be good to check out what these bytes are.
 	ld ix, _RAM_D900_CHARA_COORD
 -:
 	ld a, (ix+0)
@@ -5596,7 +5594,7 @@ _LABEL_37C8_:
 	cp $12
 	jp z, _LABEL_3B6E_
 	cp $13
-	jp z, _LABEL_3B77_
+	jp z, _LABEL_3B77_SOUTH_ROOMCHANGE
 	cp $0F
 	jp nz, _LABEL_3876_
 	ld a, (_RAM_DE54_HOLD_PLYR)
@@ -5803,7 +5801,7 @@ _LABEL_3953_:
 	jr z, +
 	ld a, $01
 	ld (_RAM_DE5D_), a
-_LABEL_3988_:
+_LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	ld hl, _DATA_3B5C_
 	jp _LABEL_3953_
 
@@ -6088,7 +6086,7 @@ _LABEL_3B6E_:
 	ld b, $00
 	jr +
 
-_LABEL_3B77_:
+_LABEL_3B77_SOUTH_ROOMCHANGE:
 	ld b, $02
 	call _LABEL_3C54_
 	ld b, $02
@@ -6176,7 +6174,7 @@ _LABEL_3B77_:
 	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_SECOND_HERO_COORD), hl
 	ld a, $0F
-	ld (_RAM_D90A_HERO_ACTION), a
+	ld (_RAM_D90A_HERO_ACTION), a		;Set the action the hero does to falling. 
 	ld hl, $0040
 	ld (_RAM_D902_HERO_GROUNDLEVEL1), hl
 	ld (_RAM_D912_HERO_GROUNDLEVEL2), hl
@@ -7186,10 +7184,10 @@ _LABEL_53F6_:
 	pop iy
 	ld a, b
 	cp $09
-	jp nc, _LABEL_5573_
+	jp nc, _LABEL_5573_ENEMY_ACTION
 	ld a, (ix+10)
 	cp $05
-	jp z, _LABEL_5442_
+	jp z, _LABEL_5442_ENEMY_PLAYER_DAMAGE
 	ld ix, _RAM_D91C_NME_COORD_ARRAY
 	ld b, $05
 -:
@@ -7209,7 +7207,7 @@ _LABEL_543A_:
 	ld de, $001C
 	add ix, de
 	djnz -
-_LABEL_5442_:
+_LABEL_5442_ENEMY_PLAYER_DAMAGE:
 	pop iy
 	pop ix
 	pop hl
@@ -7311,7 +7309,7 @@ _LABEL_5442_:
 	ld a, $01	;This is the sound effect number, that we the Player will use when we attack. If you really want, you can get this into a variable, and control the sound effect that way, but this is my two cents.
 	call _LABEL_2FF_PREPNPLAYSFX
 	pop bc
-	jp _LABEL_5442_
+	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
 _LABEL_54ED_:	;This does not make sense to me without dissecting the previous long line of code, only some small parts.
 	ld a, (ix+9)
@@ -7374,18 +7372,18 @@ _LABEL_54ED_:	;This does not make sense to me without dissecting the previous lo
 	ld (ix+8), a
 	ret
 
-_LABEL_5573_:
+_LABEL_5573_ENEMY_ACTION:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
-	jp nz, _LABEL_5442_
+	jp nz, _LABEL_5442_ENEMY_PLAYER_DAMAGE	;If this is just a z, then the enemies do no damage. Traps still hurt though.
 	ld a, (_RAM_D90A_HERO_ACTION)
-	cp $0F
-	jp z, _LABEL_5442_
+	cp $0F	;Falling.
+	jp z, _LABEL_5442_ENEMY_PLAYER_DAMAGE	;I guess if the player is falling, then apply damage and then kill the player. Since that's what pits do.
 	ld a, (ix+9)
-	cp $0A
+	cp $0A	;Low swing.
 	jr nz, +
 	ld a, (ix+10)
-	cp $11
+	cp $11	;Blocking.
 	jp z, ++
 	ld a, $03
 	call _LABEL_652_LOAD_NEW_SCRN
@@ -7406,12 +7404,12 @@ _LABEL_5573_:
 	call _LABEL_652_LOAD_NEW_SCRN
 	inc a
 	ld (ix+5), a
-	jp _LABEL_5442_
+	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
 +:
 	cp $13
 	jr nz, ++
-	jp _LABEL_5442_
+	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
 ++:
 	ld l, (ix+0)
@@ -7433,14 +7431,14 @@ _LABEL_5573_:
 	jr nc, +
 	ld e, (iy+1)
 	add hl, de
-	jp nc, _LABEL_5442_
+	jp nc, _LABEL_5442_ENEMY_PLAYER_DAMAGE
 	jr ++
 
 +:
 	ld e, (iy+1)
 	and a
 	sbc hl, de
-	jp nc, _LABEL_5442_
+	jp nc, _LABEL_5442_ENEMY_PLAYER_DAMAGE
 ++:
 	ld a, (ix+9)
 	cp $12
@@ -7453,7 +7451,7 @@ _LABEL_5573_:
 	ld h, $10
 	ld a, $01
 	call _LABEL_3AAF_DRAWPROJECTILE
-	jp _LABEL_5442_
+	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
 +:
 	ld a, (ix+10)
@@ -7482,7 +7480,7 @@ _LABEL_5573_:
 	ld a, (_RAM_D909_FIRST_COMPANION)
 	call _LABEL_5851_APPLYDAMAGE
 	cp c
-	jp c, _LABEL_5442_
+	jp c, _LABEL_5442_ENEMY_PLAYER_DAMAGE
 	ld a, $08
 	call _LABEL_652_LOAD_NEW_SCRN
 	inc a
@@ -7517,7 +7515,7 @@ _LABEL_5573_:
 	call _LABEL_5689_HITDETECT
 	ld a, $01
 	call _LABEL_2FF_PREPNPLAYSFX
-	jp _LABEL_5442_
+	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
 _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. RET'D, AND YOU WILL BE INVINCIBLE.
 							;RAISTLIN WILL STILL GET HURT FOR SOME REASON.
@@ -7856,6 +7854,7 @@ _LABEL_5851_APPLYDAMAGE:	;Runs whenever damage should apply, for the player, for
 	ret
 
 _LABEL_5887_:
+	;ret
 	ld hl, $DCF2
 	ld b, $08
 -:
@@ -10034,7 +10033,7 @@ _LABEL_6678_:
 		ld   (hl), $00
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_66C2_:	
+_LABEL_66C2_STAFFPICKUP:	
 		ld   a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		add  a, a
 		or   $80
@@ -10087,7 +10086,7 @@ _LABEL_66C2_:
 		cp   $02
 		jr   z, +
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
-		ld   de, _DATA_ABF6_STF_FLARE_GIVE_CHR_TXT
+		ld   de, _DATA_ABF6_STF_FLARE_GIVE_CHR_TXT	;So this looks like the code that will be executed if you want to pick up the staff as a character who is not supposed to.
 -:	
 		ld   hl, $3908
 		call _LABEL_35A6_RANDOM
@@ -10643,7 +10642,7 @@ _DATA_6CAD_PALETTES:	; Data from 6CAD to 6CAE (2 bytes)
 	
 ; Jump Table from 6CAF to 6CBC (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _DATA_6CAF_:	
-	.dw _LABEL_5D43_HERO_SELECT_MENU _LABEL_3908_ _LABEL_605C_MAGICUSERSPELLMENU _LABEL_3948_ _LABEL_60B0_ _LABEL_3988_ _LABEL_6114_
+	.dw _LABEL_5D43_HERO_SELECT_MENU _LABEL_3908_ _LABEL_605C_MAGICUSERSPELLMENU _LABEL_3948_ _LABEL_60B0_ _LABEL_3988_APPLYDAMAGE _LABEL_6114_
 	
 	; Data from 6CBD to 6CD4 (24 bytes)
 	.db $C8 $39 $C5 $62 $08 $3A $22 $61 $48 $3A $06 $61 $88 $3A $CB $61
@@ -10651,7 +10650,7 @@ _DATA_6CAF_:
 	
 ; Jump Table from 6CD5 to 6CE2 (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _DATA_6CD5_:	
-	.dw _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3908_ _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3948_ _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3988_ _LABEL_5FE0_SPELLIST_JUMPS
+	.dw _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3908_ _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3948_ _LABEL_5FE0_SPELLIST_JUMPS _LABEL_3988_APPLYDAMAGE _LABEL_5FE0_SPELLIST_JUMPS
 	
 	; Data from 6CE3 to 6CF4 (18 bytes)
 	.db $C8 $39 $E0 $5F $08 $3A $E0 $5F $48 $3A $E0 $5F $88 $3A $E0 $5F
