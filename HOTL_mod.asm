@@ -5524,10 +5524,10 @@ _LABEL_374B_AB_DEBUG_BUTTON:				;Checks for button 2, and either opens the menu 
 	ld ix, _RAM_D900_CHARA_COORD
 	ld a, (_RAM_DE95_GAMEPAD)
 	and a
-	jr z, _LABEL_3786_		;Sooo, this means, get into the options menu if we've pressed the B button on the controller.
+	jr z, _LABEL_3786_FLOORCHECK		;Sooo, this means, get into the options menu if we've pressed the B button on the controller.
 	ld a, (ix+10)
 	cp $05
-	jr z, _LABEL_3786_		;If D910 is 05, then jump. This is the X coordinate on the player. So if it's 05, which is normally outside the playfied, then jump to that menu.
+	jr z, _LABEL_3786_FLOORCHECK		;If D910 is 05, then jump. This is the X coordinate on the player. So if it's 05, which is normally outside the playfied, then jump to that menu.
 	ld a, (_RAM_DEBB_DEBUG)		;Check debug flag, we are not there with those coordinates.
 	and a
 	jr nz, +			;If we are not in debug, jump. Strangely, we are NOT in debug if the flag is 1.
@@ -5540,7 +5540,8 @@ _LABEL_374B_AB_DEBUG_BUTTON:				;Checks for button 2, and either opens the menu 
 
 +:					;No debug mode here.
 	call _LABEL_5C07_
-_LABEL_3786_:	;This is where we are, if the fall should be in progress. Also runs every frame.
+_LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part that checks for floors, if you use a door, gonna fall and things like that.
+	
 	ld ix, _RAM_D900_CHARA_COORD
 	ld c, (ix+0)	;Get the X coord.
 	ld b, (ix+1)	;Get which screen are we on.
@@ -5557,7 +5558,9 @@ _LABEL_3786_:	;This is where we are, if the fall should be in progress. Also run
 	ld l, a
 	ld a, (ix+10)
 	and a
-	jp z, _LABEL_3938_
+	jp z, _LABEL_3938_	;Not noticeable what this does.
+
+
 	ld e, a
 	add a, a
 	ld e, a
@@ -5573,7 +5576,7 @@ _LABEL_3786_:	;This is where we are, if the fall should be in progress. Also run
 	inc hl
 	ld a, (ix+11)
 	cp e
-	call z, _LABEL_53F6_
+	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE
 	add a, a
 	ld e, a
 	ld d, $00
@@ -5592,19 +5595,19 @@ _LABEL_37C8_:
 
 +:
 	cp $12
-	jp z, _LABEL_3B6E_
+	jp z, _LABEL_3B6E_NORTH_ROOMCHANGE
 	cp $13
 	jp z, _LABEL_3B77_SOUTH_ROOMCHANGE
 	cp $0F
 	jp nz, _LABEL_3876_
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
-	jr z, _LABEL_3839_
+	jr z, _LABEL_3839_PIT_DEATH
 	ld a, (ix+0)
 	cp $C0
 	jr nc, +
 	ld (ix+11), $00
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 +:
 	pop hl
@@ -5629,7 +5632,7 @@ _LABEL_37C8_:
 	call _LABEL_5B9D_ALARMBELLS_TXT_SCRN
 	jp _LABEL_726_LEVEL_WARP_LOAD
 
-_LABEL_3839_:
+_LABEL_3839_PIT_DEATH:	;This runs when the player falls into a pit.
 	ld hl, _RAM_DEBD_SECOND_HERO_ARRAY
 	ld de, _RAM_DEBC_INRAM_HUD_PORTRAITS
 	ld bc, $0007
@@ -5676,7 +5679,7 @@ _LABEL_3887_:
 	ld (ix+10), $05
 	ld (ix+11), $00
 	ld a, (_RAM_DE90_GAMEPAD)
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 +:
 	jp _LABEL_37C8_
@@ -5786,12 +5789,12 @@ _LABEL_3953_:
 	ret nz
 	ld (ix+10), $04
 	ld (ix+11), $00
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 +:
 	ld (ix+10), a
 	and a
-	jp nz, _LABEL_3786_
+	jp nz, _LABEL_3786_FLOORCHECK
 	ret
 
 ++:
@@ -5850,7 +5853,7 @@ _LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	cp $15
 	jp z, _LABEL_3A4A_
 	cp $0D
-	jp nz, _LABEL_3786_
+	jp nz, _LABEL_3786_FLOORCHECK
 	ld a, e
 	sub $03
 	add a, a
@@ -5872,12 +5875,12 @@ _LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	jp z, _LABEL_3A88_
 	cp $0B
 	jp z, _LABEL_3A66_
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 +:
 	ld a, (_RAM_DEE6_)
 	inc a
-	jp z, _LABEL_3786_
+	jp z, _LABEL_3786_FLOORCHECK
 	dec a
 	cp $FD
 	jr nz, +
@@ -5892,7 +5895,7 @@ _LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	ld (hl), $00
 	add hl, de
 	djnz -
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 +:
 	ld b, a
@@ -5908,7 +5911,7 @@ _LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	xor a
 ++:
 	call _LABEL_597A_CHECK_MAGIUS_STF_POWER
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 _LABEL_3A4A_:
 	ld l, c
@@ -5921,12 +5924,12 @@ _LABEL_3A4A_:
 _LABEL_3A54_:
 	ld a, (_RAM_DEE8_PROJECTILE_TYPE)
 	inc a
-	jp z, _LABEL_3786_
+	jp z, _LABEL_3786_FLOORCHECK
 	dec a
 	ld b, a
 	ld a, (_RAM_DEE9_HOLDPERSON_VAR)
 	call _LABEL_5999_GMSTAFF_DECMANA
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 _LABEL_3A66_:
 	ld (hl), $00
@@ -5979,7 +5982,7 @@ _LABEL_3AA1_:
 	ld e, $0C
 	ld h, $18
 	call _LABEL_3AAF_DRAWPROJECTILE
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 _LABEL_3AAF_DRAWPROJECTILE:
 	ld iy, _RAM_D9A8_PROJECTILE_ARRAY
@@ -6054,7 +6057,7 @@ _LABEL_3B2E_:
 	and a
 	jr nz, +
 	ld (ix+10), $06
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 +:
 	ld hl, _DATA_3B53_
@@ -6080,32 +6083,32 @@ _DATA_3B5C_:
 _DATA_3B65_:
 .db $00 $FF $02 $01 $01 $FE $00 $FD $00
 
-_LABEL_3B6E_:
+_LABEL_3B6E_NORTH_ROOMCHANGE:
 	ld b, $01
 	call _LABEL_3C54_
 	ld b, $00
 	jr +
 
-_LABEL_3B77_SOUTH_ROOMCHANGE:
+_LABEL_3B77_SOUTH_ROOMCHANGE:	;We come here, when the player takes a southward move to a different room.
 	ld b, $02
 	call _LABEL_3C54_
 	ld b, $02
 +:
-	jp z, _LABEL_3876_
-	call _LABEL_7A14_DEALLOCATE_TRAPS
+	jp z, _LABEL_3876_		;These two are not really legible to me atm. If this is nz, then the room change won't happen.
+	call _LABEL_7A14_DEALLOCATE_TRAPS	;With a room change, it makes sense to deallocate traps, since we don't need it anymore.
 	ld a, (hl)
 	and $04
-	jr z, +
+	jr z, +		;If this is nz, then we go into that chute sequence, and fall down. We go to the "You hear alarm bells in the distance.." screen.
 	ld a, $FF
 	ld (_RAM_DE54_HOLD_PLYR), a
-+:
++:		;Down we go the chute.
 	ld a, (hl)
 	and $10
-	jr z, +
+	jr z, +	;If this is nz, then it's a waterfall. After the waterfall, we go where we want.
 	ld a, (_RAM_DE55_WATERFALL)
 	or $01
 	ld (_RAM_DE55_WATERFALL), a
-+:
++:				;Waterfall.
 	ld a, (_RAM_DE53_COMPASS)
 	inc a
 	and $02
@@ -6148,7 +6151,7 @@ _LABEL_3B77_SOUTH_ROOMCHANGE:
 	ld de, $0080
 	and a
 	sbc hl, de
-	jr nc, +
+	jr nc, +	;The player gets put in the right point in the map if this is NC.
 	ld hl, $0000
 +:
 	ld (_RAM_DE34_SCRN_SCROLL), hl
@@ -6186,7 +6189,7 @@ _LABEL_3C32_:
 	ret z
 	ld (ix+10), $12
 	ld (ix+11), $00
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 _LABEL_3C43_:
 	ld b, $02
@@ -6194,11 +6197,11 @@ _LABEL_3C43_:
 	ret z
 	ld (ix+10), $13
 	ld (ix+11), $00
-	jp _LABEL_3786_
+	jp _LABEL_3786_FLOORCHECK
 
 _LABEL_3C54_:
-	ld hl, (_RAM_D900_CHARA_COORD)
-	call _LABEL_7AE7_RSHIFTHL
+	ld hl, (_RAM_D900_CHARA_COORD)	;Hm, we get the player character's coordinate.
+	call _LABEL_7AE7_RSHIFTHL		;We shift aroung some things.
 	ld c, l
 	ld hl, (_RAM_DE60_)
 -:
@@ -6701,7 +6704,7 @@ _LABEL_3F7E_:
 	inc hl
 	ld a, (ix+11)
 	cp e
-	call z, _LABEL_53F6_
+	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE
 	add a, a
 	ld e, a
 	ld d, $00
@@ -7155,14 +7158,15 @@ _LABEL_53A3_FLOORCOLLISION: ;If this is just a return, then the floor collision 
 	ld ix, _RAM_D900_CHARA_COORD
 	ld (ix+11), $00
 	ld (ix+10), $0F	;Now this looks like something. Set the character to fall and die.
-	jp _LABEL_3786_	;This does many things, and is at many places, but I can't tell exactly what.
+	jp _LABEL_3786_FLOORCHECK	;This does many things, and is at many places, but I can't tell exactly what.
 
 +:	;We don't execute any fall, and lang here.
 	ld hl, (_RAM_D900_CHARA_COORD)
 	ld (_RAM_DE6F_), hl
 	ret
 
-_LABEL_53F6_:
+_LABEL_53F6_ENEMY_PLAYER_DAMAGE:			;If you put a ret here, then the enemy won't do any damage.
+	;ret
 	push af
 	push bc
 	push de
@@ -12085,7 +12089,7 @@ _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this might just deallocate tra
 	ret
 
 _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used are not removed at the end of their fall, and remain at ground level, but at least they don't damage the player.
-	;Note: This might be a nice entry point at some other time to understand how the trap array works in RAM, or howm its stored in ROM.
+	
 	ld (ix+9), $00
 	ld a, (ix+24)
 	cp $0B
@@ -12229,7 +12233,7 @@ _LABEL_7AED_:
 	ret
 
 _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the companion does die, and this is just a RET, then there is no tombstone put on the stage.
-	;Note: The tombstone part is also nice, but not really necessary IMO. If the player dies, the same portrait indicator is fine, but just the tombstone... However you still need to pick up things after dead players, which is not convenient. I would rather give the default gear back, and not hassle with that other thing they implemented.
+	;ret
 	ld a, (_RAM_DE52_ROOM_NR)	;Sample: 01 as level
 	add a, a	;2
 	ld hl, _DATA_1343_LVL_POINTERS - 2	;Get the level pointers-2 bytes. I think there is a label there for that too.
@@ -12250,7 +12254,6 @@ _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the co
 
 ; Data from 7B16 to 7D0A (501 bytes)
 _DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll check later what are the attributes. There's a lot of stuff here.
-;Another note: This part could also be compressed. I have to check how much of this is actually used, or what is the byte format, how many bytes are needed for one item\trap whatever else there is.
 .db $18 $01 $40 $00 $00 $17 $01 $17 $00 $00 $1C $02 $37 $00 $00 $10
 .db $02 $09 $00 $14 $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
 .db $01 $00 $00 $2C $04 $10 $00 $40 $45 $04 $12 $00 $80 $44 $04 $08
@@ -12296,8 +12299,6 @@ _DATA_7D2C_:	;This is connected to some trap processing on the stages, or projec
 .db $13 $1C $1E $11 $01 $07
 
 _LABEL_7D42_LOAD_PLYRSTAT:	;Loads the player stats, inventory and all into RAM.
-;Note to self: When doing the game hack, compress the player stats, then just decompress it to ram, so this code will become redundant. Another thing, is that maybe here is the key why Raistlin jump bigger than the others.
-;Possible other thing is to boost the stats a little for an easier game.
 	ld hl, _DATA_7D6C_PLYRSTATS
 	ld de, _RAM_DBA0_PLYR_STATS
 	ld b, $08	;08	;HOW MANY PLAYERS ARE TOTALLY.
@@ -12556,7 +12557,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 .BANK 2
 .ORG $0000
 
-; Data from 8000 to A739 (10042 bytes)	;I have a bit more about this one, so this very well may be tilemaps and similar stuff, related to levels. A big blob of data, so i'm not sure what is the exact format.
+; Data from 8000 to A739 (10042 bytes)	;Still no idea what this does.
 .incbin "HOTL_mod_DATA_8000_.inc"
 
 ;.org $A73A
