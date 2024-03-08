@@ -12066,7 +12066,7 @@ _LABEL_7A01_:	;Well, even if this is ret'd, nothing noticeable happens. After we
 	djnz _LABEL_7A01_	;Loop back, until b=0.
 	ret
 
-_LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this might just deallocate traps in RAM.
+_LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this goes to deallocate traps in RAM upon level switching.
 	;ret
 	push af
 	push bc
@@ -12089,7 +12089,7 @@ _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this might just deallocate tra
 	ret
 
 _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used are not removed at the end of their fall, and remain at ground level, but at least they don't damage the player.
-	
+	;Some stuff also tells me that this also does change the dead players to permadead as well upon exiting a level.
 	ld (ix+9), $00
 	ld a, (ix+24)
 	cp $0B
