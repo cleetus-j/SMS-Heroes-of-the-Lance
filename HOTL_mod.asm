@@ -7594,7 +7594,7 @@ _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCU
 	and a
 	jr z, +
 	push hl
-	call _LABEL_79DB_
+	call _LABEL_79DB_ADJUST_TRAPADDRESS
 	ex de, hl
 	pop hl
 	ld a, (hl)
@@ -7624,7 +7624,7 @@ _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCU
 	and a
 	jr z, +
 	push hl
-	call _LABEL_79DB_
+	call _LABEL_79DB_ADJUST_TRAPADDRESS
 	ex de, hl
 	pop hl
 	ld a, (hl)
@@ -7647,7 +7647,7 @@ _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCU
 	and a
 	jr z, +
 	push hl
-	call _LABEL_79DB_
+	call _LABEL_79DB_ADJUST_TRAPADDRESS
 	ex de, hl
 	pop hl
 	ld a, (hl)
@@ -11964,16 +11964,17 @@ _LABEL_794B_:
 _LABEL_7958_:
 	ld (ix+9), $00
 _LABEL_795C_:
+	
 	ld a, b
 	call _LABEL_652_LOAD_NEW_SCRN
 	inc a
 	add a, c
 	ld c, a
 	push ix
-	ld ix, $D900
+	ld ix, _RAM_D900_CHARA_COORD;$D900	;CHANGED!
 	call _LABEL_5689_HITDETECT
 	pop ix
-	jp _LABEL_76D1_
+	jp _LABEL_76D1_	;If the above is jumped over, then the trap damage is not applied.
 
 _LABEL_7971_INIT_TRAPS:
 	ld b, $06
@@ -12027,15 +12028,16 @@ _LABEL_799A_ACTIVATE_TRAP:	;This engages traps. iF THIS IS just a ret, then the 
 	inc hl
 	jr -
 
-_LABEL_79DB_:
-	ld hl, _RAM_D600_ITEMNTRAP_TYPES
-	ld de, $0005
+_LABEL_79DB_ADJUST_TRAPADDRESS:			;Okay, the coffee kicked in, so, this checks for the next trap, and leaves with HL pointing to that address.
+	;ret
+	ld hl, _RAM_D600_ITEMNTRAP_TYPES	;So, this is after a quick espresso in the morning. This is the trap array in RAM.
+	ld de, $0005						;This looks like an amount of bytes.
 -:
 	ld a, (hl)
 	and a
-	ret z
-	add hl, de
-	jr -
+	ret z								;Exit if we hit a zero (empty stuff maybe)
+	add hl, de							;Add the offset to the destination.
+	jr -								;And then return.
 
 _LABEL_79E7_SPAWN_ITEMTRAP:	;Puts traps and boxes in the game. Traps activate only once when you are in a level, but if you fix the RAM value, and return into the room, the trap is there again. Item numbers correlate with the equipment you can give to your party. I guess the level data contains the coordinates where the boxes, and traps are, but D600 has the item types.
 	ld hl, _DATA_7B16_ITEMNTRAP	;Source
