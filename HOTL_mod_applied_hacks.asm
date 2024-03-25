@@ -10592,14 +10592,16 @@ _DATA_6E93_SCR_SCRN_DATA:
 .dsb 21, $00
 .db $10 $27 $00 $00
 
-; Data from 6F05 to 6F05 (1 bytes)
-_DATA_6F05_:
-.db $FF
-
+; Data from 6F05 to 6F05 (1 bytes)	;This is disabled, as the debug is not there anymore.
+;_DATA_6F05_:
+;.db $FF
+;
 _LABEL_6F06_HUD:	;THIS DRAWS THE HUD.
-	ld a, (_RAM_DEBB_DEBUG_DELETEME)	;THIS SEEMS LIKE A DEBUG FLAG.
-	and a
-	jp z, _LABEL_7117_ENABLE_DEBUG	;IF THIS IS ZERO, ENABLE THE DEBUG PARTS, WHICH REPLACE THE HUD, AND DISABLES SOME FUNCTIONS.
+	;ld a, (_RAM_DEBB_DEBUG_DELETEME)	;THIS SEEMS LIKE A DEBUG FLAG.
+	;and a
+	;jp z, _LABEL_7117_ENABLE_DEBUG	;IF THIS IS ZERO, ENABLE THE DEBUG PARTS, WHICH REPLACE THE HUD, AND DISABLES SOME FUNCTIONS.
+
+	;This above is disabled, we don't need any debug.
 	di
 	ld a, $04
 	ld (_RAM_FFFF_), a
@@ -10625,9 +10627,9 @@ _LABEL_6F06_HUD:	;THIS DRAWS THE HUD.
 	ret
 
 _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
-	ld a, (_RAM_DEBB_DEBUG_DELETEME)
-	and a
-	jp z, _LABEL_714D_DRAW_DEBUGHUD	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
+	;ld a, (_RAM_DEBB_DEBUG_DELETEME)		;Changed!		The debug hud is not needed, since the debug parts will be removed.
+	;and a
+	;jp z, _LABEL_714D_DRAW_DEBUGHUD	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
 	ld a, $04
 	ld (_RAM_FFFF_), a
 	ld hl, (_RAM_DE5B_COMBAT_MARK)
@@ -10912,29 +10914,29 @@ _DATA_70F7_COMPASS_TILEMAP:
 .db $80 $03 $84 $03 $88 $03 $8C $03 $84 $03 $88 $03 $8C $03 $80 $03
 .db $88 $03 $8C $03 $80 $03 $84 $03 $8C $03 $80 $03 $84 $03 $88 $03
 
-_LABEL_7117_ENABLE_DEBUG:
-;THIS WILL PRINT SOME EXTRA INFO ON THE HUD, AND DISABLE THE REST OF THE INFO YOU ARE NORMALLY GIVEN.
-	ld a, $1F
-	ld (_RAM_FFFF_), a	;SELECT THE LAST BANK. It has the tiles for the menu drawing, text and so on.
-	ld hl, _DATA_7C000_CHAR_BIO_TEXT
-	ld de, $1000	;WHERE WE WILL DRAW ON THE TILEMAP.
-	ld bc, $0C00
-	di
-	call _LABEL_48C_LOAD_VDP_DATA
-	ei
-	ld hl, $0080
-	ld (_RAM_DE62_), hl
-	ld hl, $3C00
-	ld de, _DATA_6F05_	;I wonder what would this address do..
-	di
-	call _LABEL_35A6_RANDOM	;NO IDEA YET, IT DOES NOT DO ANYTHING NOTICEABLE.
-	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NR WHERE THE PARTY IS.
-	ld hl, $3CA0	;THIS IS THE TILEMAP VALUE FOR THE ROOM NR DISPLAY.
-	call _LABEL_3582_DRAW_NUMBERS_DEBUG
-	ld a, (_RAM_DE59_LEFT_DEBUG_NR)
-	ld hl, $3CCC
-	call _LABEL_3582_DRAW_NUMBERS_DEBUG
-	ret
+;_LABEL_7117_ENABLE_DEBUG:	;CHANGED!
+;;THIS WILL PRINT SOME EXTRA INFO ON THE HUD, AND DISABLE THE REST OF THE INFO YOU ARE NORMALLY GIVEN.
+;	ld a, $1F
+;	ld (_RAM_FFFF_), a	;SELECT THE LAST BANK. It has the tiles for the menu drawing, text and so on.
+;	ld hl, _DATA_7C000_CHAR_BIO_TEXT
+;	ld de, $1000	;WHERE WE WILL DRAW ON THE TILEMAP.
+;	ld bc, $0C00
+;	di
+;	call _LABEL_48C_LOAD_VDP_DATA
+;	ei
+;	ld hl, $0080
+;	ld (_RAM_DE62_), hl
+;	ld hl, $3C00
+;	ld de, _DATA_6F05_	;I wonder what would this address do..
+;	di
+;	call _LABEL_35A6_RANDOM	;NO IDEA YET, IT DOES NOT DO ANYTHING NOTICEABLE.
+;	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NR WHERE THE PARTY IS.
+;	ld hl, $3CA0	;THIS IS THE TILEMAP VALUE FOR THE ROOM NR DISPLAY.
+;	call _LABEL_3582_DRAW_NUMBERS_DEBUG
+;	ld a, (_RAM_DE59_LEFT_DEBUG_NR)
+;	ld hl, $3CCC
+;	call _LABEL_3582_DRAW_NUMBERS_DEBUG
+;	ret
 
 _LABEL_714D_DRAW_DEBUGHUD:	;If this is just a RET, then the debug HUD is not drawn. The normal hud under it is not updated, so players can still die, but you can use the warp and all that. Strangely, just above we also do something similar.
 	
@@ -11026,44 +11028,6 @@ _LABEL_71B9_INC_CHKNEXT_CHAR:		;The player is fine.
 	inc de
 	jp _LABEL_71B9_INC_CHKNEXT_CHAR
 
-; Data from 71E8 to 721B (52 bytes)
-;.db $3A $C3 $DE $CD $73 $65 $11 $B4 $DB $19 $46 $23 $7E $4F $B0 $C8
-;.db $06 $07 $DD $21 $BC $DE $DD $7E $00 $CD $73 $65 $19 $7E $A7 $28
-;.db $05 $DD $23 $10 $F1 $C9 $DD $4E $00 $3A $C3 $DE $DD $77 $00 $79
-;.db $32 $C3 $DE $C9
-
-;_LABEL_71E8_UNUSED:	;Does not seem to be referenced anywhere, and possibly not even used. No idea what this is.
-;	;ret
-;		ld a, (_RAM_DEC3_UNUSED)		;Getting this value..
-;		call _LABEL_6573_CALC_DMG
-;		ld de, _RAM_DBB4_GOLDMOON_MAXHP
-;		add hl, de
-;		ld b, (hl)
-;		inc hl
-;		ld a, (hl)
-;		ld c, a
-;		or b
-;		ret z
-;		ld b, $07
-;		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
-;-:	
-;		ld a, (ix+0)
-;		call _LABEL_6573_CALC_DMG
-;		add hl, de
-;		ld a, (hl)
-;		and a
-;		jr z, +
-;		inc ix
-;		djnz -
-;		ret
-;	
-;+:	
-;		ld c, (ix+0)
-;		ld a, (_RAM_DEC3_UNUSED)
-;		ld (ix+0), a
-;		ld a, c
-;		ld (_RAM_DEC3_UNUSED), a
-;		ret
 .org $721C
 _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	ld b, $05	;$05
