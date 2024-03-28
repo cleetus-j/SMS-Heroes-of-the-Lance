@@ -22,34 +22,41 @@ BANKS 30
 _RAM_C000_RAM_START dsb $20			;Holds many things from mapdata to palettes.
 _RAM_C001_ db
 .ende
-.enum $C020 export
-_RAM_C020_INTROSCR_NR db			;This number holds the screen number in the intro. I mean which screen to show. Some values are written here during gameplay.
-_RAM_C021_ db
-;Apperently this is also used by some menu tilemap thing. I have to get to that part later on. Sometimes the memory management part is not the best,
-.ende
+;.enum $C020 export
+;;Since the intro screens are disabled, this is not needed anymore. _RAM_C020_INTROSCR_NR db			;This number holds the screen number in the intro. I mean which ;screen to show. Some values are written here during gameplay.
+;_RAM_C021_ db
+;;Apperently this is also used by some menu tilemap thing. I have to get to that part later on. Sometimes the memory management part is not the best,
+;.ende
 
 .enum $C040 export
-_RAM_C040_SELECTED_MENUITEMINRAM_PAL dsb $f	;This is also used to check what menu item was selected in the ingame menu. Also, the character introduction screens are using this memory to store the characters palettes.
+_RAM_C040_SELECTED_MENUITEMINRAM_PAL db	;Used to held the last selected menuitem.
+_RAM_C041_ACTIVE_MENUITEM db;_RAM_C04E_ACTIVE_MENUITEM_ db	;This can be relocated.
+_RAM_C042_LAST_ENTERED_MENU db
+_RAM_C043_ dw	;_RAM_C0FE__ dw
+_RAM_C045_ dw						;Only written once, but that's it, but it's used. The level messes up if this is not written to.
 .ENDE
-.ENUM $C04E EXPORT
-_RAM_C04E_ACTIVE_MENUITEM DB	;Active menu item number. Used for both the magic and clerical things.
-.ende
-.enum $C04F export
-_RAM_C04F_LAST_ENTERED_MENU db			;Stores what was the last menu before we entered a submenu. You know, so we know where we were, and what to select again.
-.ende
-.enum $c050 export
-_RAM_C050_ dsb $10				;Check this later. Some menu items are handled here as well. Not sure why 16 bytes are used for this, but it will be clearer later, i'm sure.
-.ende
-.enum $C0FE export
-_RAM_C0FE_UNUSED dw		;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
-.ende
+;.ENUM $C04E EXPORT
+;_RAM_C04E_ACTIVE_MENUITEM_ DB	;Active menu item number. Used for both the magic and clerical things.
+;.ende
+;.enum $C04F export
+;_RAM_C04F_LAST_ENTERED_MENU_ db			;Stores what was the last menu before we entered a submenu. You know, so we know where we were, and what to select again.
+;.ende
+;.enum $c050 export
+;_RAM_C050_ dsb $10				;Check this later. Some menu items are handled here as well. Not sure why 16 bytes are used for this, but it will be clearer later, i'm ;sure.
+;The above does not seem to be used, written to or anything else.
+
+;.ende
+;.enum $C0FE export
+;_RAM_C0FE__ dw		;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
+;.ende
 
 .enum $C100 export
 _RAM_C100_LEVEL_TILEMAP1 db	;This is one part of the tilemap used by the engine. These are scattered around RAM, i don't know why exactly.
 .ende
 
-.enum $C1FE export
-_RAM_C1FE_UNUSED dw						;Only written once, but that's it.
+;.enum $C1FE export
+.enum $C200 export
+;_RAM_C1FE__ dw						;Only written once, but that's it, but it's used. The level messes up if this is not written to.
 _RAM_C200_LEVEL_TILEMAP2 DB						;Second part of the tilemap engine.
 .ende
 
@@ -91,7 +98,7 @@ _RAM_C720_NEW_HERO_SELECTIONTILES db	;Used to hold the tiles of the hero, while 
 .enum $C7FE export
 _RAM_C7FE_HEROSELECT_VAR db
 _RAM_C7FF_FIRST_SELECTED_COMPANION db
-_RAM_C800_ dsb $24		;This is the actual tilemap for the screen! If you modify these, the relevant 16x16 metatiles are changed. Starting at $C800 would modify the very first metatile.
+_RAM_C800_FIRSTROW_METATILES dsb $24		;This is the first two rows of the tilemap, made from 4x4 metatiles. This is for two screenful, but there may be more.
 _RAM_C824_ dsb $10
 _RAM_C834_ dsb $4
 .ende
@@ -519,31 +526,16 @@ _LABEL_0_:
 	im 1
 	ld sp, $DFF0
 	ld hl, _RAM_C000_RAM_START
-	ld a, (hl)
-	and $E0
-	or $08
+	ld a,$08
 	out (Port_MemoryControl), a
 	ld de, _RAM_C000_RAM_START + 1
 	ld (hl), l
 	ld bc, $1EFF	;7936 bytes
 	ldir	;Clear RAM.
-	;ld l, $FC
-	;ld a, $80
-	;ld (hl), a
-	;inc l
-	;xor a
-	;ld (hl), a
-	;inc l
-	;inc a
-	;ld (hl), a
-	;inc l
-	;inc a
-	;ld (hl), a	;From DEFC: 80 00 01 02			;This is actually not really needed this time. The RAM clear is important, but that's it.
 	ei
 	jp _LABEL_200_ENTRY	;Jump to program start.
-;.dsb 13,$00
-; Data from 2B to 37 (13 bytes)
-;.db $0C $1D $0C $3D $04 $3D $95 $10 $E4 $58 $0C $3D $04 ;Wow, this is used, at least for now.
+	;Not that it was necessary, but I've removed some things that were not that important.
+
 .org $0038
 _LABEL_38_:
 	push af
@@ -1433,8 +1425,8 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	jr c, +
 	ld c, $01
 	call _LABEL_5689_HITDETECT
-	ld c, $08
-	call _LABEL_57CC_DAMAGE_OTHERS
+;	ld c, $08		;Changed!
+;	call _LABEL_57CC_DAMAGE_OTHERS
 +:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02			
@@ -1871,8 +1863,8 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 
 	ld (hl), c
 	ldir		;We clear $FF again. $D700 is at the end.
-	ld hl, _RAM_C800_
-	ld de, _RAM_C800_ + 1
+	ld hl, _RAM_C800_FIRSTROW_METATILES
+	ld de, _RAM_C800_FIRSTROW_METATILES + 1
 	ld bc, $07FF	;2K but there is $100 missing.
 	ld (hl), $00
 	ldir		;We get around 2,5k of RAM cleared. CFFF is the end.
@@ -1989,7 +1981,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	ld a, (hl)
 	ld (_RAM_DE53_COMPASS_TYPE), a	;Hm, so the compass data is also loaded here.
 	exx
-	ld de, _RAM_C800_
+	ld de, _RAM_C800_FIRSTROW_METATILES
 	ld bc, $0004
 	exx				;These are saved for later in the shadow regs.
 	xor a
@@ -2228,9 +2220,9 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	inc ix
 	djnz -		;We will loop 32 times, and load those tiles.
 	ld hl, $F0F4
-	ld (_RAM_C0FE_UNUSED), hl
+	ld (_RAM_C043_), hl
 	ld hl, $0909
-	ld (_RAM_C1FE_UNUSED), hl
+	ld (_RAM_C045_), hl	
 	ld hl, $F1F5
 	ld (_RAM_C2FE_), hl
 	ld hl, $0909
@@ -2294,7 +2286,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	call _LABEL_2C54_CHARA_ANIM
 	call _LABEL_59B_MAIN
 	di
-	ld hl, _RAM_C800_
+	ld hl, _RAM_C800_FIRSTROW_METATILES
 	ld (_RAM_DE2F_), hl
 	ld a, $02
 	ld (_RAM_DE2E_BANKSWITCH_LEVEL), a
@@ -6323,11 +6315,11 @@ _DATA_3DE7_ENEMY_BEHAVIOUR:	;This list is the enemy behaviour list.
 ; 11th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3DFD_ENDBOSS:
 	xor a
-	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
-	ld (_RAM_D920_MNE1_DIR), a
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a		;Stop the endboss from moving. Usually monsters move when they see you.
+	ld (_RAM_D920_MNE1_DIR), a			;Set the direction to left.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	and a
-	jr nz, +
+	jr nz, +							;If falling stones are set, then jump and make them fall.
 	ld a, $01
 	ld (_RAM_DEF4_FALLING_STONES), a
 	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
@@ -6901,7 +6893,7 @@ _LABEL_52D5_FALLINGTRAP_ACTIVATE:
 _LABEL_531C_:
 	cp $46
 	jp nz, _LABEL_536C_
-_LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are harming the player upon contact.
+_LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are harming the player upon contact. This code could be updated to be a bit harder, like random times between proectiles and such, or slower,faster even turned off.
 	push ix
 	ld a, (_RAM_DE58_UNUSED)
 	inc a
@@ -7372,7 +7364,7 @@ _LABEL_5573_ENEMY_ACTION:
 +:
 	srl c
 ++:
-	call _LABEL_57CC_DAMAGE_OTHERS
+	;call _LABEL_57CC_DAMAGE_OTHERS		;Changed!
 	call _LABEL_5689_HITDETECT
 	ld a, $01
 	call _LABEL_2FF_PREPNPLAYSFX
@@ -7591,43 +7583,43 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	call _LABEL_5BA7_RIVERWIND_PROT_SCRN
 	ret
 
-_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. If this is disabled, no other parties are damaged by the first companion's damage received.
-;I think this should be disabled later on.
-	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
-	ld a, c
-	srl a			;4
-	srl a			;2
-	srl a			;Divide by 2 three times. 1
-	ld c, a			;c-->1
-	srl a			;1/2=0
-	add a, c		;0+1=1
-	jr z, ++		;The jump is not taken.
-	ld c, a			;Put this 1 to c.
-	push de
-	push hl
-	push ix			;Save registers.
-	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
-	ld b, $03		;Three of them
--:
-	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
-	call _LABEL_6573_CALC_DMG
-	ld de, _RAM_DBB5_GOLDMOON_HP
-	add hl, de
-	ld a, (hl)
-	sub c
-	jr c, +
-	jr z, +
-	ld (hl), a
-+:
-	inc ix
-	djnz -
-	pop ix
-	pop hl
-	pop de
-++:
-	pop bc
-	ret
-
+;_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. This is ;also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, but not as harshly. I ;thought this is a bug from the Raistlin code, but no, this is that part. If this is disabled, no other parties are damaged by the first companion's damage received.
+;;I think this should be disabled later on.
+;	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
+;	ld a, c
+;	srl a			;4
+;	srl a			;2
+;	srl a			;Divide by 2 three times. 1
+;	ld c, a			;c-->1
+;	srl a			;1/2=0
+;	add a, c		;0+1=1
+;	jr z, ++		;The jump is not taken.
+;	ld c, a			;Put this 1 to c.
+;	push de
+;	push hl
+;	push ix			;Save registers.
+;	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
+;	ld b, $03		;Three of them
+;-:
+;	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
+;	call _LABEL_6573_CALC_DMG
+;	ld de, _RAM_DBB5_GOLDMOON_HP
+;	add hl, de
+;	ld a, (hl)
+;	sub c
+;	jr c, +
+;	jr z, +
+;	ld (hl), a
+;+:
+;	inc ix
+;	djnz -
+;	pop ix
+;	pop hl
+;	pop de
+;++:
+;	pop bc
+;	ret
+;This mechanic is definetly not needed. This is not really fair I think, let's just damage the main player only. Also later on, this is also needed for the semi-single player thing I imagine for this.
 ; Data from 5800 to 5818 (25 bytes)
 _DATA_5800_:
 .dsb 16, $00
@@ -7944,22 +7936,27 @@ _LABEL_59DE_DEPLETE_GMSTAFF:			;This really looks like when you use the Blue Cry
 	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl	;If we have enough mana, then load back the new value, then return.
 	ret
 _LABEL_59EE_CURE_CRITICAL_WOUNDS:	
+_LABEL_59F5_CURE_LIGHT_WOUNDS:	;To be honest, the separate healing spells are not really needed. Only one is enough.
 		ld a, $05	;Mana cost.
+
 		ld bc, $1606	;Okay, so this is the min and max value of the healing. It is very clever indeed.
-		jr +
+;		jr +
 	
-_LABEL_59F5_CURE_LIGHT_WOUNDS:	
-		ld a, $01	;Same.
-		ld bc, $0801
-+:	
+
+;An idea here would be that maybe the two can be reduced to one, and let is be skill based or something.
+;		ld a, $01	;Same.
+;		ld bc, $0801
+;+:	
 		push bc
 		call  _LABEL_59DE_DEPLETE_GMSTAFF
 		pop bc
 		jp c,  _LABEL_5ADA_BL_STF_NOPWR	;As with other spells, this checks if the Staff had enough charge for the operation. If not, tell the user.
 		push bc
 	;.dsb 3,$ff
+-:
 		call _LABEL_5AA2_SELECT_PLAYER_CLERICAL		;This lets you select who you want to to an action on, like this healing.
 		pop bc
+		ld bc, $1606
 		ld a, b
 		call _LABEL_652_LOAD_NEW_SCRN			;Does nothing if commented out.
 		add a, c
@@ -7984,7 +7981,7 @@ _LABEL_59F5_CURE_LIGHT_WOUNDS:
 		call _LABEL_6F3B__UPD_HUD			;Updates the HUD with the new health values.
 		ei
 		jp  _LABEL_6053_WAIT4BUTTN
-	
+
 _LABEL_5A2B_RESURRECT:	
 		ld a, $05					;Mana cost.
 		call  _LABEL_59DE_DEPLETE_GMSTAFF		;Check for mana.
@@ -8034,7 +8031,7 @@ _LABEL_5A2B_RESURRECT:
 		call _LABEL_6F3B__UPD_HUD		;Show the updated HUD.
 		ei
 		jp  _LABEL_6053_WAIT4BUTTN		;Wait for a button press, and we are good.
-	
+
 _LABEL_5A83_HEALING:	
 		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)	;Read from this address. It's usually 09 at the start of the game.
 		ld l, a
@@ -8043,6 +8040,7 @@ _LABEL_5A83_HEALING:
 		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS
 		add hl, de
 		ld a, (hl)
+		;add a, $05
 		add a, a
 		add a, a
 		add a, a
@@ -8058,7 +8056,7 @@ _LABEL_5A83_HEALING:
 		add hl, de
 		pop de
 		ret	;This looks easy, but I can't wrap my head around this at the moment, but it works.
-	
+.org $5AA2	
 _LABEL_5AA2_SELECT_PLAYER_CLERICAL:	;This works for any spell, where you have to select a Companion for healing\resurrection.
 		xor a
 		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
@@ -8129,7 +8127,7 @@ _DATA_5B05_BL_STF_NOPWR_TXT:	;'The blue staff has no power at present.'
 .db $0D $70 $72 $65 $73 $65 $6E $74 $FF
 
 ; Data from 5B2E to 5B9C (111 bytes)
-_DATA_5B2E_MG_STF_NOPWR_TXT:	;'The Staff if Magius has no power at present.'
+_DATA_5B2E_MG_STF_NOPWR_TXT:	;'The Staff of Magius has no power at present.'
 .db $54 $68 $65 $20 $73 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61 $67
 .db $69 $75 $73 $0D $0D $68 $61 $73 $20 $6E $6F $20 $70 $6F $77 $65
 .db $72 $20 $61 $74 $0D $0D $70 $72 $65 $73 $65 $6E $74 $FF		;The first set of bytes are there for the text, the rest is the below code.
@@ -8282,7 +8280,7 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	ld hl, (_RAM_DE62_)
 	ld (_RAM_DE64_), hl
 	xor a
-	ld (_RAM_C04E_ACTIVE_MENUITEM),a;(_RAM_C04F_LAST_ENTERED_MENU), a
+	ld (_RAM_C041_ACTIVE_MENUITEM),a;(_RAM_C042_LAST_ENTERED_MENU), a
 	ld a, $1F
 	ld (_RAM_FFFF_), a
 	ld b, $60
@@ -8305,7 +8303,7 @@ _LABEL_5C65_ENTER_INGAME_MENU:	;This is the entry point for the ingame menu, at 
 	ld c, $97
 	ld ix, _RAM_C000_RAM_START	;Loads tilemap data here.
 	call _LABEL_6AE6_MENU_TXTDRAW		;Draw the text.
-	ld a, (_RAM_C04E_ACTIVE_MENUITEM);(_RAM_C04F_LAST_ENTERED_MENU)		;Menu position we last entered.
+	ld a, (_RAM_C041_ACTIVE_MENUITEM);(_RAM_C042_LAST_ENTERED_MENU)		;Menu position we last entered.
 	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Copy it to the active menupoint ram value, so the game remembers where it came from.
 	ld iy, _DATA_6CAD_PALETTES	;We do some palette loading as well, i'm not sure how many bytes in that array is actially used. There are some text near it, the name of the Companions, but I can't be sure yet.
 _LABEL_5C89_:		;We use some fellthrough stuff.
@@ -8439,7 +8437,7 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 
 _LABEL_5D43_HERO_SELECT_MENU:	
 		xor a
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
+		ld (_RAM_C042_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
 		call _LABEL_6046_WAIT4GAMEPAD		;Wait for a button press.
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN	;Draw a solid color screen.
 		ld hl, $38C8				;This is a screen position in VRAM, we'll draw the text below there.
@@ -8750,7 +8748,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 		inc ix
 		inc ix
 		ld b, $20
-		ld hl, _RAM_C800_
+		ld hl, _RAM_C800_FIRSTROW_METATILES
 -:	
 		in a, (Port_VDPData)
 		ld (hl), a
@@ -8765,7 +8763,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 		di
 		call _LABEL_4BB_VDP_RAM_WRITESETUP
 		ei
-		ld de, _RAM_C800_
+		ld de, _RAM_C800_FIRSTROW_METATILES
 		ld b, $08
 -:	
 		ld a, (de)
@@ -8810,7 +8808,7 @@ _DATA_5F98_RECTANGLE1BITTILE:
 ; 1st entry of Jump Table from 6CD5 (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _LABEL_5FE0_SPELLIST_JUMPS:	;Based on what we've selected, we'll go to the appropriate spell's code. This is used for both the Magical and Clerical stuff too.
 		call _LABEL_6046_WAIT4GAMEPAD		;Get the gamepad's values.
-		ld a, (_RAM_C04E_ACTIVE_MENUITEM)
+		ld a, (_RAM_C041_ACTIVE_MENUITEM)
 		and a
 		jr z, ++
 		dec a
@@ -8883,9 +8881,9 @@ _LABEL_605C_MAGICUSERSPELLMENU:
 		ld l, $04
 		ld h, $00
 		ld a, $01
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld (_RAM_C042_LAST_ENTERED_MENU), a
 		dec a
-		ld (_RAM_C04E_ACTIVE_MENUITEM), a
+		ld (_RAM_C041_ACTIVE_MENUITEM), a
 		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
 -:	
 		ld a, (ix+0)
@@ -8930,7 +8928,7 @@ _LABEL_60B0_:
 		ld e, $04
 		ld d, $00
 		ld a, $02
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld (_RAM_C042_LAST_ENTERED_MENU), a
 -:	
 		ld a, (ix+0)
 		call _LABEL_6573_CALC_DMG
@@ -8966,14 +8964,14 @@ _LABEL_60B0_:
 		ld de, _DATA_AE69_CLERIC_SPLS_TXT2
 		ld iy, $6CF9
 +:	
-		ld (_RAM_C04E_ACTIVE_MENUITEM), a
+		ld (_RAM_C041_ACTIVE_MENUITEM), a
 		jp _LABEL_6A41_ENTERMENU
 	
 _LABEL_6106_:	
 		ld hl, _DATA_678C_DROPMENU_TXT
 		ld de, $6678
 		ld a, $06
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld (_RAM_C042_LAST_ENTERED_MENU), a
 		jp +
 	
 ; 7th entry of Jump Table from 6CAF (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
@@ -8981,14 +8979,14 @@ _LABEL_6114_:
 		ld hl, _DATA_67A8_USEMENU_TXT
 		ld de, $6467
 		ld a, $03
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld (_RAM_C042_LAST_ENTERED_MENU), a
 		jp +
 	
 _LABEL_6122_:	;TODO
 		ld hl, _DATA_679A_GIVEMENU_TXT
 		ld de, $66C2
 		ld a, $05
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld (_RAM_C042_LAST_ENTERED_MENU), a
 		jp +
 	
 +:	
@@ -9097,7 +9095,7 @@ _LABEL_61CB_:
 		call _LABEL_6AE6_MENU_TXTDRAW
 		call _LABEL_61FA_DRAW_SCORESCREEN
 		ld a, $07
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld (_RAM_C042_LAST_ENTERED_MENU), a
 		call _LABEL_62B1_SCOREMENU_CONT_LOOP
 		jp _LABEL_6053_WAIT4BUTTN
 	
@@ -9221,7 +9219,7 @@ _LABEL_62C5_TAKE_MENU:
 		ld   ix, _RAM_C300_LEVEL_TILEMAP3
 		ld   bc, $0000
 		ld   a, $04
-		ld   (_RAM_C04F_LAST_ENTERED_MENU), a
+		ld   (_RAM_C042_LAST_ENTERED_MENU), a
 		call _LABEL_6A1D_MENU_PART_LOAD
 		ld   de, $38C8
 		ld   ix, _RAM_C300_LEVEL_TILEMAP3
@@ -9966,9 +9964,9 @@ _DATA_67F6_DELCHARS:
 	
 ; Data from 6809 to 6A1C (532 bytes)	
 _DATA_6809_ITEM_NAMES:	
-	.db $FF $42 $6C $75 $65 $20 $43 $72 $79 $73 $74 $61 $6C $20 $53 $74
-	.db $61 $66 $66 $0D $FF $53 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61
-	.db $67 $69 $75 $73 $0D $FF $42 $6F $77 $0D $FF $4C $6F $6E $67 $73
+	.db $FF $42 $6C $75 $65 $20 $43 $72 $79 $73 $74 $61 $6C $20 $53 $74 $61 $66 $66 $0D ;Blue Crystal Staff
+	.db $FF $53 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61 $67 $69 $75 $73 $0D ;Staff of Magius
+	.db $FF $42 $6F $77 $0D $FF $4C $6F $6E $67 $73
 	.db $77 $6F $72 $64 $0D $FF $44 $61 $67 $67 $65 $72 $0D $FF $48 $6F
 	.db $6F $70 $61 $6B $0D $FF $4A $6F $20 $73 $74 $69 $63 $6B $0D $FF
 	.db $48 $75 $6E $74 $69 $6E $67 $20 $4B $6E $69 $66 $65 $0D $FF $53
@@ -11475,7 +11473,7 @@ _LABEL_7771_DRAGONDEAD_STONES:	;This runs, when the Endboss, the Dragon is defea
 	jr nz, -
 	ld bc, $08C0
 	ld hl, $3800
-	ld de, _RAM_C800_
+	ld de, _RAM_C800_FIRSTROW_METATILES
 _LABEL_77CB_REMOVE_DRAGONHEAD:	;This removes the dragon, when the Crystal Staff hits the dragon.
 	;ret
 	push bc
