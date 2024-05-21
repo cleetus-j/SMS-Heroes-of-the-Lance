@@ -22,41 +22,34 @@ BANKS 30
 _RAM_C000_RAM_START dsb $20			;Holds many things from mapdata to palettes.
 _RAM_C001_ db
 .ende
-;.enum $C020 export
-;;Since the intro screens are disabled, this is not needed anymore. _RAM_C020_INTROSCR_NR db			;This number holds the screen number in the intro. I mean which ;screen to show. Some values are written here during gameplay.
-;_RAM_C021_ db
-;;Apperently this is also used by some menu tilemap thing. I have to get to that part later on. Sometimes the memory management part is not the best,
-;.ende
+.enum $C020 export
+_RAM_C020_INTROSCR_NR db			;This number holds the screen number in the intro. I mean which screen to show. Some values are written here during gameplay.
+_RAM_C021_ db
+;Apperently this is also used by some menu tilemap thing. I have to get to that part later on. Sometimes the memory management part is not the best,
+.ende
 
 .enum $C040 export
-_RAM_C040_SELECTED_MENUITEMINRAM_PAL db	;Used to held the last selected menuitem.
-_RAM_C041_ACTIVE_MENUITEM db;_RAM_C04E_ACTIVE_MENUITEM_ db	;This can be relocated.
-_RAM_C042_LAST_ENTERED_MENU db
-_RAM_C043_ dw	;_RAM_C0FE__ dw
-_RAM_C045_ dw						;Only written once, but that's it, but it's used. The level messes up if this is not written to.
+_RAM_C040_SELECTED_MENUITEMINRAM_PAL dsb $f	;This is also used to check what menu item was selected in the ingame menu. Also, the character introduction screens are using this memory to store the characters palettes.
 .ENDE
-;.ENUM $C04E EXPORT
-;_RAM_C04E_ACTIVE_MENUITEM_ DB	;Active menu item number. Used for both the magic and clerical things.
-;.ende
-;.enum $C04F export
-;_RAM_C04F_LAST_ENTERED_MENU_ db			;Stores what was the last menu before we entered a submenu. You know, so we know where we were, and what to select again.
-;.ende
-;.enum $c050 export
-;_RAM_C050_ dsb $10				;Check this later. Some menu items are handled here as well. Not sure why 16 bytes are used for this, but it will be clearer later, i'm ;sure.
-;The above does not seem to be used, written to or anything else.
-
-;.ende
-;.enum $C0FE export
-;_RAM_C0FE__ dw		;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
-;.ende
+.ENUM $C04E EXPORT
+_RAM_C04E_ACTIVE_MENUITEM DB	;Active menu item number. Used for both the magic and clerical things.
+.ende
+.enum $C04F export
+_RAM_C04F_LAST_ENTERED_MENU db			;Stores what was the last menu before we entered a submenu. You know, so we know where we were, and what to select again.
+.ende
+.enum $c050 export
+_RAM_C050_ dsb $10				;Check this later. Some menu items are handled here as well. Not sure why 16 bytes are used for this, but it will be clearer later, i'm sure.
+.ende
+.enum $C0FE export
+_RAM_C0FE_UNUSED dw		;Only written once, i'm not sure if this is used at all, not even read from during normal gameplay.
+.ende
 
 .enum $C100 export
 _RAM_C100_LEVEL_TILEMAP1 db	;This is one part of the tilemap used by the engine. These are scattered around RAM, i don't know why exactly.
 .ende
 
-;.enum $C1FE export
-.enum $C200 export
-;_RAM_C1FE__ dw						;Only written once, but that's it, but it's used. The level messes up if this is not written to.
+.enum $C1FE export
+_RAM_C1FE_UNUSED dw						;Only written once, but that's it.
 _RAM_C200_LEVEL_TILEMAP2 DB						;Second part of the tilemap engine.
 .ende
 
@@ -98,7 +91,7 @@ _RAM_C720_NEW_HERO_SELECTIONTILES db	;Used to hold the tiles of the hero, while 
 .enum $C7FE export
 _RAM_C7FE_HEROSELECT_VAR db
 _RAM_C7FF_FIRST_SELECTED_COMPANION db
-_RAM_C800_FIRSTROW_METATILES dsb $24		;This is the first two rows of the tilemap, made from 4x4 metatiles. This is for two screenful, but there may be more.
+_RAM_C800_ dsb $24		;This is the actual tilemap for the screen! If you modify these, the relevant 16x16 metatiles are changed. Starting at $C800 would modify the very first metatile.
 _RAM_C824_ dsb $10
 _RAM_C834_ dsb $4
 .ende
@@ -234,10 +227,6 @@ _RAM_D91C_NME_COORD_ARRAY db		;This is the first enemy's X coordinate. The next 
 
 .enum $D920 export
 _RAM_D920_MNE1_DIR db		;Enemy 1 direction.
-.ende
-
-.enum $D925 export
-_RAM_D925_ db
 .ende
 
 .enum $D9A8 export
@@ -396,31 +385,24 @@ _RAM_DE4C_ dw
 _RAM_DE4E_SCROLL_DIR db	;1 IS RIGHT, 2 IS LEFT.
 _RAM_DE4F_ db
 _RAM_DE50_COLUMN_DRW_NR db
-_RAM_DE51_GRNDLEVEL_SCROLLED db				;This is for kinda like the ground level for the drawing parts. If this is more than zero, the gameplay area is drawn over the usual place. But this is only for parts, where the screen is scrolling into a new area.
+_RAM_DE51_ db
 _RAM_DE52_ROOM_NR db
-_RAM_DE53_COMPASS_TYPE db						;How the compass is drawn on the screen: (Reading in a Clockwise direction)
-											;$00-N-E-S-W
-											;$01-E-S-W-N
-											;$02-S-W-N-E
-											;$03-W-N-E-S
-											;Other values are of course not valid, and will glich the game out.
+_RAM_DE53_COMPASS db
 _RAM_DE54_HOLD_PLYR db
 _RAM_DE55_WATERFALL db
 _RAM_DE56_WINPOINT_ADD db	;If this is non-zero, then the game adds 10k points to items. I guess, the Disks of Mishakal worth this much points.
-_RAM_DE57_UNUSED db				;This does not seem to be used, I mean it's written, but not read from in any useful way. Also, this could be also removed.
-_RAM_DE58_UNUSED db						;Same, this is also just incremented, but not really used for anything. I don't know why this was done this way, but i'm sure it had some purpose during development. Without this, a few traps won't work though.
-.ende
-.enum $DE59 export
-_RAM_DE59_LEFT_DEBUG_NR db	;I can't remove this now, since the debug number draw will be used later on.
+_RAM_DE57_ db
+_RAM_DE58_ db
+_RAM_DE59_LEFT_DEBUG_NR db
 _RAM_DE5A_ db
 _RAM_DE5B_COMBAT_MARK dw	;If this is not zero, we are in combat, and able to attack.
 _RAM_DE5D_ db
 _RAM_DE5E_FLOORFALLXCOORD dw
-_RAM_DE60_ dw					;This is like some memory address for a given room.
+_RAM_DE60_ dw
 _RAM_DE62_ db
 _RAM_DE63_ db
 _RAM_DE64_ dw
-_RAM_DE66_DEBUGTXT db					;This is only used for the debugging routine, for a text draw, but nothing else. This could be disabled, but I don't know yet what it does. Maybe later it will be revealed.
+_RAM_DE66_ db
 .ende
 
 .enum $DE6A export
@@ -428,7 +410,7 @@ _RAM_DE6A_ db
 _RAM_DE6B_ db
 _RAM_DE6C_NME_MOVE7BIT db
 _RAM_DE6D_GAME_WIN db		;If this is not zero, the game is won automatically.
-_RAM_DE6E_STANDORRUN db	;$FF if we are standing, and $07 if not, or anything else.
+_RAM_DE6E_ db
 _RAM_DE6F_ dw
 _RAM_DE71_ db
 _RAM_DE72_LVL_LOAD dw	;This is used in the level transition routine. Freezing it will however not prevent anyone from going elsewhere in the game.
@@ -440,11 +422,11 @@ _RAM_DE7A_KILLCOUNT_ARRAY dsb $16
 _RAM_DE90_GAMEPAD db
 _RAM_DE91_ db
 _RAM_DE92_ db
-_RAM_DE93_ db			;These are also gamepad values.
+_RAM_DE93_ db
 _RAM_DE94_GAMEPAD db
 _RAM_DE95_GAMEPAD db
-_RAM_DE96_STOPGAME db		;If this is not zero, then the whole game is stopped.
-_RAM_DE97_CAN_GAME_START db
+_RAM_DE96_STOPGAME db
+_RAM_DE97_ db
 _RAM_DE98_ dw
 _RAM_DE9A_ db
 _RAM_DE9B_ db
@@ -469,10 +451,10 @@ _RAM_DEB5_FRAMESET db
 _RAM_DEB6_ db
 _RAM_DEB7_INRAM_SPRITETABLE_TEMP dw
 _RAM_DEB9_ANIM_POINTER dw		;Some pointer, that helps with animations, but the connecting data is not obvious what it is now.
-_RAM_DEBB_DEBUG_DELETEME db					;This will be disabled later on.
+_RAM_DEBB_DEBUG db
 _RAM_DEBC_INRAM_HUD_PORTRAITS db
 _RAM_DEBD_SECOND_HERO_ARRAY dsb $6	;A small array starting with the second hero.
-_RAM_DEC3_UNUSED db						;Some now unused code is using this, but nothing else anymore.
+_RAM_DEC3_ db
 _RAM_DEC4_PALETTE_LOAD_POINTER db	;This is just a pointer, from where the code gets the palette data, and showes it out to the VDP directly.
 _RAM_DEC5_FADEOUT_WORKPAL dsb $f	;The code writes here the temporary palette for fadeout.
 .ende
@@ -519,23 +501,38 @@ _RAM_FFFF_ db				;Slot 2 mapping is at the top of RAM, and this is that.
 .BANK 0 SLOT 0
 .ORG $0000
 
-;So, this shall be the ASM file that contains a modified game, to make it easier, to get back some space and stuff like that. As you can see this is based on the disassembly that was made.
-
 _LABEL_0_:
 	di
 	im 1
 	ld sp, $DFF0
 	ld hl, _RAM_C000_RAM_START
-	ld a,$08
+	ld a, (hl)
+	and $E0
+	or $08
 	out (Port_MemoryControl), a
 	ld de, _RAM_C000_RAM_START + 1
 	ld (hl), l
 	ld bc, $1EFF	;7936 bytes
 	ldir	;Clear RAM.
+	;ld l, $FC
+	;ld a, $80
+	;ld (hl), a
+	;inc l
+	;xor a
+	;ld (hl), a
+	;inc l
+	;inc a
+	;ld (hl), a
+	;inc l
+	;inc a
+	;ld (hl), a	;From DEFC: 80 00 01 02
+
+;This is not really needed now or before.	
 	ei
 	jp _LABEL_200_ENTRY	;Jump to program start.
-	;Not that it was necessary, but I've removed some things that were not that important.
-
+;.dsb 13,$00
+; Data from 2B to 37 (13 bytes)
+.db $0C $1D $0C $3D $04 $3D $95 $10 $E4 $58 $0C $3D $04 ;I think this is used, so it remains now.
 .org $0038
 _LABEL_38_:
 	push af
@@ -560,14 +557,14 @@ _LABEL_38_:
 	reti
 
 ; Data from 59 to 63 (11 bytes)
-;.dsb 11, $00	;11 bytes of free space.
+.dsb 11, $00	;11 
 .org $0064	;With the ORG, this above is not needed, we can use that space for something later.
 _LABEL_64_:
 	dec a
 	inc c
 _LABEL_66_:
 	push af
-	ld a, (_RAM_DE97_CAN_GAME_START)
+	ld a, (_RAM_DE97_)
 	and a
 	jr nz, +
 	ld a, (_RAM_DE9E_)
@@ -604,12 +601,11 @@ _LABEL_66_:
 	ld (_RAM_FFFF_), a	;AND SWITCH BACK.
 	ret
 
-; Data from A0 to AA (11 bytes) free space again, so stuff can be put here.
-;.dsb 11, $00
+
+
 .org $00AB
 ; Data from AB to 1FF (341 bytes)
-_DATA_AB_:	;This is used for many things, but I can't seem to pinpoint exactly what else it is used for.
-
+_DATA_AB_:	
 .dsb 32, $00
 .db $04 $A4 $00 $00 $04 $A4 $08 $00 $04 $A4 $10 $00 $04 $A4 $18 $00
 .db $75 $3F $1F $BD $0C $FD $0C $3F $FD $3F $0D $3D $0C $3D $0C $FD
@@ -631,35 +627,58 @@ _DATA_AB_:	;This is used for many things, but I can't seem to pinpoint exactly w
 .db $DB $3B $BB $7B $FB $07 $87 $47 $C7 $27 $A7 $67 $E7 $17 $97 $57
 .db $D7 $37 $B7 $77 $F7 $0F $8F $4F $CF $2F $AF $6F $EF $1F $9F $5F
 .db $DF $3F $BF $7F $FF
-
+.org $0200
 _LABEL_200_ENTRY:	;Entry for the program, but nothing as a main loop or anything.
-	ld sp, $DFF0    ;This is needed, as without this, some graphical glitches appear, and sound is also not really good at the first fee seconds.
-	call _LABEL_7E9A_REGION_CHKSETUP	;Region checking is not needed at all here. Just set it to PAL, and call it a day, I don't care about any NTSC stuff.
-	ld a, $18
-	ld (_RAM_FFFF_), a	;lOAD BANK 24.
-	call _LABEL_623E8_PREP_MUS_BANK
-	ld a, $18
-	ld (_RAM_FFFF_), a	
-	ld a, $01			;SET NR. OF MUSIC.
-	ld c, a
-	call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
-	;This fixes a small issue, where the whole length of the title screen music is never heard. If we init the music BEFORE we go into the main loop of the demos, and the 	menu, then the whole music is accessible again, which is nice, since the best parts are unheard.
-	;Another thing is, that when you lose, then the lose music plays on the title screen, but it's even better this way.
+	ld sp, $DFF0
+	call _LABEL_7E9A_REGION_CHKSETUP	;This region check is not really needed, since the game is only released in PAL regions, no NTSC compatibility needed.
+	;I think i'll keep the code where they are at the moment, before I have to rearrange stuff again.
+ld a, $18
+ld (_RAM_FFFF_), a	;lOAD BANK 24.
+call _LABEL_623E8_PREP_MUS_BANK
+;ei
+ld a, $18
+ld (_RAM_FFFF_), a	
+ld a, $01			;SET NR. OF MUSIC.
+ld c, a
+call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
 
-;The region check was gutted, so that's not really an issue anymore.
 _LABEL_206_ENTRY_AFTERCHECK:
+	di
 	ld hl, _RAM_DE29_
 	ld de, _RAM_DE29_ + 1
 	ld bc, $00CB
 	ld (hl), $00
-	ldir		;FROM THAT, CLEAR 203 BYTES OF RAM.
+	ldir
+	;If the above is disabled, then the intro char descriptions, or at least the first image will use the wrong background color, and frankly these few bytes are not really that much of a deal.
 	ld sp, $DFF0
 	di
-    call _LABEL_7E9A_REGION_CHKSETUP    ;This is also changed. Since the below is now the same as this little routine, we can save three bytes, which I have to save again, since the game should be padded.
-    call _LABEL_63B_CLEAR_SAT	;CLEAR SAT.
+	ld hl, _DATA_468_VDP_INIT_DATA
+	call _LABEL_61F_WRITE_VDP_REG	;DO SOME VDP HOUSEKEEPING AGAIN.
+	call _LABEL_63B_CLEAR_SAT	;CLEAR SAT.
+	;ld a, (_RAM_DE97_)
+	nop
+	nop
+	nop
+	;and a
+	nop
+	;jr nz, +
+	nop
+	nop
+	;ld a, $18
+	;ld (_RAM_FFFF_), a	;lOAD BANK 24.
+	;call _LABEL_623E8_PREP_MUS_BANK
+	;ei
+	;ld a, $18
+	;ld (_RAM_FFFF_), a	
+	;ld a, $01			;SET NR. OF MUSIC.
+	;ld c, a
+	;call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
+;+:
+	;The above is relocated, so the titlescreen music will play through its entirety. I needed some padding here and there, since other offsets are not fixed that are in later editions of this hack. The original code interrupts the music, and restarts it, when the game demo ends, preventing the music to play all the way.
+	;Of course, the NOPs will be removed later.
 	ei
 	xor a
-	ld (_RAM_DE97_CAN_GAME_START), a
+	ld (_RAM_DE97_), a
 	ld hl, _DATA_AB_		;FIRST 32 BYTES ARE AN ALL BLACK PALETTE.
 	call _LABEL_4CF_LOAD2PALS	;RESET ALL PALS.
 	xor a
@@ -667,37 +686,86 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	ld (_RAM_DE9E_), a
 	ld bc, $0001
 
-LABEL_275_:
-	ld a, $03
-	ld hl, $0000
-	call _LABEL_334C_DECOMPRESS_ART
-	ld a, $02
+	;Console region check.
+;	ld a, (_RAM_DE23_CONSOLE_REGION)
+;	and a
+;	jr z, +	;JUMP TO + IF THE CONSOLE IS PAL.
+;	ld bc, $1415	;NTSC LEGAL SCREEN DATA OFFSET.
+;+:
+;	ld a, b	
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop	
+
+;The region check for the legal screen is now disabled.
+	push bc
 	ld hl, $3800
-	call _LABEL_334C_DECOMPRESS_ART
-	ld hl, _DATA_3B8_DRAGONPIC_PAL
-	call _LABEL_4CF_LOAD2PALS
-;We draw the Dragon image on this first, so we don't get a black screen for long.
-	ld bc, $0200;$01F4		;SET UP A TIMER. Let it take a little longer, since we only have one screen.
+	call _LABEL_334C_DECOMPRESS_ART	;WRITE SCREEN MAP.
+	pop bc
+	ld a, c
+	ld hl, $0000
+	call _LABEL_334C_DECOMPRESS_ART	;WRITE TILES.
+	ld hl, _DATA_3C8_	;LEGAL SCREEN PALETTE.
+	call _LABEL_4CF_LOAD2PALS	;LOAD SAID PALETTE.
+	xor a
+	ld (_RAM_C000_RAM_START), a;($C000), a 
+	ld (_RAM_C001_),a;($C001), a
+_LABEL_275_:
+	ld bc, $01F4		;SET UP A TIMER.
 -:
 	push bc
-	call _LABEL_59B_MAIN	
+	call _LABEL_59B_MAIN	;THIS IS THE MAIN LOOP HERE.
 	call _LABEL_552_CHECK_AB_BUTTONS	;CHECK FOR A\B BUTTON PRESS.
 	ld a, (_RAM_DE94_GAMEPAD)
 	ld b, a
 	ld a, (_RAM_DE95_GAMEPAD)
 	or b
 	jr nz, _LABEL_2D7_GAME_INIT			;IF THERE IS A PRESS, GO TO MAIN GAME SEQENCE.
-	pop bc			
+	pop bc			;GET BACK TIMER.
 	dec bc
 	ld a, b
 	or c
 	jr Nz, -			;JUMP IF TIMER IS EXPIRED. (SWITCH SCREENS IN THE INTRO, AND GO TO DEMO THEN.)
+	;IF THIS IS Z, PICTURES WILL SHOW FOR A VERY LITTLE TIME, AS THE PROGRAM THINKS THE TIMER IS EXPIRED ALREADY.
 	call _LABEL_4F9_PALETTE_FADEOUT	;FADE OUT SCREEN.
-    jp _LABEL_2ED_GAME_DEMO
-;This is a bit hackish, but should be fixed later on. So, once the screen is drawn with the dragon, then it should just loop to the game demo, then when that's over, then loop back and draw the Dragon screen again. The music will loop as usual, and you don't need to wait several stupid legal screens about people who are not in the programming team.
-;I've removed a lot of things here. Since we won't use the other screens in this game, the code, and later on the connecting data will be also removed. I'm thinking about recompressing the asset here to use less space than what it uses now.
+	ld a, ($C001)
+	inc a
+	and $03
+	ld ($C001), a
+	jp z, _LABEL_2ED_GAME_DEMO	;IF WE HAVE SEEN ALL SCREENS, COMMENCE TO GAME DEMO.
+	;IF SET TO NZ, THE GAME DEMO STARTS AFTER THE FIRST LEGAL SCREEN.
+	ld a, ($C000)
+	inc a
+	and $01
+	ld ($C000), A
+	jr z, +	;CHANGE THIS TO NZ, AND THE SECOND SCREEEN WILL STAY ON, UNTIL THE DEMO COMMENCES.
+	ld a, $16
+	ld hl, $3800
+	call _LABEL_334C_DECOMPRESS_ART	;TILEMAP
+	ld a, $17
+	ld hl, $0000
+	call _LABEL_334C_DECOMPRESS_ART	;TILES
+	ld hl, _DATA_3C8_
+	jr ++
 
-
++:	;THIS IS THE HEROES OF THE LANCE SCREEEN WITH THE DRAGON.
+	ld a, $03
+	ld hl, $0000
+	call _LABEL_334C_DECOMPRESS_ART
+	ld a, $02
+	ld hl, $3800
+	call _LABEL_334C_DECOMPRESS_ART
+	ld hl, _DATA_3B8_
+++:
+	call _LABEL_4CF_LOAD2PALS
+	jp _LABEL_275_
 
 _LABEL_2D7_GAME_INIT:	;THIS IS WHEN YOU START A NORMAL GAME.
 	pop bc
@@ -707,14 +775,13 @@ _LABEL_2D7_GAME_INIT:	;THIS IS WHEN YOU START A NORMAL GAME.
 	ld a, $FF
 	ld c, $02
 	call _LABEL_6242B_SET_MUS	;SELECT STAGE MUSIC
+	call _LABEL_3504_CHAR_BIOS		;SHOW THE CHAR. BIOS.
 	jp _LABEL_697_GAME_ENTRY			;GO TO GAME.
 
 _LABEL_2ED_GAME_DEMO:	;DISABLES PLAYER INPUT, LOADS SIMULATED ONES, AND STARTS THE GAME.
 ;YOU CAN HIJACK THIS, AND PLAY IT AS A REAL GAME, THERE IS NO DIFFERENCE.
-
-
 	ld a, $01
-	ld (_RAM_DE97_CAN_GAME_START), a	;IF THIS IS CHANGED TO ZERO, YOU CAN JUST PLAY THE GAME, AND THAT'S IT.
+	ld (_RAM_DE97_), a	;IF THIS IS CHANGED TO ZERO, YOU CAN JUST PLAY THE GAME, AND THAT'S IT.
 	DEC a
 	ld (_RAM_DE9C_PLYR_BLOCK), a	;BLOCK PLAYER INPUT
 	ld hl, _DATA_B67_DEMO_INPUT
@@ -734,7 +801,7 @@ _LABEL_2FF_PREPNPLAYSFX:	;If this is returned early, then there will bw no sound
 	ld (_RAM_FFFF_), a	;And switch back.
 	pop bc			;Restore this older value.
 	ret
-.org $0314      ;This needs to be placed here, otherwise the palettes are borked on the character bio screen. Some code uses absolute addressing here to my misery.
+
 ; Data from 314 to 334 (33 bytes)		;This is connected with some animations, but not sure what this is yet.
 _DATA_314_:
 .db $00 $01 $01 $01 $01 $02 $02 $02 $02 $03 $03 $03 $03 $04 $04 $04
@@ -760,13 +827,30 @@ _DATA_377_:
 .db $08
 
 ; Data from 398 to 3B7 (32 bytes)
-_DATA_398_GAME_PALETTE:
+_DATA_398_:
 .db $00 $15 $2A $3F $00 $00 $15 $2A $3F $3F $3F $15 $00 $15 $00 $3F
 .db $00 $15 $2A $3F $00 $01 $06 $1B $2F $0F $2F $07 $02 $09 $20 $34
 
 ; Data from 3B8 to 3C7 (16 bytes)
-_DATA_3B8_DRAGONPIC_PAL:
+_DATA_3B8_:
 .db $00 $24 $39 $03 $15 $2A $3F $05 $1A $2F $06 $1B $07 $02 $01 $26
+
+; Data from 3C8 to 3D7 (16 bytes)
+_DATA_3C8_:
+.db $00 $3F $2A $15 $1F $0F $0B $07 $06 $02 $01 $2F $03 $33 $33 $33
+
+; Data from 3D8 to 467 (144 bytes)
+_DATA_3D8_CHAR_PALS:
+.dsb 15, $00
+.db $3F $00 $15 $2A $3F $04 $19 $25 $10 $2B $17 $03 $01 $06 $1B $2F
+.db $3F $00 $15 $2A $01 $06 $1B $2F $10 $24 $39 $3E $11 $05 $1A $2F
+.db $3F $00 $01 $16 $2B $02 $07 $0B $06 $1B $2F $3F $2A $15 $10 $25
+.db $3A $00 $10 $24 $39 $3E $03 $02 $01 $06 $1B $2F $16 $2B $15 $2A
+.db $3F $00 $05 $1A $2F $01 $06 $1B $2F $2A $15 $10 $25 $3A $16 $2B
+.db $3F $00 $05 $1A $2F $10 $24 $39 $3E $00 $01 $06 $1B $2F $15 $2A
+.db $3F $00 $04 $19 $2E $1F $0B $17 $07 $02 $01 $06 $1B $2F $15 $2A
+.db $3F $00 $14 $29 $3E $10 $25 $3A $05 $1A $01 $06 $0B $2F $15 $2A
+.db $3F
 
 ; Data from 468 to 472 (11 bytes)
 _DATA_468_VDP_INIT_DATA:
@@ -802,6 +886,14 @@ _LABEL_48C_LOAD_VDP_DATA:
 		jr nz, -
 		ret
 	
+_LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM? It is not used though.
+		di
+		ld a, $1F	;Bank 31.
+		ld (_RAM_FFFF_), a
+		ld de, $8000	;This is the beginning of Slot 2 ROM page.
+		ld bc, $4000	;16k of data.
+		ld hl, $0000
+		call --
 -:	
 		jr -
 
@@ -815,7 +907,17 @@ _LABEL_4BD_VDP_OUTSETUP:		;This is used to do general VDP tasks, nor just write.
 	res 6, h
 	ret
 
-;.org $04CF ;This org is not needed anymore.
+; Data from 4C6 to 4CE (9 bytes)
+;.dsb 9, $00
+;.db $11 $C4 $DE $01 $20 $00 $ED $B0 $C9
+
+_LABEL_4C6_:	
+		ld   de, _RAM_DEC4_PALETTE_LOAD_POINTER
+		ld   bc, $0020
+		ldir
+		ret
+
+.org $04CF
 _LABEL_4CF_LOAD2PALS:
 	xor a
 	out (Port_VDPAddress), a
@@ -832,6 +934,20 @@ _LABEL_4CF_LOAD2PALS:
 	inc de
 	djnz -
 	ret
+
+_LABEL_4E7_:	;This is not used by the code. Some VDP data loading. The indexing part is a bit strange, especially with the +0. Maybe this is some other error in the disassembly.	
+		ld a, c
+		out (Port_VDPAddress), a
+		ld a, (ix+0)
+		ld a, $C0
+		out (Port_VDPAddress), a
+		ld a, (ix+0)
+		ld a, b
+		out (Port_VDPData), a
+		ei
+		ret
+
+.org $04F9
 _LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette details into the VDP. As it can be seen, this is a fadeout routine as well.
 	ld a, (_RAM_DED3_FADEOUT_VAR)
 	and a
@@ -908,7 +1024,7 @@ _LABEL_552_CHECK_AB_BUTTONS:
 	or c
 	xor $3F
 	ld c, a
-	ld a, (_RAM_DE97_CAN_GAME_START)
+	ld a, (_RAM_DE97_)
 	and a
 	jr z, +	;if this is NZ, THEN THE GAMEPAD WON'T GET READ.
 	ld a, c
@@ -941,8 +1057,8 @@ _LABEL_59B_MAIN:
 	ld a, (_RAM_DE9D_TIMER)
 	and a
 	jr z, -
-	;call _LABEL_5F4_RESET
-	ld a, (_RAM_DE97_CAN_GAME_START)
+	call _LABEL_5F4_RESET
+	ld a, (_RAM_DE97_)
 	and a
 	jr z, +
 	xor a
@@ -955,10 +1071,10 @@ _LABEL_59B_MAIN:
 	ld a, (_RAM_DE9E_)
 	and b
 	ret z
-	ld a, (_RAM_DE46_SCROLLBG);($DE46)
+	ld a, ($DE46)
 	ld b, a
 	ld c, $08
-	call _LABEL_62D_WRITE_VDP_REG		;The engine works without this too.
+	call _LABEL_62D_WRITE_VDP_REG
 	ld a, (_RAM_DE25_MUSIC_COUNTER)
 	ld d, a
 	ld a, $01
@@ -970,29 +1086,36 @@ _LABEL_59B_MAIN:
 	ld a, (_RAM_DE9D_TIMER)
 	and a
 	jr z, -
-	ld a, (_RAM_DE46_SCROLLBG);($DE46)	;This is changed. It was just the hardcoded RAM value.
+	ld a, ($DE46)
 	ld b, a
 	ld c, $08
-	call _LABEL_62D_WRITE_VDP_REG	;This can be also disabled.
-	ret	;This is new, but not needed possibly.
-	;call _LABEL_5F4_RESET
-
-;_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. The SMS2 doesn't, and neither the MD--->SMS ;adapter.
-;	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
-;	and $10			;MASK OUT ALL OTHER BUTTONS.
-;	ld c, a
-;	ld a, (_RAM_DE22_RESET)
-;	sub c
-;	ret z			;If the button is not pressed, then we should just return.
-;	ld a, c
-;	ld (_RAM_DE22_RESET), a
-;	bit 4, a
-;	ret nz
-;	xor a
-;	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
-;	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
-;	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
-;	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
+	call _LABEL_62D_WRITE_VDP_REG
+	call _LABEL_5F4_RESET
+; Data from 5E8 to 5F3 (12 bytes)
+;.dsb 12, $00	;This is what it gets disassembled to, but does not seem to be valid, since the jump is a bit far for it, and at the moment, I don't know where it would jump either.
+;		ld   a, (_RAM_DE9E_)
+;		and  a
+;		jr   nz, --
+;		ld   a, d
+;		ld   (_RAM_DE25_MUSIC_COUNTER), a
+;		jr   _LABEL_59B_MAIN
+.db $3A $9E $DE $A7 $20 $E4 $7A $32 $25 $DE $18 $A7
+_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. The SMS2 doesn't, and neither the MD--->SMS adapter.
+	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
+	and $10			;MASK OUT ALL OTHER BUTTONS.
+	ld c, a
+	ld a, (_RAM_DE22_RESET)
+	sub c
+	ret z			;If the button is not pressed, then we should just return.
+	ld a, c
+	ld (_RAM_DE22_RESET), a
+	bit 4, a
+	ret nz
+	xor a
+	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
+	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
+	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
+	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
 ;The devs thought about this, I think they programmed this on an SMS1, otherwise they would not bother with this small feature.
 _LABEL_612_MUTE_PSG:
 	ld hl, _DATA_61B_MUTEPSG
@@ -1154,7 +1277,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld (_RAM_DE9F_TIMER), a
 	xor a
 	ld (_RAM_DE9E_), a
-	ld a, (_RAM_DE97_CAN_GAME_START)
+	ld a, (_RAM_DE97_)
 	and a
 	jr nz, +
 	ld a, $18
@@ -1165,8 +1288,8 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD.
 _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
-	call _LABEL_5819_MARKDEAD_PERMADEAD		;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. Since at the moment we start the game, this will have no effect. This is actually a nice thing to disable. You are at least saved from an unwinnable game. If you jump into a pit, it's still permadeath, at least for now.
-	call _LABEL_59B_MAIN	;This can be disabled, does nothing bad.
+	call _LABEL_5819_MARKDEAD_PERMADEAD		;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. Since at the moment we start the game, this will have no effect.
+	call _LABEL_59B_MAIN
 	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES.
 	call _LABEL_7971_INIT_TRAPS	
 	ld a, (_RAM_DE55_WATERFALL)	;See if the loaded new screen will be a waterfall\healing for the party.
@@ -1186,10 +1309,10 @@ _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
 	ld l, a
 	ld (_RAM_DE42_), hl	;Stop the character in place. Also, no scrolling if this is frozen,but no apparent function. It is used in movement, and scroll too.
 	ei
-	call _LABEL_2C1A_FRAMESET_COPY	;This can be disabled here, the game works fine.
+	call _LABEL_2C1A_FRAMESET_COPY	;no function to this yet.
 	ld ($DE27), sp
 _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
-	ld a, (_RAM_DE97_CAN_GAME_START)
+	ld a, (_RAM_DE97_)
 	and a
 	jr z, +++
 	ld a, (_RAM_DE9B_)
@@ -1395,7 +1518,8 @@ _LABEL_8B9_GAME_OVER:	;THIS GETS CALLED, WHEN ALL CHARS ARE DEAD\PERMADEAD.
 	call _LABEL_552_CHECK_AB_BUTTONS
 	ld a, (_RAM_DE91_)
 	and $30
-	jp z, _LABEL_206_ENTRY_AFTERCHECK	;RETURN TO THE BEGINNING OF THE CODE. YEAH, NO CONTINUES.
+	jp z, _LABEL_200_ENTRY;_LABEL_206_ENTRY_AFTERCHECK	;RETURN TO THE BEGINNING OF THE CODE. YEAH, NO CONTINUES.
+	;Small fix, so the music after either a win or loss will not play its music after returning to the titlescreen.
 	call _LABEL_59B_MAIN
 	jr -
 
@@ -1414,7 +1538,7 @@ _LABEL_906_GOOD_END: ;Ending screen.
    jp -- ;$08dc; Jump to address $08DC 3
 ;.dsb 27,$00
 _LABEL_924_UPDATE_GAME_SCRN:	
-	
+	;jp _LABEL_757_GAME_MAIN
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $01
 	jr nz, +	;IF THIS IS NOT ZERO, JUMP.
@@ -1425,15 +1549,15 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	jr c, +
 	ld c, $01
 	call _LABEL_5689_HITDETECT
-;	ld c, $08		;Changed!
-;	call _LABEL_57CC_DAMAGE_OTHERS
+	ld c, $08
+	call _LABEL_57CC_DAMAGE_OTHERS
 +:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02			
 	jr nz, +		;Jump of we don't want stones to fall on our heads.
-	ld a, (_RAM_DE57_UNUSED)
+	ld a, (_RAM_DE57_)
 	inc a
-	ld (_RAM_DE57_UNUSED), a			;This is changed! The value is not really used for anything.
+	ld (_RAM_DE57_), a
 	and $03
 	jr nz, +		;To be actually playable, the game uses some counter to delay the next stone's falling. Still, I think this is a bit too quick to evade.
 	ld a, (_RAM_D904_HERO_DIRECTION)	;Get the direction the player is facing.
@@ -1509,7 +1633,6 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld hl, _DATA_314_			;These data statements should mean something, but not for now.
 	ld (_RAM_DEB9_ANIM_POINTER), hl		;Load this address into HL.
 	call _LABEL_A95_UPDATE_SCREEN
-;.dsb 9,$00
 	call _LABEL_6F3B__UPD_HUD
 	call _LABEL_A10_ANIM_SPRITES
 	ld b, $0D
@@ -1537,11 +1660,6 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld hl, _DATA_377_
 	ld (_RAM_DEB9_ANIM_POINTER), hl
 	call _LABEL_A95_UPDATE_SCREEN
-
-
-
-
-
 	call _LABEL_3238_COPYCOORDS
 	ld a, (_RAM_DE96_STOPGAME)		;This value makes the whole game stop.
 	and a
@@ -1553,7 +1671,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 +:	;Normal flow.
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
-	call z, _LABEL_374B_AB_DEBUG_BUTTON	;If the player can move, call that routine with the debug parts. This is disabled.
+	call z, _LABEL_374B_AB_DEBUG_BUTTON	;If the player can move, call that routine with the debug parts.
 	call _LABEL_53A3_FLOORCOLLISION		;Run the floor collision check.
 	call _LABEL_5223_CHECKTRAP		;Run the trap check on the floor.
 	call _LABEL_369E_NME_N_TRAP			;If this is commented out, then the screen scrolling won't be performed.
@@ -1644,11 +1762,10 @@ _LABEL_A10_ANIM_SPRITES:			;This runs a few times a frame, so let's see if this 
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
-	ld a, (_RAM_DE48_)				;You could remove the second set of these writes, and the game works the same.
+	ld a, (_RAM_DE48_)
 	ld b, a
 	ld c, $09
 	call _LABEL_62D_WRITE_VDP_REG
-	
 	ret
 
 _LABEL_A95_UPDATE_SCREEN:	
@@ -1682,7 +1799,6 @@ _LABEL_A95_UPDATE_SCREEN:
 	ret
 
 +:
-
 	ld a, (_RAM_DE44_SCRNSCRL_2FRMSET)
 	bit 7, a
 	jr nz, +
@@ -1863,8 +1979,8 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 
 	ld (hl), c
 	ldir		;We clear $FF again. $D700 is at the end.
-	ld hl, _RAM_C800_FIRSTROW_METATILES
-	ld de, _RAM_C800_FIRSTROW_METATILES + 1
+	ld hl, _RAM_C800_
+	ld de, _RAM_C800_ + 1
 	ld bc, $07FF	;2K but there is $100 missing.
 	ld (hl), $00
 	ldir		;We get around 2,5k of RAM cleared. CFFF is the end.
@@ -1979,9 +2095,9 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	inc hl
 	ld (_RAM_DE60_), de		;$1944.
 	ld a, (hl)
-	ld (_RAM_DE53_COMPASS_TYPE), a	;Hm, so the compass data is also loaded here.
+	ld (_RAM_DE53_COMPASS), a	;Hm, so the compass data is also loaded here.
 	exx
-	ld de, _RAM_C800_FIRSTROW_METATILES
+	ld de, _RAM_C800_
 	ld bc, $0004
 	exx				;These are saved for later in the shadow regs.
 	xor a
@@ -2220,9 +2336,9 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	inc ix
 	djnz -		;We will loop 32 times, and load those tiles.
 	ld hl, $F0F4
-	ld (_RAM_C043_), hl
+	ld (_RAM_C0FE_UNUSED), hl
 	ld hl, $0909
-	ld (_RAM_C045_), hl	
+	ld (_RAM_C1FE_UNUSED), hl
 	ld hl, $F1F5
 	ld (_RAM_C2FE_), hl
 	ld hl, $0909
@@ -2286,7 +2402,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	call _LABEL_2C54_CHARA_ANIM
 	call _LABEL_59B_MAIN
 	di
-	ld hl, _RAM_C800_FIRSTROW_METATILES
+	ld hl, _RAM_C800_
 	ld (_RAM_DE2F_), hl
 	ld a, $02
 	ld (_RAM_DE2E_BANKSWITCH_LEVEL), a
@@ -2306,7 +2422,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	ld h, l
 	ld l, $00
 	ld a, h
-	ld (_RAM_DE51_GRNDLEVEL_SCROLLED), a
+	ld (_RAM_DE51_), a
 	add hl, de
 	ex de, hl
 	ld b, $08
@@ -2366,7 +2482,7 @@ _LABEL_F50_:
 	inc d
 	dec b
 	jp nz, _LABEL_F50_
-	ld hl, _DATA_398_GAME_PALETTE
+	ld hl, _DATA_398_
 	call _LABEL_4CF_LOAD2PALS
 	ld hl, $0000
 	ld (_RAM_DE4A_COLUMN_NR_SCROLL), hl
@@ -2469,7 +2585,7 @@ _LABEL_1032_:
 	xor $01
 	ld (_RAM_DE3B_), a
 	ret nz
-	ld hl, _RAM_DE51_GRNDLEVEL_SCROLLED
+	ld hl, _RAM_DE51_
 	inc (hl)
 	ret
 
@@ -2507,7 +2623,7 @@ _LABEL_106D_:
 	xor $01
 	ld (_RAM_DE3B_), a
 	ret z
-	ld hl, _RAM_DE51_GRNDLEVEL_SCROLLED
+	ld hl, _RAM_DE51_
 	dec (hl)
 	ret
 
@@ -5101,10 +5217,84 @@ _LABEL_34DA_:
 
 _LABEL_3503_JUST_RET:
 	ret
-.org $3582  ;Some stuff relies on being in place, so this is needed.
-_LABEL_3582_DRAW_NUMBERS_DEBUG: ;This can be used for something else, so I'll keep this here.
+
+_LABEL_3504_CHAR_BIOS:
+;THIS SHOWS THE PLAYABLE CHARACTERS BIOS BEFORE WE GO INTO THE MAIN GAME.
+	ld a, $1F
+	ld (_RAM_FFFF_), a	;BANK 31.
+	ld hl, _DATA_7C000_CHAR_BIO_TEXT
+	ld de, $2800
+	ld bc, $0C00
+	di
+	call _LABEL_48C_LOAD_VDP_DATA
+	;SHOWING THE TEXT FIRST
+	ei
+	ld hl, $0140
+	ld (_RAM_DE62_), hl
+	ld hl, _DATA_366C_CHAR_DATA
+_LABEL_3520_CHAR_SHOW:	;THIS SHOWS THE COMPANIONS, AND SHOWS BIOS, PICTURES AND SO ON.
+	ld a, (hl)
+	inc hl
+	and a
+	jr z, _LABEL_3581_JUSTRET	;IF THIS IS ZERO, JUST RETURN, AND START THE GAME.
+	push hl
+	ld hl, $0000
+	call _LABEL_334C_DECOMPRESS_ART	;TILES
+	pop hl
+	ld a, (hl)
+	inc hl
+	push hl
+	ld hl, $3800
+	call _LABEL_334C_DECOMPRESS_ART	;TILEMAP
+	pop hl
+	ld e, (hl)
+	inc hl
+	ld d, (hl)
+	inc hl
+	push hl
 	ex de, hl
-	ld hl, _RAM_DE66_DEBUGTXT
+	ld de, _RAM_C040_SELECTED_MENUITEMINRAM_PAL
+	ld bc, $0010
+	ldir
+	ld hl, _DATA_3D8_CHAR_PALS
+	ld bc, $0010
+	ldir
+	ld hl, _RAM_C040_SELECTED_MENUITEMINRAM_PAL
+	call _LABEL_4CF_LOAD2PALS	;LOAD PALS INTO RAM, AND THEN INTO VRAM.
+	pop hl
+	ld e, (hl)
+	inc hl
+	ld d, (hl)
+	inc hl
+	push hl
+	ld a, d
+	or e
+	jr z, +
+	call _LABEL_35A6_RANDOM
++:
+	ld de, _DATA_A73A_TEXT_CHARSTAT	
+	call _LABEL_35A6_RANDOM	;PRINTS THE PRESS BUTTON TEXT.
+-:
+	call _LABEL_59B_MAIN
+	call _LABEL_552_CHECK_AB_BUTTONS	;CHECK FOR ANY AB BUTTON PRESS.
+	ld a, (_RAM_DE95_GAMEPAD)
+	ld b, a
+	ld a, (_RAM_DE94_GAMEPAD)
+	or b
+	jr z, -
+	push bc
+	call _LABEL_4F9_PALETTE_FADEOUT
+	pop bc
+	pop hl
+	ld a, b
+	and a
+	jp z, _LABEL_3520_CHAR_SHOW
+_LABEL_3581_JUSTRET:
+	ret
+
+_LABEL_3582_DRAW_NUMBERS_DEBUG:
+	ex de, hl
+	ld hl, _RAM_DE66_
 	ld b, $2F
 -:
 	inc b
@@ -5126,7 +5316,7 @@ _LABEL_3582_DRAW_NUMBERS_DEBUG: ;This can be used for something else, so I'll ke
 	inc hl
 	ld (hl), $FF
 	ex de, hl
-	ld de, _RAM_DE66_DEBUGTXT
+	ld de, _RAM_DE66_
 _LABEL_35A6_RANDOM:	;HL 3C00 DE $FF
 	ld a, r	;GET A VALUE FROM THE R REGISTER...
 	jp po, +
@@ -5144,7 +5334,7 @@ _LABEL_35A6_RANDOM:	;HL 3C00 DE $FF
 	push af
 	ld a, $02	;BANKSWITCH.
 	ld (_RAM_FFFF_), a
-	call _LABEL_35C8_PLOT_CHARBIO			;The menu text draw actually uses this. If this is turned off, the menu text draw won't draw the text itself.
+	call _LABEL_35C8_PLOT_CHARBIO
 	pop af
 	ld (_RAM_FFFF_), a
 	ret
@@ -5248,14 +5438,18 @@ _LABEL_362D_DRAWTXT:
 	jr _LABEL_35C8_PLOT_CHARBIO
 
 ; Data from 3645 to 366B (39 bytes)
-_DATA_3645_:	;If these are just zeroes, the spaces are replaced with '/'.'
-;.dsb 39,$00
+_DATA_3645_:
 .db $20 $3F $3A $1C $27 $1F $26 $3A $2E $1D $2C $1E $2B $1A $2D $1B
 .db $3F $3B $22 $3C $21 $3D $2F $3E $00 $4A $01 $4B $02 $4C $03 $4D
 .db $04 $4E $05 $4F $06 $50 $FF
 
+; Data from 366C to 369D (50 bytes)
+_DATA_366C_CHAR_DATA:
+.db $05 $04 $E8 $03 $DB $A0 $07 $06 $F8 $03 $2C $A5 $09 $08 $08 $04
+.db $A1 $A1 $0B $0A $18 $04 $46 $A3 $0D $0C $28 $04 $00 $A0 $0F $0E
+.db $38 $04 $21 $A6 $11 $10 $48 $04 $3A $A4 $13 $12 $58 $04 $76 $A2
+.db $00 $00
 
-.org $369E	;This is needed to be placed here, but the above 50 bytes are not needed.
 _LABEL_369E_NME_N_TRAP:	;Some enemy thingy here.
 	call _LABEL_7565_TRAP_INIT	;Well, this one simply won't let the traps work, so maybe it's not that simple as I thought. It handles trap types, and things like that.
 	call _LABEL_3CCF_MONST_AI	;The enemies spawn, but they are not moving, so this is likely the "AI" of the enemy. AI is a very fashionable word today.
@@ -5359,23 +5553,33 @@ _LABEL_36B9_:
 
 _LABEL_374B_AB_DEBUG_BUTTON:				;Checks for button 2, and either opens the menu of the game, or does the debug warp.
 	call _LABEL_552_CHECK_AB_BUTTONS	;Check if we've pressed the A or B buttons.
-;	ld a, (_RAM_DE54_HOLD_PLYR)
-;	and a
-;	jr z, +				;If the player is held still, then jump. (Maybe not in movement?)
-;	xor a				;Clear a.
-;	ld (_RAM_DE95_GAMEPAD), a
-;	ld (_RAM_DE94_GAMEPAD), a
-;	ld (_RAM_DE90_GAMEPAD), a	;Clear joypad values.
-;+:			;Without this, the game is actually better with jumping response, it does it faster, and you don't need to make a small dash before it.
+	ld a, (_RAM_DE54_HOLD_PLYR)
+	and a
+	jr z, +				;If the player is held still, then jump. (Maybe not in movement?)
+	xor a				;Clear a.
+	ld (_RAM_DE95_GAMEPAD), a
+	ld (_RAM_DE94_GAMEPAD), a
+	ld (_RAM_DE90_GAMEPAD), a	;Clear joypad values.
++:
 	ld ix, _RAM_D900_CHARA_COORD
 	ld a, (_RAM_DE95_GAMEPAD)
 	and a
-	jr z, _LABEL_3786_FLOORCHECK
+	jr z, _LABEL_3786_FLOORCHECK		;Sooo, this means, get into the options menu if we've pressed the B button on the controller.
 	ld a, (ix+10)
 	cp $05
-	jr z, _LABEL_3786_FLOORCHECK		;If D910 is 05, then jump. This is the X coordinate on the player. So if it's 05, which is normally outside the playfied, then ;ump to that menu.
-	call _LABEL_5C07_ENTERMENU					;The debug part is removed.
-.org $3786
+	jr z, _LABEL_3786_FLOORCHECK		;If D910 is 05, then jump. This is the X coordinate on the player. So if it's 05, which is normally outside the playfied, then jump to that menu.
+	ld a, (_RAM_DEBB_DEBUG)		;Check debug flag, we are not there with those coordinates.
+	and a
+	jr nz, +			;If we are not in debug, jump. Strangely, we are NOT in debug if the flag is 1.
+	call _LABEL_7A14_DEALLOCATE_TRAPS		;This does some coordinate relocation, but the debug mode works better without this, as many rooms are otherwise not playable with it. The players spawn in strange locations, and can't be controlled. I won't name this yet, but I'm sure this is what it does.
+	ld a, (_RAM_DE52_ROOM_NR)
+	inc a
+	ld (_RAM_DE52_ROOM_NR), a	;This small part I know. So, in debug mode, the ingame menu is disabled. Instead, we go to the next "room" of the game.
+	pop hl
+	jp _LABEL_726_LEVEL_WARP_LOAD	;Warp to the desired level. If this is commented out, you go to the menu, as the code is just below, then when you leave the room, the game reboots.
+
++:					;No debug mode here.
+	call _LABEL_5C07_
 _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part that checks for floors, if you use a door, gonna fall and things like that.
 	
 	ld ix, _RAM_D900_CHARA_COORD
@@ -5392,14 +5596,14 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	inc hl
 	ld h, (hl)
 	ld l, a
-	ld a, (ix+10) ;_RAM_D90A_HERO_ACTION	;So we get what the Hero does.
+	ld a, (ix+10)
 	and a
-	jp z, _LABEL_3938_	;Jump here, if we are standing still.
+	jp z, _LABEL_3938_	;Not noticeable what this does.
 
 
-	ld e, a			;Save the action in C. Totally useless, we'll overwrite this later on.
-	add a, a		;Do some bitshifting.
-	ld e, a			;Then put in into C. The other LD is useless then.
+	ld e, a
+	add a, a
+	ld e, a
 	ld d, $00
 	add hl, de
 	ld a, (hl)
@@ -5408,18 +5612,18 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	ld l, a
 	ld e, (hl)
 	ld a, e
-	ld (_RAM_DE6E_STANDORRUN), a	;This is either $FF for non jumping states, and $06 for jump. $02 is while attacking.
+	ld (_RAM_DE6E_), a
 	inc hl
-	ld a, (ix+11) ;_RAM_D90B_ANIM_FRAME_COUNTER
+	ld a, (ix+11)
 	cp e
-	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE		;If this is nz, then the enemy's damage will be applied to you, and to the enemy as well. Could be used for a nice reflect damage spell!
+	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE
 	add a, a
 	ld e, a
 	ld d, $00
 	add hl, de
 	ld a, (hl)
 	inc a
-	jp nz, _LABEL_3887_						;I'll check this later.
+	jp nz, _LABEL_3887_
 _LABEL_37C8_:
 	ld a, (ix+10)
 	cp $04
@@ -5474,7 +5678,7 @@ _LABEL_3839_PIT_DEATH:	;This runs when the player falls into a pit.
 	ld bc, $0007
 	ld a, (de)
 	ldir
-	ld (_RAM_DEC3_UNUSED), a
+	ld (_RAM_DEC3_), a
 	call _LABEL_7E74_
 	ld (hl), $00
 	ld bc, (_RAM_DE6F_)
@@ -5497,10 +5701,10 @@ _LABEL_3876_:
 	ld (ix+11), $00
 	jp _LABEL_3938_
 
-_LABEL_3887_:					;So this might be the jumping part, or at least the end of it.
+_LABEL_3887_:
 	ld a, (ix+10)
 	cp $04
-	jr nc, ++; ++				;If this is just a C, then the character won't jump.
+	jr nc, ++
 	ld a, (_RAM_DE90_GAMEPAD)
 	ld e, a
 	ld a, (_RAM_DE93_)
@@ -5528,11 +5732,11 @@ _LABEL_3887_:					;So this might be the jumping part, or at least the end of it.
 	ld a, (hl)
 	ld l, $00
 	cp $63
-	jr z, +				;If this is nz, then the jump does not change the X position of the character.
+	jr z, +
 	ld l, a
 	ld a, (ix+4)
 	and a
-	jr z, +				;If this is nz, then the character will moonwalk!
+	jr z, +
 	ld a, l
 	neg
 	ld l, a
@@ -5544,10 +5748,10 @@ _LABEL_3887_:					;So this might be the jumping part, or at least the end of it.
 	ld h, a
 	ld a, (ix+10)
 	cp $0F
-	jr nz, ++		;If this is z, then the character just walks downward diagonally.
+	jr nz, ++
 	push hl
 	bit 7, h
-	jr z, +			;If this is nz, then the falling character will fall upwards, not down.
+	jr z, +
 	ld de, $0000
 	ex de, hl
 	and a
@@ -5557,7 +5761,7 @@ _LABEL_3887_:					;So this might be the jumping part, or at least the end of it.
 	ld d, (ix+3)
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
-	jr z, +			;Nothing as of now.
+	jr z, +
 	sra h
 	rr l
 +:
@@ -5580,12 +5784,12 @@ _LABEL_3908_:
 	sbc hl, de
 	ld a, h
 	and a
-	jr nz, +		;If this is nz, then the character won't move.
+	jr nz, +
 	ld a, l
 	cp $10
-	jr c, +		;Same.
+	jr c, +
 	cp $F0
-	jr nc, +	;Same. Maybe this part is for the movement, or other parts. But now is a bit late for checking that.
+	jr nc, +
 	ret
 
 +:
@@ -5597,14 +5801,14 @@ _LABEL_3908_:
 	ret
 
 _LABEL_3938_:	;IX is D900
-	ld (ix+7), $00			;This is an animation frame thing. It uses IX, but honestly there is a ram value for this already.
+	ld (ix+7), $00
 	ld a, (_RAM_DE90_GAMEPAD)
 	ld (_RAM_DE93_), a
-	call _LABEL_3C89_MOVEMENT_DIR
+	call _LABEL_3C89_
 	ld a, (_RAM_DE91_)
 _LABEL_3948_:
 	bit 4, a
-	jr nz, ++	;If this is z, then the attack stance is constantly on, and inverts the 'attack button's' function.
+	jr nz, ++
 	xor a
 	ld (_RAM_DE5D_), a
 	ld hl, _DATA_3B65_
@@ -5889,7 +6093,6 @@ _LABEL_3AAF_DRAWPROJECTILE:
 	ret
 
 _LABEL_3B2E_:
-
 	ld a, (_RAM_DE6A_)
 	and a
 	jr nz, +
@@ -5900,20 +6103,17 @@ _LABEL_3B2E_:
 	ld hl, _DATA_3B53_
 	jp _LABEL_3953_
 
-	;These are all the same sizes, but I don't know what they do.
-
 ; Data from 3B41 to 3B49 (9 bytes)
 _DATA_3B41_:
 .db $0C $0C $0D $0D $0D $0B $0C $0C $0C
-;.dsb 9,$00
+
 ; Data from 3B4A to 3B52 (9 bytes)
 _DATA_3B4A_:
 .db $14 $14 $15 $15 $15 $0B $14 $14 $14
 
 ; Data from 3B53 to 3B5B (9 bytes)
-_DATA_3B53_:		;This is used at the end of the death of enemies.
+_DATA_3B53_:
 .db $10 $10 $10 $10 $10 $0B $10 $10 $10
-
 
 ; Data from 3B5C to 3B64 (9 bytes)
 _DATA_3B5C_:
@@ -5949,7 +6149,7 @@ _LABEL_3B77_SOUTH_ROOMCHANGE:	;We come here, when the player takes a southward m
 	or $01
 	ld (_RAM_DE55_WATERFALL), a
 +:				;Waterfall.
-	ld a, (_RAM_DE53_COMPASS_TYPE)
+	ld a, (_RAM_DE53_COMPASS)
 	inc a
 	and $02
 	xor $02
@@ -6081,7 +6281,7 @@ _LABEL_3C54_:
 	xor a
 	ret
 
-_LABEL_3C89_MOVEMENT_DIR:				;Runs on every frame.
+_LABEL_3C89_:
 	ld a, (_RAM_DE90_GAMEPAD)
 	ld e, a
 	and $0A
@@ -6097,9 +6297,9 @@ _LABEL_3C89_MOVEMENT_DIR:				;Runs on every frame.
 	and d
 	ld e, a
 	ld d, e
-	ld a, (_RAM_D904_HERO_DIRECTION);(ix+4)		;This is D904, the direction of the player.
+	ld a, (ix+4)
 	and a
-	jr z, +		;Are we facing right?
+	jr z, +
 	ld a, e
 	and $03
 	ld e, a
@@ -6112,7 +6312,7 @@ _LABEL_3C89_MOVEMENT_DIR:				;Runs on every frame.
 	and $FC
 	or e
 	ld e, a
-+:				;We are facing right.
++:
 	push hl
 	ld hl, _DATA_3CC4_
 	ld a, e
@@ -6137,7 +6337,7 @@ _LABEL_3CCF_MONST_AI:		;So, if this seems to be the enemy AI routine, If this is
 	ld a, (ix+9)	;D925 seems to be the first monster type in the given room\stage whatever.
 			;Monster types:
 				;00-nothing
-				;01-Goldmoon. Yes, even players can be monsters. When killed, they remains on screen.
+				;01-Goldmoon. Yes, even players can be monsters. When killed, it remains on screen.
 				;02-Sturm.
 				;03-Caramon
 				;04-Raistlin
@@ -6180,36 +6380,35 @@ _LABEL_3CCF_MONST_AI:		;So, if this seems to be the enemy AI routine, If this is
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	cp $1E
 	jr c, ++	;Is the player held? At least this is what this seems to do. Jump if this is less than 30. The numbers have to be investigated, but this holds the player as well.
-	ld a,(ix+9)	;The player is not held, so get through the next monster type.	;_RAM_D91C_NME_COORD_ARRAY+9	$D925
+	ld a, (ix+9)	;The player is not held, so get through the next monster type.
 	cp $15		;Is it a confined small dragon?(Or is the dragon confined?)
 	jr nz, +	;Jump if not.
-	ld a, (ix+24) 	;Confined dragon, but maybe this is that gargoyle. The latter.		;$D934
-	;These indexes are yet to be identified.
-	ld (ix+9), a	;D925
+	ld a, (ix+24)	;Confined dragon, but maybe this is that gargoyle. The latter.
+	ld (ix+9), a
 +:
-	ld a, (ix+10)	;D926
+	ld a, (ix+10)
 	cp $11		;Spider.
 	jp z, _LABEL_3D99_
-	ld (ix+10), $11	;D926
-	ld (ix+5), $00	;D921
-	ld (ix+22), $00	;D932
-	ld (ix+23), $00	;D933
-	ld a, (ix+9)	;D925
+	ld (ix+10), $11
+	ld (ix+5), $00
+	ld (ix+22), $00
+	ld (ix+23), $00
+	ld a, (ix+9)
 	call _LABEL_6DC9_NME_KILLED_INCKILLCOUNT
 	jp _LABEL_3D99_
 
 ++:
-	ld a, (ix+5)	;D921
+	ld a, (ix+5)
 	and a
 	jr z, _LABEL_3D38_
-	dec (ix+5)		;D921
-	ld a, (ix+10)	;D926
+	dec (ix+5)
+	ld a, (ix+10)
 	cp $0F
 	ret c
-	ld (ix+5), $00	;D921
+	ld (ix+5), $00
 _LABEL_3D38_:
-	ld l, (ix+22)	;D932
-	ld h, (ix+23)	;D933
+	ld l, (ix+22)
+	ld h, (ix+23)
 	ld a, h
 	or l
 	jr z, _LABEL_3D99_
@@ -6224,13 +6423,13 @@ _LABEL_3D38_:
 	ld a, b
 	and $80
 	or h
-	ld (ix+23), a	;D933
-	ld (ix+22), l	;D932
+	ld (ix+23), a
+	ld (ix+22), l
 	ld a, (ix+10)
 	cp $11
 	ret nz
-	ld (ix+22), $00	;D932
-	ld (ix+23), $00	;D933
+	ld (ix+22), $00
+	ld (ix+23), $00
 	bit 7, b
 	jr z, _LABEL_3D99_
 	ld a, (ix+24)
@@ -6254,7 +6453,7 @@ _LABEL_3D38_:
 	ret
 
 _LABEL_3D99_:
-	ld a, (ix+10)	;D926
+	ld a, (ix+10)
 	and a
 	jr nz, ++
 	ld l, (ix+0)
@@ -6264,7 +6463,7 @@ _LABEL_3D99_:
 	ld de, (_RAM_DE34_SCRN_SCROLL)
 	and a
 	sbc hl, de
-	jr c, +			;If this is NC, then the enemy does not attack.
+	jr c, +
 	ld de, $0120
 	sbc hl, de
 	ret nc
@@ -6287,7 +6486,7 @@ _LABEL_3D99_:
 	jr z, -
 	jp nc, _LABEL_3F7E_
 +++:
-	ld hl, _DATA_3DE7_ENEMY_BEHAVIOUR
+	ld hl, _DATA_3DE7_
 	ld a, (ix+9)
 	sub $09
 	add a, a
@@ -6303,23 +6502,18 @@ _LABEL_3D99_:
 	jp (hl)
 
 ; Jump Table from 3DE7 to 3DFC (11 entries, indexed by _RAM_D941_)
-_DATA_3DE7_ENEMY_BEHAVIOUR:	;This list is the enemy behaviour list.
-.dw _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E59_HOLLOW_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE
-.dw _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3E5E_NORMAL_ENEMY_TYPE _LABEL_3DFD_ENDBOSS
-;
-;_LABEL_3E59_HOLLOW_ENEMY_TYPE- This is the "hollow" enemy behaviour. The annoying sound is playing while the enemy is there.
-;_LABEL_3E5E_NORMAL_ENEMY_TYPE- This is the standard behaviour.
-;_LABEL_3DFD_ENDBOSS- As says on the tin. It lets Goldmoon use the staff throwing, and upon death, the game will throw the stones on you as it would. The 
-
+_DATA_3DE7_:
+.dw _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E59_ _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E5E_
+.dw _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3DFD_ENDBOSS
 
 ; 11th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3DFD_ENDBOSS:
 	xor a
-	ld (_RAM_DEF3_ENEMY_MOV_ENA), a		;Stop the endboss from moving. Usually monsters move when they see you.
-	ld (_RAM_D920_MNE1_DIR), a			;Set the direction to left.
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
+	ld (_RAM_D920_MNE1_DIR), a
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	and a
-	jr nz, +							;If falling stones are set, then jump and make them fall.
+	jr nz, +
 	ld a, $01
 	ld (_RAM_DEF4_FALLING_STONES), a
 	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
@@ -6356,15 +6550,12 @@ _LABEL_3DFD_ENDBOSS:
 	call _LABEL_3AAF_DRAWPROJECTILE
 	ret
 
-
 ; 5th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
-_LABEL_3E59_HOLLOW_ENEMY_TYPE:		;So, the "hollow" type is the same as the normal one, except it plays a sound effect while alive. VERY annoying.
+_LABEL_3E59_:
 	ld a, $02
-	call _LABEL_2FF_PREPNPLAYSFX	;Set the sound type, and play it.
+	call _LABEL_2FF_PREPNPLAYSFX
 ; 1st entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
-_LABEL_3E5E_NORMAL_ENEMY_TYPE:
-	;So, this seems like an easy type: Get the distance between the player and the enemy, and close on in them, then if they are in range, then attack.
-
+_LABEL_3E5E_:
 	ld l, (ix+0)
 	ld h, (ix+1)
 	ld de, (_RAM_D900_CHARA_COORD)
@@ -6617,8 +6808,8 @@ _LABEL_3F7E_:
 	ret
 
 ; Data from 4020 to 4EC3 (3748 bytes)
-.incbin "HOTL_mod_DATA_4020_.inc"   ;This is defunetly used, as the character movement will become crazy.
-;.org $4020
+.incbin "HOTL_mod_DATA_4020_.inc"
+
 ; Data from 4EC4 to 4F22 (95 bytes)
 _DATA_4EC4_:
 .db $10 $10 $2D $18 $0A $12 $1D $2A $1E $0B $15 $1A $2A $1D $0B $10
@@ -6893,11 +7084,11 @@ _LABEL_52D5_FALLINGTRAP_ACTIVATE:
 _LABEL_531C_:
 	cp $46
 	jp nz, _LABEL_536C_
-_LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are harming the player upon contact. This code could be updated to be a bit harder, like random times between proectiles and such, or slower,faster even turned off.
+_LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are harming the player upon contact.
 	push ix
-	ld a, (_RAM_DE58_UNUSED)
+	ld a, (_RAM_DE58_)
 	inc a
-	ld (_RAM_DE58_UNUSED), a	;This is also changed, and the value is not really used for anything, just wasting time or something.
+	ld (_RAM_DE58_), a
 	and $3F
 	cp $30	;48 Wait 48 frames I guess, then launch another projectile.
 	jr nc, +
@@ -6931,7 +7122,7 @@ _LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are har
 +:
 	pop ix
 	jp _LABEL_539C_INC_TRAP_ARRAY_ADDR
-.org $536C
+
 _LABEL_536C_:
 	jp nz, +
 	ret
@@ -6971,7 +7162,7 @@ _LABEL_53A3_FLOORCOLLISION: ;If this is just a return, then the floor collision 
 	jr nz, +	;Jump if we are not jumping. No pun intended.
 	ld a, (ix+11)	;So, this might be a jump check?
 	ld b, a
-	ld a, (_RAM_DE6E_STANDORRUN)	;FF is we are standing.
+	ld a, (_RAM_DE6E_)	;FF is we are standing.
 	cp b
 	ret nc
 	jr ++
@@ -7364,7 +7555,7 @@ _LABEL_5573_ENEMY_ACTION:
 +:
 	srl c
 ++:
-	;call _LABEL_57CC_DAMAGE_OTHERS		;Changed!
+	call _LABEL_57CC_DAMAGE_OTHERS
 	call _LABEL_5689_HITDETECT
 	ld a, $01
 	call _LABEL_2FF_PREPNPLAYSFX
@@ -7542,7 +7733,7 @@ _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCU
 	ld bc, $0007
 	ld a, (de)
 	ldir
-	ld (_RAM_DEC3_UNUSED), a
+	ld (_RAM_DEC3_), a
 	ld hl, (_RAM_DE6F_)
 	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_SECOND_HERO_COORD), hl
@@ -7583,43 +7774,43 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	call _LABEL_5BA7_RIVERWIND_PROT_SCRN
 	ret
 
-;_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. This is ;also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, but not as harshly. I ;thought this is a bug from the Raistlin code, but no, this is that part. If this is disabled, no other parties are damaged by the first companion's damage received.
-;;I think this should be disabled later on.
-;	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
-;	ld a, c
-;	srl a			;4
-;	srl a			;2
-;	srl a			;Divide by 2 three times. 1
-;	ld c, a			;c-->1
-;	srl a			;1/2=0
-;	add a, c		;0+1=1
-;	jr z, ++		;The jump is not taken.
-;	ld c, a			;Put this 1 to c.
-;	push de
-;	push hl
-;	push ix			;Save registers.
-;	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
-;	ld b, $03		;Three of them
-;-:
-;	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
-;	call _LABEL_6573_CALC_DMG
-;	ld de, _RAM_DBB5_GOLDMOON_HP
-;	add hl, de
-;	ld a, (hl)
-;	sub c
-;	jr c, +
-;	jr z, +
-;	ld (hl), a
-;+:
-;	inc ix
-;	djnz -
-;	pop ix
-;	pop hl
-;	pop de
-;++:
-;	pop bc
-;	ret
-;This mechanic is definetly not needed. This is not really fair I think, let's just damage the main player only. Also later on, this is also needed for the semi-single player thing I imagine for this.
+_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. If this is disabled, no other parties are damaged by the first companion's damage received.
+
+	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
+	ld a, c
+	srl a			;4
+	srl a			;2
+	srl a			;Divide by 2 three times. 1
+	ld c, a			;c-->1
+	srl a			;1/2=0
+	add a, c		;0+1=1
+	jr z, ++		;The jump is not taken.
+	ld c, a			;Put this 1 to c.
+	push de
+	push hl
+	push ix			;Save registers.
+	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
+	ld b, $03		;Three of them
+-:
+	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
+	call _LABEL_6573_CALC_DMG
+	ld de, _RAM_DBB5_GOLDMOON_HP
+	add hl, de
+	ld a, (hl)
+	sub c
+	jr c, +
+	jr z, +
+	ld (hl), a
++:
+	inc ix
+	djnz -
+	pop ix
+	pop hl
+	pop de
+++:
+	pop bc
+	ret
+
 ; Data from 5800 to 5818 (25 bytes)
 _DATA_5800_:
 .dsb 16, $00
@@ -7936,27 +8127,22 @@ _LABEL_59DE_DEPLETE_GMSTAFF:			;This really looks like when you use the Blue Cry
 	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl	;If we have enough mana, then load back the new value, then return.
 	ret
 _LABEL_59EE_CURE_CRITICAL_WOUNDS:	
-_LABEL_59F5_CURE_LIGHT_WOUNDS:	;To be honest, the separate healing spells are not really needed. Only one is enough.
 		ld a, $05	;Mana cost.
-
 		ld bc, $1606	;Okay, so this is the min and max value of the healing. It is very clever indeed.
-;		jr +
+		jr +
 	
-
-;An idea here would be that maybe the two can be reduced to one, and let is be skill based or something.
-;		ld a, $01	;Same.
-;		ld bc, $0801
-;+:	
+_LABEL_59F5_CURE_LIGHT_WOUNDS:	
+		ld a, $01	;Same.
+		ld bc, $0801
++:	
 		push bc
 		call  _LABEL_59DE_DEPLETE_GMSTAFF
 		pop bc
 		jp c,  _LABEL_5ADA_BL_STF_NOPWR	;As with other spells, this checks if the Staff had enough charge for the operation. If not, tell the user.
 		push bc
 	;.dsb 3,$ff
--:
 		call _LABEL_5AA2_SELECT_PLAYER_CLERICAL		;This lets you select who you want to to an action on, like this healing.
 		pop bc
-		ld bc, $1606
 		ld a, b
 		call _LABEL_652_LOAD_NEW_SCRN			;Does nothing if commented out.
 		add a, c
@@ -7981,7 +8167,7 @@ _LABEL_59F5_CURE_LIGHT_WOUNDS:	;To be honest, the separate healing spells are no
 		call _LABEL_6F3B__UPD_HUD			;Updates the HUD with the new health values.
 		ei
 		jp  _LABEL_6053_WAIT4BUTTN
-
+	
 _LABEL_5A2B_RESURRECT:	
 		ld a, $05					;Mana cost.
 		call  _LABEL_59DE_DEPLETE_GMSTAFF		;Check for mana.
@@ -8031,7 +8217,7 @@ _LABEL_5A2B_RESURRECT:
 		call _LABEL_6F3B__UPD_HUD		;Show the updated HUD.
 		ei
 		jp  _LABEL_6053_WAIT4BUTTN		;Wait for a button press, and we are good.
-
+	
 _LABEL_5A83_HEALING:	
 		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)	;Read from this address. It's usually 09 at the start of the game.
 		ld l, a
@@ -8040,7 +8226,6 @@ _LABEL_5A83_HEALING:
 		ld de,  _RAM_DEBC_INRAM_HUD_PORTRAITS
 		add hl, de
 		ld a, (hl)
-		;add a, $05
 		add a, a
 		add a, a
 		add a, a
@@ -8056,7 +8241,7 @@ _LABEL_5A83_HEALING:
 		add hl, de
 		pop de
 		ret	;This looks easy, but I can't wrap my head around this at the moment, but it works.
-.org $5AA2	
+	
 _LABEL_5AA2_SELECT_PLAYER_CLERICAL:	;This works for any spell, where you have to select a Companion for healing\resurrection.
 		xor a
 		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
@@ -8127,7 +8312,7 @@ _DATA_5B05_BL_STF_NOPWR_TXT:	;'The blue staff has no power at present.'
 .db $0D $70 $72 $65 $73 $65 $6E $74 $FF
 
 ; Data from 5B2E to 5B9C (111 bytes)
-_DATA_5B2E_MG_STF_NOPWR_TXT:	;'The Staff of Magius has no power at present.'
+_DATA_5B2E_MG_STF_NOPWR_TXT:	;'The Staff if Magius has no power at present.'
 .db $54 $68 $65 $20 $73 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61 $67
 .db $69 $75 $73 $0D $0D $68 $61 $73 $20 $6E $6F $20 $70 $6F $77 $65
 .db $72 $20 $61 $74 $0D $0D $70 $72 $65 $73 $65 $6E $74 $FF		;The first set of bytes are there for the text, the rest is the below code.
@@ -8246,7 +8431,7 @@ _LABEL_5BBE_CHECKWTRFALL:	;This seems to check the waterfall, and apply healing 
 	ld hl, $3908	;Set up the same screen address.
 	jr _LABEL_5BB5_WATERFALL_NOFXCONT
 
-_LABEL_5C07_ENTERMENU:
+_LABEL_5C07_:
 	call _LABEL_5C0C_PREPSCRN_4_MSG
 	jr _LABEL_5C65_ENTER_INGAME_MENU
 
@@ -8280,7 +8465,7 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	ld hl, (_RAM_DE62_)
 	ld (_RAM_DE64_), hl
 	xor a
-	ld (_RAM_C041_ACTIVE_MENUITEM),a;(_RAM_C042_LAST_ENTERED_MENU), a
+	ld (_RAM_C04E_ACTIVE_MENUITEM),a;(_RAM_C04F_LAST_ENTERED_MENU), a
 	ld a, $1F
 	ld (_RAM_FFFF_), a
 	ld b, $60
@@ -8303,7 +8488,7 @@ _LABEL_5C65_ENTER_INGAME_MENU:	;This is the entry point for the ingame menu, at 
 	ld c, $97
 	ld ix, _RAM_C000_RAM_START	;Loads tilemap data here.
 	call _LABEL_6AE6_MENU_TXTDRAW		;Draw the text.
-	ld a, (_RAM_C041_ACTIVE_MENUITEM);(_RAM_C042_LAST_ENTERED_MENU)		;Menu position we last entered.
+	ld a, (_RAM_C04E_ACTIVE_MENUITEM);(_RAM_C04F_LAST_ENTERED_MENU)		;Menu position we last entered.
 	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Copy it to the active menupoint ram value, so the game remembers where it came from.
 	ld iy, _DATA_6CAD_PALETTES	;We do some palette loading as well, i'm not sure how many bytes in that array is actially used. There are some text near it, the name of the Companions, but I can't be sure yet.
 _LABEL_5C89_:		;We use some fellthrough stuff.
@@ -8437,7 +8622,7 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 
 _LABEL_5D43_HERO_SELECT_MENU:	
 		xor a
-		ld (_RAM_C042_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
 		call _LABEL_6046_WAIT4GAMEPAD		;Wait for a button press.
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN	;Draw a solid color screen.
 		ld hl, $38C8				;This is a screen position in VRAM, we'll draw the text below there.
@@ -8748,7 +8933,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 		inc ix
 		inc ix
 		ld b, $20
-		ld hl, _RAM_C800_FIRSTROW_METATILES
+		ld hl, _RAM_C800_
 -:	
 		in a, (Port_VDPData)
 		ld (hl), a
@@ -8763,7 +8948,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 		di
 		call _LABEL_4BB_VDP_RAM_WRITESETUP
 		ei
-		ld de, _RAM_C800_FIRSTROW_METATILES
+		ld de, _RAM_C800_
 		ld b, $08
 -:	
 		ld a, (de)
@@ -8798,7 +8983,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 	
 ; Data from 5F98 to 5FDF (72 bytes)	
 _DATA_5F98_RECTANGLE1BITTILE:	
-;The below is a piece of graphics, the white rectangle that is shown around a selected hero. To be honest, this could been compressed a bit, but probably the bytes saved are not that significant.
+;The below is a piece of graphics, the white rectangle that is shown around a selected hero.
 	.db $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00
 	.db $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $C0
 	.db $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $03 $03
@@ -8808,7 +8993,7 @@ _DATA_5F98_RECTANGLE1BITTILE:
 ; 1st entry of Jump Table from 6CD5 (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _LABEL_5FE0_SPELLIST_JUMPS:	;Based on what we've selected, we'll go to the appropriate spell's code. This is used for both the Magical and Clerical stuff too.
 		call _LABEL_6046_WAIT4GAMEPAD		;Get the gamepad's values.
-		ld a, (_RAM_C041_ACTIVE_MENUITEM)
+		ld a, (_RAM_C04E_ACTIVE_MENUITEM)
 		and a
 		jr z, ++
 		dec a
@@ -8881,9 +9066,9 @@ _LABEL_605C_MAGICUSERSPELLMENU:
 		ld l, $04
 		ld h, $00
 		ld a, $01
-		ld (_RAM_C042_LAST_ENTERED_MENU), a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		dec a
-		ld (_RAM_C041_ACTIVE_MENUITEM), a
+		ld (_RAM_C04E_ACTIVE_MENUITEM), a
 		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
 -:	
 		ld a, (ix+0)
@@ -8928,7 +9113,7 @@ _LABEL_60B0_:
 		ld e, $04
 		ld d, $00
 		ld a, $02
-		ld (_RAM_C042_LAST_ENTERED_MENU), a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 -:	
 		ld a, (ix+0)
 		call _LABEL_6573_CALC_DMG
@@ -8964,14 +9149,14 @@ _LABEL_60B0_:
 		ld de, _DATA_AE69_CLERIC_SPLS_TXT2
 		ld iy, $6CF9
 +:	
-		ld (_RAM_C041_ACTIVE_MENUITEM), a
+		ld (_RAM_C04E_ACTIVE_MENUITEM), a
 		jp _LABEL_6A41_ENTERMENU
 	
 _LABEL_6106_:	
 		ld hl, _DATA_678C_DROPMENU_TXT
 		ld de, $6678
 		ld a, $06
-		ld (_RAM_C042_LAST_ENTERED_MENU), a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		jp +
 	
 ; 7th entry of Jump Table from 6CAF (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
@@ -8979,14 +9164,14 @@ _LABEL_6114_:
 		ld hl, _DATA_67A8_USEMENU_TXT
 		ld de, $6467
 		ld a, $03
-		ld (_RAM_C042_LAST_ENTERED_MENU), a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		jp +
 	
 _LABEL_6122_:	;TODO
 		ld hl, _DATA_679A_GIVEMENU_TXT
 		ld de, $66C2
 		ld a, $05
-		ld (_RAM_C042_LAST_ENTERED_MENU), a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		jp +
 	
 +:	
@@ -9095,14 +9280,12 @@ _LABEL_61CB_:
 		call _LABEL_6AE6_MENU_TXTDRAW
 		call _LABEL_61FA_DRAW_SCORESCREEN
 		ld a, $07
-		ld (_RAM_C042_LAST_ENTERED_MENU), a
+		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		call _LABEL_62B1_SCOREMENU_CONT_LOOP
 		jp _LABEL_6053_WAIT4BUTTN
 	
 
-_LABEL_61FA_DRAW_SCORESCREEN:
-	;JP _LABEL_63B6_
-	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN. I GUESS THERE IS ANOTHER PART WHERE THE TITLE PART(THE SCORE, GAME OVER OF WIN TEXT IS CHANGED, SINCE THE ENDING IS BASICALLY JUST THIS SCREEN WITH A DIFFERENT HEADER.)
+_LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN. I GUESS THERE IS ANOTHER PART WHERE THE TITLE PART(THE SCORE, GAME OVER OF WIN TEXT IS CHANGED, SINCE THE ENDING IS BASICALLY JUST THIS SCREEN WITH A DIFFERENT HEADER.)
 	ld b, $0A	;THERE ARE TEN MONSTER TYPES. CHANGING THIS NUMBER WILL LIMIT HOW MANY NUMBERS ARE DRAWN.
 	ld ix, _RAM_DE7A_KILLCOUNT_ARRAY	;GET THE ARRAY.
 	ld iy, _DATA_6E7F_SCORE_PALETTE		;THIS IS THE PALETTE FOR THE SCREEN.
@@ -9205,12 +9388,58 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 	jr z, _LABEL_62B1_SCOREMENU_CONT_LOOP			;IF WE HAVE NOT PRESSED EITHER, THEN LOOP BACK.
 	ret
 
+; Data from 62C2 to 6572 (689 bytes)	;This is not yet used even in the newer source file.
+;.db $C3 $C2 $62 $CD $46 $60 $CD $42 $6B $21 $7E $67 $FD $21 $00 $C1
+;.db $11 $00 $00 $DD $21 $00 $C3 $01 $00 $00 $3E $04 $32 $4F $C0 $CD
+;.db $1D $6A $11 $C8 $38 $DD $21 $00 $C3 $D5 $DD $E5 $06 $96 $0E $00
+;.db $2A $00 $D9 $11 $08 $00 $A7 $ED $52 $5D $54 $DD $21 $00 $D6 $30
+;.db $03 $11 $01 $00 $CB $3A $CB $1B $CB $3A $CB $1B $CB $3A $CB $1B
+;.db $CB $3A $CB $1B $3A $52 $DE $DD $BE $01 $20 $5C $DD $7E $04 $E6
+;.db $E0 $20 $55 $DD $7E $00 $A7 $28 $4F $FE $40 $30 $4B $DD $7E $02
+;.db $93 $38 $45 $FE $03 $30 $41 $3E $96 $90 $08 $79 $D9 $DD $E5 $D1
+;.db $26 $C4 $6F $08 $77 $62 $6B $DD $7E $00 $DD $E1 $D1 $D5 $E5 $4F
+;.db $21 $09 $68 $7E $23 $3C $20 $FB $0D $20 $F8 $01 $B6 $63 $CD $1D
+;.db $6A $E1 $D1 $7B $C6 $40 $5F $3E $00 $8A $57 $D5 $DD $E5 $E5 $DD
+;.db $E1 $D9 $0C $79 $FE $0B $28 $09 $D9 $11 $05 $00 $DD $19 $D9 $10
+;.db $93 $DD $E1 $D1 $79 $A7 $20 $17 $DD $21 $00 $C3 $21 $B5 $67 $01
+;.db $00 $00 $11 $00 $00 $CD $1D $6A $DD $21 $00 $C3 $11 $48 $3A $01
+;.db $53 $60 $21 $DB $67 $CD $1D $6A $11 $00 $C1 $06 $0C $FD $21 $00
+;.db $C3 $C3 $41 $6A $CD $60 $6B $06 $08 $7E $A7 $28 $10 $23 $23 $10
+;.db $F8 $11 $81 $A9 $06 $11 $FD $21 $F3 $6C $C3 $41 $6A $E5 $3A $40
+;.db $C0 $26 $C4 $6F $7E $11 $00 $D6 $6F $26 $00 $4F $44 $29 $29 $09
+;.db $19 $D1 $7E $FE $37 $CA $46 $64 $FE $02 $20 $1C $3A $BC $DE $FE
+;.db $03 $28 $68 $3A $BC $DE $CD $73 $65 $11 $B5 $DB $19 $7E $11 $83
+;.db $AB $3D $CA $32 $64 $77 $18 $28 $FE $01 $20 $3F $3A $BC $DE $A7
+;.db $28 $39 $FE $06 $28 $35 $FE $01 $28 $31 $FE $02 $28 $2D $3A $BC
+;.db $DE $CD $73 $65 $11 $B5 $DB $19 $7E $11 $BD $AB $3D $28 $01 $77
+;.db $D5 $CD $42 $6B $D1 $21 $08 $39 $CD $A6 $35 $CD $3B $6F $CD $B1
+;.db $62 $C3 $53 $60 $ED $7B $27 $DE $C3 $06 $09 $7E $36 $00 $12 $13
+;.db $01 $04 $00 $09 $7E $E6 $1F $12 $C3 $53 $60 $36 $00 $3E $02 $32
+;.db $29 $DC $C3 $53 $60 $3A $40 $C0 $87 $F6 $80 $26 $C3 $6F $7E $23
+;.db $66 $6F $4E $79 $FE $02 $CA $25 $66 $FE $03 $CA $CD $65 $FE $28
+;.db $CA $CD $65 $FE $0B $CA $FD $65 $FE $09 $CA $0C $66 $FE $0E $CA
+;.db $36 $66 $FE $0F $CA $36 $66 $FE $10 $CA $47 $66 $FE $06 $CA $E9
+;.db $65 $FE $01 $CA $9F $65 $FE $2F $CA $3D $65 $FE $30 $28 $7A $FE
+;.db $38 $28 $76 $FE $31 $CA $81 $65 $FE $32 $CA $45 $65 $FE $33 $28
+;.db $41 $FE $34 $28 $44 $FE $35 $28 $44 $FE $2D $DA $FC $64 $FE $37
+;.db $D2 $FC $64 $3A $BC $DE $FE $03 $20 $1A $79 $06 $02 $FE $2D $20
+;.db $02 $06 $05 $78 $32 $E6 $DE $3E $FF $32 $E7 $DE $36 $00 $11 $D1
+;.db $AE $C3 $8E $65 $11 $B7 $AA $C3 $8E $65 $3E $04 $CD $FF $02 $C3
+;.db $53 $60 $0E $02 $11 $37 $A9 $18 $09 $0E $01 $18 $02 $0E $04 $11
+;.db $53 $A9 $36 $00 $3A $BC $DE $CD $73 $65 $79 $01 $C0 $DB $09 $4E
+;.db $81 $01 $07 $00 $09 $77 $C3 $8E $65 $36 $00 $3E $05 $CD $52 $06
+;.db $C6 $02 $32 $F1 $DE $11 $22 $A9 $C3 $8E $65 $3E $08 $CD $52 $06
+;.db $3C $18 $07 $3E $07 $CD $52 $06 $C6 $04 $4F $36 $00 $3A $BC $DE
+;.db $CD $73 $65 $11 $B4 $DB $19 $11 $F9 $A8 $46 $23 $7E $81 $77 $B8
+;.db $38 $01 $70 $D5 $CD $3B $6F $D1 $C3 $8E $65 $EB $CD $73 $65 $EB
+;.db $C9
+
 
 
 -:	
 		jp   -
 	
-_LABEL_62C5_TAKE_MENU:	
+_LABEL_62C5_:	
 		call _LABEL_6046_WAIT4GAMEPAD
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		ld   hl, _DATA_677E_TAKEMENU_TXT
@@ -9219,7 +9448,7 @@ _LABEL_62C5_TAKE_MENU:
 		ld   ix, _RAM_C300_LEVEL_TILEMAP3
 		ld   bc, $0000
 		ld   a, $04
-		ld   (_RAM_C042_LAST_ENTERED_MENU), a
+		ld   (_RAM_C04F_LAST_ENTERED_MENU), a
 		call _LABEL_6A1D_MENU_PART_LOAD
 		ld   de, $38C8
 		ld   ix, _RAM_C300_LEVEL_TILEMAP3
@@ -9336,7 +9565,7 @@ _LABEL_637A_:
 		ld   iy, $C300
 		jp   _LABEL_6A41_ENTERMENU
 	
-_LABEL_63B6_:	;Take menu, when you have items and things.
+_LABEL_63B6_:	
 		call _LABEL_6B60_ITEM_MENUS_ENTRY
 		ld   b, $08
 -:	
@@ -9349,7 +9578,7 @@ _LABEL_63B6_:	;Take menu, when you have items and things.
 		ld   de, _DATA_A981_TAKEMENU_TXT
 		ld   b, $11
 		ld   iy, $6CF3
-		jp   _LABEL_6A41_ENTERMENU	;Draw the Take menu text on the screen.
+		jp   _LABEL_6A41_ENTERMENU
 	
 +:	
 		push hl
@@ -9593,7 +9822,7 @@ _LABEL_656D_:
 		ret
 
 
-_LABEL_6573_CALC_DMG:	;This does not just calcs damage, this is used for the characters as well.
+_LABEL_6573_CALC_DMG:	;This seems like the 
 	add a, a ;2X
 	add a, a	;4X
 	add a, a	;8X
@@ -9612,10 +9841,12 @@ _LABEL_6581_:
 		ld (hl), $00
 		ld a, $01
 		ld (_RAM_DEF3_ENEMY_MOV_ENA), a
-		ld de, _DATA_A8D4_MONST_SLOWDOWN
+		ld de, _DATA_A8D4_
 		jp _LABEL_658E_PLOT_FLSCRN_MSG
-
-	_LABEL_658E_PLOT_FLSCRN_MSG:	
+	; Data from 6581 to 658D (13 bytes)
+;	.db $36 $00 $3E $01 $32 $F3 $DE $11 $D4 $A8 $C3 $8E $65
+	
+_LABEL_658E_PLOT_FLSCRN_MSG:	
 		push de
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		pop de
@@ -9623,6 +9854,40 @@ _LABEL_6581_:
 		call _LABEL_35A6_RANDOM
 		call _LABEL_62B1_SCOREMENU_CONT_LOOP
 		jp _LABEL_6053_WAIT4BUTTN
+	;This has to be examined later, but this is valid code for sure. I have it saved somewhere else, so I can include it in the source, and analyze it.	
+	; Data from 659F to 678B (493 bytes)
+	;TODO CODE COMES HERE.
+;	.db $CD $6A $66 $1A $E6 $7F $77 $79 $12 $23 $36 $00 $6B $62 $01 $11
+;	.db $00 $A7 $ED $42 $06 $08 $7E $A7 $28 $07 $23 $23 $10 $F8 $C3 $53
+;	.db $60 $23 $36 $00 $2B $CD $5C $66 $C3 $53 $60 $C3 $52 $66 $3A $BC
+;	.db $DE $FE $04 $28 $05 $FE $06 $C2 $53 $60 $CD $6A $66 $E6 $7F $C2
+;	.db $53 $60 $1A $77 $3E $83 $12 $C3 $53 $60 $3A $BC $DE $FE $05 $C2
+;	.db $53 $60 $CD $6A $66 $E6 $7F $C2 $53 $60 $06 $06 $18 $1C $3A $BC
+;	.db $DE $FE $07 $C2 $53 $60 $CD $6A $66 $06 $0B $18 $0D $3A $BC $DE
+;	.db $FE $02 $C2 $53 $60 $CD $6A $66 $06 $09 $1A $E6 $7F $C2 $53 $60
+;	.db $77 $78 $12 $C3 $53 $60 $CD $6A $66 $1A $E6 $7F $C2 $53 $60 $3E
+;	.db $02 $12 $36 $00 $C3 $53 $60 $CD $6A $66 $1A $E6 $7F $FE $03 $28
+;	.db $12 $FE $28 $28 $0E $C3 $53 $60 $CD $6A $66 $1A $E6 $7F $FE $06
+;	.db $C2 $53 $60 $1A $E6 $7F $12 $CD $5C $66 $C3 $53 $60 $13 $1A $4E
+;	.db $77 $79 $12 $23 $13 $1A $4E $77 $79 $12 $C9 $E5 $3A $BC $DE $CD
+;	.db $73 $65 $11 $B1 $DB $19 $EB $E1 $C9 $3A $40 $C0 $87 $F6 $80 $26
+;	.db $C3 $6F $7E $23 $66 $6F $4E $36 $00 $3A $0A $D9 $FE $0F $CA $53
+;	.db $60 $21 $00 $D6 $11 $05 $00 $7E $A7 $28 $03 $19 $18 $F9 $71 $3A
+;	.db $52 $DE $23 $77 $ED $5B $00 $D9 $CB $3A $CB $1B $CB $3A $CB $1B
+;	.db $CB $3A $CB $1B $CB $3A $CB $1B $23 $73 $23 $36 $00 $23 $36 $00
+;	.db $C3 $53 $60 $3A $40 $C0 $87 $F6 $80 $26 $C3 $6F $7E $23 $66 $6F
+;	.db $E5 $AF $32 $FF $C7 $DD $21 $00 $C7 $11 $A2 $01 $D5 $DD $E5 $F3
+;	.db $CD $F1 $5E $FB $DD $E1 $D1 $CD $64 $5E $06 $0C $CD $58 $5E $3A
+;	.db $94 $DE $A7 $28 $F2 $3A $FF $C7 $4F $08 $79 $A7 $28 $73 $E1 $7E
+;	.db $E5 $21 $BC $DE $06 $00 $09 $FE $01 $7E $20 $21 $A7 $28 $1E $FE
+;	.db $06 $28 $1A $FE $01 $28 $16 $FE $02 $28 $12 $CD $42 $6B $11 $F6
+;	.db $AB $21 $08 $39 $CD $A6 $35 $CD $B1 $62 $C3 $70 $67 $CD $63 $6B
+;	.db $06 $08 $11 $15 $00 $19 $7E $A7 $ED $52 $A7 $20 $08 $CD $42 $6B
+;	.db $11 $38 $AC $18 $DC $7E $A7 $28 $1B $23 $23 $10 $F8 $08 $E1 $DD
+;	.db $21 $00 $C7 $F3 $CD $C6 $5E $FB $11 $BE $A9 $06 $11 $FD $21 $F3
+;	.db $6C $C3 $41 $6A $D1 $D5 $EB $7E $12 $36 $00 $23 $13 $7E $12 $36
+;	.db $00 $08 $E1 $DD $21 $00 $C7 $F3 $CD $C6 $5E $FB $C3 $53 $60 $20
+
 ;The above produced this code. TODO
 _LABEL_659F_:	
 		call _LABEL_666A_
@@ -9964,9 +10229,9 @@ _DATA_67F6_DELCHARS:
 	
 ; Data from 6809 to 6A1C (532 bytes)	
 _DATA_6809_ITEM_NAMES:	
-	.db $FF $42 $6C $75 $65 $20 $43 $72 $79 $73 $74 $61 $6C $20 $53 $74 $61 $66 $66 $0D ;Blue Crystal Staff
-	.db $FF $53 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61 $67 $69 $75 $73 $0D ;Staff of Magius
-	.db $FF $42 $6F $77 $0D $FF $4C $6F $6E $67 $73
+	.db $FF $42 $6C $75 $65 $20 $43 $72 $79 $73 $74 $61 $6C $20 $53 $74
+	.db $61 $66 $66 $0D $FF $53 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61
+	.db $67 $69 $75 $73 $0D $FF $42 $6F $77 $0D $FF $4C $6F $6E $67 $73
 	.db $77 $6F $72 $64 $0D $FF $44 $61 $67 $67 $65 $72 $0D $FF $48 $6F
 	.db $6F $70 $61 $6B $0D $FF $4A $6F $20 $73 $74 $69 $63 $6B $0D $FF
 	.db $48 $75 $6E $74 $69 $6E $67 $20 $4B $6E $69 $66 $65 $0D $FF $53
@@ -10590,16 +10855,14 @@ _DATA_6E93_SCR_SCRN_DATA:
 .dsb 21, $00
 .db $10 $27 $00 $00
 
-; Data from 6F05 to 6F05 (1 bytes)	;This is disabled, as the debug is not there anymore.
-;_DATA_6F05_:
-;.db $FF
-;
-_LABEL_6F06_HUD:	;THIS DRAWS THE HUD.
-	;ld a, (_RAM_DEBB_DEBUG_DELETEME)	;THIS SEEMS LIKE A DEBUG FLAG.
-	;and a
-	;jp z, _LABEL_7117_ENABLE_DEBUG	;IF THIS IS ZERO, ENABLE THE DEBUG PARTS, WHICH REPLACE THE HUD, AND DISABLES SOME FUNCTIONS.
+; Data from 6F05 to 6F05 (1 bytes)
+_DATA_6F05_:
+.db $FF
 
-	;This above is disabled, we don't need any debug.
+_LABEL_6F06_HUD:	;THIS DRAWS THE HUD.
+	ld a, (_RAM_DEBB_DEBUG)	;THIS SEEMS LIKE A DEBUG FLAG.
+	and a
+	jp z, _LABEL_7117_ENABLE_DEBUG	;IF THIS IS ZERO, ENABLE THE DEBUG PARTS, WHICH REPLACE THE HUD, AND DISABLES SOME FUNCTIONS.
 	di
 	ld a, $04
 	ld (_RAM_FFFF_), a
@@ -10625,9 +10888,9 @@ _LABEL_6F06_HUD:	;THIS DRAWS THE HUD.
 	ret
 
 _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
-	;ld a, (_RAM_DEBB_DEBUG_DELETEME)		;Changed!		The debug hud is not needed, since the debug parts will be removed.
-	;and a
-	;jp z, _LABEL_714D_DRAW_DEBUGHUD	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
+	ld a, (_RAM_DEBB_DEBUG)
+	and a
+	jp z, _LABEL_714D_DRAW_DEBUGHUD	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
 	ld a, $04
 	ld (_RAM_FFFF_), a
 	ld hl, (_RAM_DE5B_COMBAT_MARK)
@@ -10692,7 +10955,7 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 +++:
 	ld a, $04
 	ld (_RAM_FFFF_), a
-	ld a, (_RAM_DE53_COMPASS_TYPE)
+	ld a, (_RAM_DE53_COMPASS)
 	add a, a
 	add a, a
 	add a, a
@@ -10912,29 +11175,29 @@ _DATA_70F7_COMPASS_TILEMAP:
 .db $80 $03 $84 $03 $88 $03 $8C $03 $84 $03 $88 $03 $8C $03 $80 $03
 .db $88 $03 $8C $03 $80 $03 $84 $03 $8C $03 $80 $03 $84 $03 $88 $03
 
-;_LABEL_7117_ENABLE_DEBUG:	;CHANGED!
-;;THIS WILL PRINT SOME EXTRA INFO ON THE HUD, AND DISABLE THE REST OF THE INFO YOU ARE NORMALLY GIVEN.
-;	ld a, $1F
-;	ld (_RAM_FFFF_), a	;SELECT THE LAST BANK. It has the tiles for the menu drawing, text and so on.
-;	ld hl, _DATA_7C000_CHAR_BIO_TEXT
-;	ld de, $1000	;WHERE WE WILL DRAW ON THE TILEMAP.
-;	ld bc, $0C00
-;	di
-;	call _LABEL_48C_LOAD_VDP_DATA
-;	ei
-;	ld hl, $0080
-;	ld (_RAM_DE62_), hl
-;	ld hl, $3C00
-;	ld de, _DATA_6F05_	;I wonder what would this address do..
-;	di
-;	call _LABEL_35A6_RANDOM	;NO IDEA YET, IT DOES NOT DO ANYTHING NOTICEABLE.
-;	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NR WHERE THE PARTY IS.
-;	ld hl, $3CA0	;THIS IS THE TILEMAP VALUE FOR THE ROOM NR DISPLAY.
-;	call _LABEL_3582_DRAW_NUMBERS_DEBUG
-;	ld a, (_RAM_DE59_LEFT_DEBUG_NR)
-;	ld hl, $3CCC
-;	call _LABEL_3582_DRAW_NUMBERS_DEBUG
-;	ret
+_LABEL_7117_ENABLE_DEBUG:
+;THIS WILL PRINT SOME EXTRA INFO ON THE HUD, AND DISABLE THE REST OF THE INFO YOU ARE NORMALLY GIVEN.
+	ld a, $1F
+	ld (_RAM_FFFF_), a	;SELECT THE LAST BANK. It has the tiles for the menu drawing, text and so on.
+	ld hl, _DATA_7C000_CHAR_BIO_TEXT
+	ld de, $1000	;WHERE WE WILL DRAW ON THE TILEMAP.
+	ld bc, $0C00
+	di
+	call _LABEL_48C_LOAD_VDP_DATA
+	ei
+	ld hl, $0080
+	ld (_RAM_DE62_), hl
+	ld hl, $3C00
+	ld de, _DATA_6F05_	;I wonder what would this address do..
+	di
+	call _LABEL_35A6_RANDOM	;NO IDEA YET, IT DOES NOT DO ANYTHING NOTICEABLE.
+	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NR WHERE THE PARTY IS.
+	ld hl, $3CA0	;THIS IS THE TILEMAP VALUE FOR THE ROOM NR DISPLAY.
+	call _LABEL_3582_DRAW_NUMBERS_DEBUG
+	ld a, (_RAM_DE59_LEFT_DEBUG_NR)
+	ld hl, $3CCC
+	call _LABEL_3582_DRAW_NUMBERS_DEBUG
+	ret
 
 _LABEL_714D_DRAW_DEBUGHUD:	;If this is just a RET, then the debug HUD is not drawn. The normal hud under it is not updated, so players can still die, but you can use the warp and all that. Strangely, just above we also do something similar.
 	
@@ -11026,7 +11289,45 @@ _LABEL_71B9_INC_CHKNEXT_CHAR:		;The player is fine.
 	inc de
 	jp _LABEL_71B9_INC_CHKNEXT_CHAR
 
-.org $721C
+; Data from 71E8 to 721B (52 bytes)
+;.db $3A $C3 $DE $CD $73 $65 $11 $B4 $DB $19 $46 $23 $7E $4F $B0 $C8
+;.db $06 $07 $DD $21 $BC $DE $DD $7E $00 $CD $73 $65 $19 $7E $A7 $28
+;.db $05 $DD $23 $10 $F1 $C9 $DD $4E $00 $3A $C3 $DE $DD $77 $00 $79
+;.db $32 $C3 $DE $C9
+
+_LABEL_71E8_UNUSED:	;Does not seem to be referenced anywhere, and possibly not even used. No idea what this is.
+	;ret
+		ld a, (_RAM_DEC3_)		;Getting this value..
+		call _LABEL_6573_CALC_DMG
+		ld de, _RAM_DBB4_GOLDMOON_MAXHP
+		add hl, de
+		ld b, (hl)
+		inc hl
+		ld a, (hl)
+		ld c, a
+		or b
+		ret z
+		ld b, $07
+		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
+-:	
+		ld a, (ix+0)
+		call _LABEL_6573_CALC_DMG
+		add hl, de
+		ld a, (hl)
+		and a
+		jr z, +
+		inc ix
+		djnz -
+		ret
+	
++:	
+		ld c, (ix+0)
+		ld a, (_RAM_DEC3_)
+		ld (ix+0), a
+		ld a, c
+		ld (_RAM_DEC3_), a
+		ret
+
 _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	ld b, $05	;$05
 	ld ix, _RAM_D91C_NME_COORD_ARRAY
@@ -11473,7 +11774,7 @@ _LABEL_7771_DRAGONDEAD_STONES:	;This runs, when the Endboss, the Dragon is defea
 	jr nz, -
 	ld bc, $08C0
 	ld hl, $3800
-	ld de, _RAM_C800_FIRSTROW_METATILES
+	ld de, _RAM_C800_
 _LABEL_77CB_REMOVE_DRAGONHEAD:	;This removes the dragon, when the Crystal Staff hits the dragon.
 	;ret
 	push bc
@@ -11995,8 +12296,21 @@ _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the co
 
 ; Data from 7B16 to 7D0A (501 bytes)
 _DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll check later what are the attributes. There's a lot of stuff here.
-.db $18 $01 $40 $00 $00 $17 $01 $17 $00 $00 $1C $02 $37 $00 $00 $10
-.db $02 $09 $00 $14 $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
+;This goes to D600
+;The first byte is the item type.
+;Second byte is the visibility of the chest. It seems, $00 is invisible, $01 is the normal visible chests. There's supposed to be a value for invisible chests as well.
+;Third byte is the distance in tiles from the beginning of the room.
+;fourth byte is not yet known
+;fifth byte tells the game that the chest can be set to visible with the 'Detect Invisible' spell. So far, it does not matter the value as long as it's not zero.
+
+
+;$00 means the item is not valid anymore\picked up.
+
+.db $18 $01 $40 $00 $00 
+.db $17 $01 $17 $00 $00 
+.db $1C $02 $37 $00 $00 
+.db $10 $02 $09 $00 $14
+.db $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
 .db $01 $00 $00 $2C $04 $10 $00 $40 $45 $04 $12 $00 $80 $44 $04 $08
 .db $00 $80 $44 $04 $20 $00 $80 $31 $04 $26 $00 $60 $1A $05 $27 $00
 .db $00 $20 $06 $34 $00 $00 $29 $07 $29 $1F $00 $29 $07 $2D $1F $00
@@ -12076,11 +12390,11 @@ _DATA_7D6C_PLYRSTATS:
 .db $00 $00 	;If this is non-zero, the inventory will taken as full.
 .db $13 $13 	;Hitpoints.
 .db $00 $05 
-.db $00 $05 
-.db $0C $0C 	;12
-.db $10 $0C 
-.db $0E $11
-.db $06
+.db $00 $05 	;These might be damage points.
+.db $0C $0C 	;Strength and Intelligence
+.db $10 $0C 	;Wisdom and Constitution
+.db $0E $11		;Dexterity and Charisma
+.db $06			;No idea yet.
 ;00-No Ranged Weapon.
 ;01-Blue Crystal Staff.
 ;02-Staff of Magius.
@@ -12205,14 +12519,41 @@ _LABEL_7E74_:
 	ret
 
 ; Data from 7E8F to 7E99 (11 bytes)
-;_DATA_7E8F_VDPREGVALS:  ;This can be substituted with the other piece of VDP init data, and the seem to function the same. I'll mark this as unused.
-;.db $36 $E0 $FF $FF $FF $FF $FB $00 $06 $00 $FF
-;.db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F    <--this is the other piece of init data, that is currently used.
+_DATA_7E8F_VDPREGVALS:
+.db $36 $E0 $FF $FF $FF $FF $FB $00 $06 $00 $FF
+
 _LABEL_7E9A_REGION_CHKSETUP:	;Checks if the console is PAL or NTSC. The game is not released in NA, so this is not really needed. NTSC speed differences are getting compensated, and a different legal screen is shown in this mode. The game is not any faster though.
 	di
-	ld hl, _DATA_468_VDP_INIT_DATA;_DATA_7E8F_VDPREGVALS
+	ld hl, _DATA_7E8F_VDPREGVALS
 	call _LABEL_61F_WRITE_VDP_REG	;WE WRITE THE INITIAL VDP REGISTERS, GET A DEFAULT VDP STATE.
 	ei
+	halt
+	halt
+	halt
+	ld hl, _RAM_DE9D_TIMER
+	ld bc, $0000
+	halt
+	ld a, (hl)
+-:
+	inc bc
+	cp (hl)
+	jr z, - ;THIS IS SOME WAITING RIGHT HERE, BUT IT'S NOT REALLY NECESSARY.
+	di
+	ld a, b
+	cp $0D
+	jp nc, _LABEL_7E9A_REGION_CHKSETUP
+	cp $08
+	jp c, _LABEL_7E9A_REGION_CHKSETUP	;USELESS COMPARISON,WE'LL BRANCH BACK ANYWAYS.
+	ld h, b
+	ld l, c
+	ld de, $0A41
+	and a
+	sbc hl, de
+	ld a, $00
+	jr nc, +		;WON'T GET TAKEN.
+	ld a, $01
++:
+	ld (_RAM_DE23_CONSOLE_REGION), a	;GET THE CONSOLE'S REGION, AND THEN SET UP THE CORRECT LEGAL SCREEN. 0 IS PAL, ANYTHING ELSE IS NTSC.
 	ret
 
 _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
@@ -12235,7 +12576,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a
 	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT. After two months, I still have no idea what this does.
 	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
-	ld (_RAM_DEBB_DEBUG_DELETEME), a	;TURN DEBUG OFF.
+	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
 	ld a, (_RAM_DE6D_GAME_WIN)
 	ld (_RAM_DE6C_NME_MOVE7BIT), a	;BIT 7 WILL STOP ENEMIES FROM MOVING. BIT 6 DOES NOTHING YET.
 	xor a
@@ -12271,14 +12612,13 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 .BANK 2
 .ORG $0000
 
-; Data from 8000 to A739 (10042 bytes)	;It has the character BIO texts (not anymore though), and level background data. No floor data and things like that.
-.incbin "HOTL_mod_DATA_8000_notxt.inc"
+; Data from 8000 to A739 (10042 bytes)	;Still no idea what this does.
+.incbin "HOTL_mod_DATA_8000_.inc"
 
 ;.org $A73A
 ; Data from A73A to A7C1 (136 bytes)
-;_DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
-;.db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
-.org $A74A-$8000
+_DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
+.db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
 _DATA_A74A_COMPANION_STATS_TEXT:
 .dsb 12, $20
 .db $4D $49 $4E $20 $20 $20 $20 $20 $20 $20 $4D $41 $58 $0D $53 $74
@@ -12287,8 +12627,6 @@ _DATA_A74A_COMPANION_STATS_TEXT:
 .db $69 $74 $75 $74 $69 $6F $6E $0D $44 $65 $78 $74 $65 $72 $69 $74
 .db $79 $0D $43 $68 $61 $72 $69 $73 $6D $61 $0D $0D $48 $69 $74 $20
 .db $70 $6F $69 $6E $74 $73 $0D $0D $55 $73 $69 $6E $67 $3A $FF 
-
-;.org $27B5
 _DATA_A7B5_SCORETXT:	;This is literally a text for 'score'.
 .db $20
 .db $20 $20 $20 $20 $20 $53 $43 $4F $52 $45 $0D $0D
@@ -12318,7 +12656,7 @@ _DATA_A871_MENUTXT:	;THIS IS RELATED SOMEHOW TO THE INGAME MENU, WHEN YOU OPEN I
 .db $55 $73 $65 $0D $54 $61 $6B $65 $0D $47 $69 $76 $65 $0D $44 $72
 .db $6F $70 $0D $53 $63 $6F $72 $65 $0D $45 $78 $69 $74 $20 $6D $65
 .db $6E $75 $FF 
-_DATA_A8D4_MONST_SLOWDOWN:	;Potion effect texts.	;The monsters appear to slow down.
+_DATA_A8D4_:	;Potion effect texts.
 	.DB $0D $0D $0D $54 $68 $65 $20 $6D $6F $6E $73 $74 $65
 	.db $72 $73 $20 $61 $70 $70 $65 $61 $72 $0D $0D $74 $6F $20 $73 $6C
 	.db $6F $77 $20 $64 $6F $77 $6E $FF 
@@ -12328,7 +12666,7 @@ _DATA_A8F9_POTION_CURE_TXT:	;The potion cures some of your wounds.
 	.db $65 $20 $6F $66 $20 $79 $6F $75 $72 $20 $77 $6F $75 $6E $64 $73
 	.db $FF 
 _DATA_A922_U_FEEL_STRONGER_TXT:	;The first seemingly not used code points here, but that's just this.
-_DATA_A925_U_FEEL_STRONGER:	;You feel stronger.
+_DATA_A925_:	;You feel stronger.
 	.db $0D $0D $0D $59 $6F $75 $20 $66 $65 $65 $6C $20 $73 $74 $72
 	.db $6F $6E $67 $65 $72 $FF 
 _DATA_A937_MORE_CONFIDENCE_TXT:	;You feel more confident.	
@@ -12519,20 +12857,331 @@ _DATA_AF25_WINTEXT:	;Congratulations. You have recovered the Disks of Mishakal.
 	.db $20 $59 $6F $75 $20 $68 $61 $76 $65 $0D $72 $65 $63 $6F $76 $65
 	.db $72 $65 $64 $20 $74 $68 $65 $0D $44 $69 $73 $6B $73 $20 $6F $66
 	.db $20 $4D $69 $73 $68 $61 $6B $61 $6C $FF 
+	;CHANGED
+_DATA_AF5F_:	;This is some data, but seemingly nothing is read from here. Possibly level data, but the beginning is the ending text.
+;	.db $40 $00 $00 $00 $00 $00
+;	.db $00 $00 $40 $00 $00 $90 $40 $0A $00 $40 $40 $00 $00 $00 $00 $08
+;	.db $00 $00 $40 $00 $00 $00 $40 $0A $00 $00 $40 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FA $FD $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $5F $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $FF $5F $FE $F5 $FC $FF $DB $FF $FF $F5 $FE $F5 $FC $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FC $FF $DB $FF $FF $D4 $7E $F5 $FE $FF
+;	.db $DB $FF $FF $F4 $FE $F5 $FC $FF $DB $FF $FF $D4 $FE $F5 $FE $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FC $FF
+;	.db $DB $FF $FF $D4 $7E $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FE $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $7E $F7 $FC $FF
+;	.db $DB $FF $FF $F4 $FE $FD $FE $FF $DB $FF $DF $F4 $FE $F5 $FC $FF
+;	.db $DB $FF $FE $F4 $FE $FD $FE $FF $DB $FF $FF $D4 $FE $F5 $FC $FF
+;	.db $DB $FF $FE $F4 $50 $10 $0C $3F $0B $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $07 $40 $00 $50 $10 $0C $00 $0B $00 $00 $40 $08 $00 $00 $00
+;	.db $0B $00 $50 $40 $70 $10 $0C $BF $0B $00 $00 $00 $40 $00 $00 $00
+;	.db $0B $0F $50 $00 $00 $00 $00 $10 $0B $02 $40 $00 $1A $00 $00 $00
+;	.db $0B $04 $50 $40 $50 $00 $0C $3F $0B $00 $00 $00 $40 $00 $00 $00
+;	.db $0B $00 $50 $00 $40 $10 $00 $10 $0B $00 $00 $00 $08 $00 $00 $FF
+;	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $02 $00 $F0 $00
+;	.db $0B $04 $50 $00 $00 $10 $00 $10 $0B $00 $00 $00 $40 $10 $00 $00
+;	.db $0B $04 $50 $40 $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FE $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $7F $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $50 $10 $0C $BF $09 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $00 $10 $70 $00 $0C $00 $0B $00 $00 $00 $0A $00 $00 $00
+;	.db $0B $04 $50 $00 $50 $00 $0C $7F $4B $00 $00 $40 $00 $00 $00 $10
+;	.db $0B $04 $50 $00 $00 $00 $00 $00 $1B $00 $00 $00 $4A $00 $00 $00
+;	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $40 $00 $0C $00
+;	.db $0B $0D $40 $00 $40 $10 $00 $00 $0B $00 $00 $40 $4A $10 $10 $00
+;	.db $0B $04 $F0 $40 $70 $40 $0C $30 $0B $00 $00 $00 $48 $00 $00 $00
+;	.db $0B $00 $50 $00 $00 $00 $00 $00 $0B $0A $50 $00 $48 $00 $00 $10
+;	.db $0B $05 $50 $40 $40 $10 $08 $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $00 $00 $00 $40 $10 $0C $00 $08 $00 $00 $40 $4A $10 $00 $10
+;	.db $0B $00 $40 $40 $00 $10 $0C $02 $00 $00 $00 $00 $40 $10 $00 $00
+;	.db $0B $20 $00 $00 $00 $10 $00 $00 $09 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $50 $00 $00 $00 $0C $00 $00 $00 $00 $00 $50 $00 $00 $00
+;	.db $0B $00 $08 $00 $00 $10 $0C $00 $01 $00 $00 $00 $40 $00 $00 $10
+;	.db $0B $00 $40 $00 $10 $00 $08 $06 $00 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $40 $00 $40 $00 $00 $10 $09 $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $00 $40 $00 $FF $FF $FC
+;	.dsb 15, $FF
+;	.db $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $BF $FC $FF $FF $FF $FF $FF $FF $FF $FE $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 25, $FF
+;	.db $FB $FF $FF $FF $40 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $01 $00 $00 $10 $00 $00 $0C
+;	.dsb 9, $00
+;	.db $49 $40 $00 $00 $00 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $09 $00 $00 $00 $00 $10 $00 $20 $00 $00 $00 $00 $00 $00 $00 $00
+;	.db $09 $00 $00 $00 $00 $00 $0C
+;	.dsb 9, $00
+;	.db $01 $00 $00 $00 $00 $00 $0C $10 $40 $00 $00 $00 $00 $00 $00 $00
+;	.db $09 $00 $00 $00 $00 $00 $08 $00 $00 $00 $00 $00 $40 $00 $00 $00
+;	.db $09
+;	.dsb 15, $00
+;	.db $09 $00 $00 $40 $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F0 $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF $FC $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $4F $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $7B $FF $FF $D4 $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $7F
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $FD $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $FF $7F $75 $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $F5 $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $7F $7F $75 $DF $7F
+;	.db $FA $F9 $7E $7F $7F $75 $DF $7F $FA $F9 $7E $7F $7F $FD $5E $F7
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $FF
+;	.db $FA $F9 $7E $FF $FF $F7 $DF $FF $FA $F9 $FE $FF $7F $FD $DF $FF
+;	.db $FA $F9 $7E $FF $50 $00 $0E $57 $0A $00 $00 $10 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $70 $00 $0E $40 $0A $00 $00 $40 $08 $00 $00 $40
+;	.db $0A $00 $30 $40 $70 $00 $0F $7F $0A $00 $00 $00 $08 $00 $08 $50
+;	.db $0A $11 $10 $40 $00 $00 $00 $50 $0A $00 $00 $40 $0E $00 $00 $40
+;	.db $0A $00 $70 $40 $70 $00 $0E $57 $0A $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $11 $10 $10 $00 $00 $00 $00 $0A $00 $00 $10 $0C $00 $00 $5F
+;	.db $0A $10 $70 $00 $70 $00 $0F $5F $0A $00 $00 $50 $04 $00 $D0 $40
+;	.db $0A $00 $30 $10 $00 $00 $00 $40 $0A $00 $00 $00 $04 $00 $00 $50
+;	.db $0A $00 $30 $40
+;	.dsb 12, $FF
+;	.db $FA $F9 $FF $FF $7F $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $7F $FF $FE $FF $FA $FF $FF $FF $DF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FE $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FB $FF $FF $7F $FF $FF $7F $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $50 $00 $0A $57 $0A $00 $00 $00 $00 $00 $00 $40
+;	.db $0A $00 $00 $40 $70 $00 $0E $40 $0A $00 $00 $00 $0C $00 $00 $40
+;	.db $0A $00 $30 $00 $50 $00 $0E $57 $0A $00 $00 $00 $00 $00 $00 $40
+;	.db $0A $40 $00 $00 $00 $00 $00 $50 $1A $10 $20 $40 $0E $00 $00 $40
+;	.db $0A $0F $30 $50 $70 $00 $0F $5F $0A $00 $00 $40 $00 $00 $0E $40
+;	.db $0A $10 $10 $40 $00 $00 $00 $40 $0A $00 $00 $40 $0E $00 $00 $40
+;	.db $0A $40 $F0 $40 $50 $00 $0E $50 $0A $00 $00 $40 $08 $00 $00 $40
+;	.db $0A $00 $10 $00 $00 $00 $00 $40 $0A $10 $00 $40 $00 $00 $00 $00
+;	.db $0A $10 $10 $40 $00 $00 $0F $50 $00 $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $0E $50 $08 $10 $00 $50 $0F $00 $00 $40
+;	.db $0A $00 $20 $40 $00 $00 $0E $C4 $08 $00 $00 $00 $00 $00 $00 $50
+;	.db $0A $00 $00 $00 $00 $00 $00 $40 $0A $00 $00 $50 $00 $00 $00 $40
+;	.db $0A $00 $10 $40 $00 $00 $0A $40 $00 $00 $00 $00 $70 $10 $00 $50
+;	.db $0A $00 $00 $50 $00 $00 $0E $40 $0A $00 $00 $50 $10 $04 $00 $40
+;	.db $0A $00 $60 $40 $00 $00 $0E $55 $08 $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $00 $50 $0A $10 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $10 $50
+;	.dsb 60, $FF
+;	.db $FE
+;	.dsb 31, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $FF $FF $00 $00 $0A $40 $00 $00 $00 $40 $00 $00 $00 $50
+;	.db $08 $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $40 $00 $08 $40 $40
+;	.db $08 $00 $00 $40 $00 $00 $0A $40 $00 $10 $00 $00 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $00 $40 $08 $00 $00 $40 $00 $00 $00 $50
+;	.db $0A $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $00 $00 $00 $00 $50
+;	.db $0A $40 $00 $40 $00 $00 $0E $40 $08 $00 $00 $40 $00 $00 $00 $40
+;	.db $08 $00 $00 $00 $00 $00 $0E $40 $40 $00 $00 $00 $00 $00 $D0 $50
+;	.db $0A $00 $00 $40 $00 $00 $00 $40 $08 $00 $08 $40 $00 $10 $00 $40
+;	.db $08 $00 $00 $10 $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FA $F0
+;	.dsb 14, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FE $FF $0F $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FF $FF $7F $FE $FF $FB $FF $FE $F7 $F7 $F7 $FE $FF $FB $7F
+;	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $F7 $D7 $DE $7F $FB $FF
+;	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $77 $D7 $FE $7F $FB $7F
+;	.db $FE $F3 $F7 $D7 $DE $7F $FB $FF $FE $D3 $F7 $D7 $DE $7F $FB $FF
+;	.db $FE $F3 $F7 $D7 $DE $7F $FB $7F $FE $F3 $F7 $D7 $DE $3F $FB $7F
+;	.db $FE $F1 $F7 $D7 $FE $7F $FB $7F $FE $F1 $F7 $D7 $FE $FF $FB $FF
+;	.db $FE $F5 $FF $FF $FE $FF $FB $7F $FE $F3 $F7 $D7 $FE $FF $FB $7F
+;	.db $FE $F3 $FF $F7 $FE $7F $FB $FF $FE $F3 $F7 $D7 $FE $FF $FB $FF
+;	.db $FE $F7 $F7 $F7 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $40 $00 $D0 $00 $0B $10 $0E $01 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $70 $40 $D0 $00 $0B $7F $0E $00 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $00 $0E $01 $00 $00 $0A $00 $00 $10
+;	.db $0E $01 $F0 $00 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $70 $40 $00 $00 $00 $00 $0E $01 $00 $40 $08 $00 $20 $7F
+;	.db $0E $01 $F0 $40 $D0 $00 $0B $3F $1E $00 $00 $40 $48 $00 $D0 $00
+;	.db $0E $01 $70 $40 $00 $00 $00 $10 $0E $01 $40 $40 $00 $00 $00 $10
+;	.db $0E $01 $70 $40 $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FE $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $7F $FF $FF
+;	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F7 $FF $FF $D0 $00 $0B $5F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $60 $50 $D0 $00 $0B $10 $1E $00 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $70 $40 $D0 $10 $1B $1F $0E $01 $00 $00 $00 $00 $00 $10
+;	.db $0E $01 $30 $00 $00 $00 $00 $00 $1E $01 $10 $40 $0A $00 $00 $10
+;	.db $0E $0F $F0 $40 $D0 $00 $0B $1F $0E $01 $00 $00 $00 $00 $0B $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $00 $08 $00 $00 $10
+;	.db $0E $01 $F0 $40 $D0 $00 $0B $70 $0E $01 $00 $00 $08 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $0B $00 $0A $00 $00 $40 $0E $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $11 $80 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $40 $40 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $70 $40 $00 $00 $0B $10 $00 $00 $00 $40 $D0 $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $60 $40 $00 $00 $0B $1B $08 $00 $00 $40 $00 $00 $00 $00
+;	.db $0E $00 $40 $08 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $50 $50 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $DE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $00 $00 $0B $10 $00 $00 $00 $40 $00 $10 $00 $10
+;	.db $02 $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $00 $00 $10 $00 $00 $40 $00 $01 $00 $10
+;	.db $1A $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $00 $00 $00 $00 $10
+;	.db $02 $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $10 $00 $00 $10 $40 $00 $00 $10 $10
+;	.db $0A $00 $00 $40 $00 $00 $00 $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $00 $40 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F0 $FF $DF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $5F $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $D7 $DE $FF $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $F7 $FB $75 $FB $F1 $FE $7F $DE $77 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $D1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $5F $DE $77 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F5 $FE $7F $DE $FF $FB $F5 $FB $F1 $FE $FF $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $FF $FB $FF $FB $F1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F1 $FE $FF $50 $00 $0B $21 $03 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $01 $00 $00 $50 $00 $0A $00 $03 $01 $00 $00 $02 $00 $00 $00
+;	.db $0B $01 $20 $50 $D0 $00 $08 $85 $03 $00 $00 $40 $00 $00 $00 $00
+;	.db $03 $01 $00 $00 $40 $00 $00 $00 $03 $01 $00 $10 $06 $00 $00 $00
+;	.db $0B $01 $60 $10 $50 $00 $0A $C5 $0B $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $46 $00 $00 $E1
+;	.db $03 $01 $40 $50 $D0 $00 $08 $A1 $03 $01 $00 $50 $06 $00 $F0 $00
+;	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $04 $00 $00 $00
+;	.db $43 $01 $60 $00 $DF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $DF $FF $FB $FF $FB $FF $FF $FF $FE $FF $FF $FF
+;	.db $FB $FF $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FB $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $DF $FF $FB $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $50 $00 $08 $01 $03 $00 $00 $10 $00 $10 $00 $00
+;	.db $03 $01 $00 $50 $D0 $00 $08 $00 $03 $01 $00 $10 $02 $00 $00 $00
+;	.db $03 $41 $40 $10 $50 $00 $08 $A1 $03 $01 $00 $00 $00 $00 $00 $00
+;	.db $03 $41 $00 $40 $00 $00 $00 $00 $03 $01 $00 $40 $06 $00 $00 $00
+;	.db $03 $0F $00 $60 $50 $00 $08 $A1 $03 $00 $00 $00 $02 $00 $08 $00
+;	.db $03 $01 $00 $40 $00 $00 $00 $00 $03 $01 $00 $00 $06 $00 $00 $00
+;	.db $03 $01 $F0 $40 $50 $00 $08 $A0 $03 $01 $00 $10 $00 $00 $00 $00
+;	.db $03 $41 $00 $10 $40 $00 $00 $00 $0B $01 $00 $50 $00 $00 $00 $00
+;	.db $03 $01 $00 $40 $00 $00 $0A $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $00 $00 $10 $00 $00 $08 $00 $03 $00 $00 $40 $06 $00 $00 $00
+;	.db $03 $00 $00 $50 $10 $00 $0A $01 $00 $00 $00 $10 $00 $00 $00 $00
+;	.db $03 $00 $00 $50 $00 $00 $10 $00 $03 $10 $00 $50 $00 $00 $00 $00
+;	.db $0B $00 $00 $40 $00 $00 $2A $01 $00 $00 $00 $00 $50 $00 $00 $00
+;	.db $03 $00 $00 $50 $00 $00 $0A $00 $03 $00 $00 $40 $00 $00 $00 $10
+;	.db $03 $00 $00 $50 $10 $00 $08 $01 $01 $00 $00 $50 $10 $00 $00 $00
+;	.db $03 $00 $00 $00 $00 $00 $00 $00 $03 $00 $00 $40 $10 $00 $40 $00
+;	.db $0B $00 $00 $50 $FF $FF $FB
+;	.dsb 15, $FF
+;	.db $FB
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FB
+;	.dsb 25, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $40 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $01 $00 $00 $50 $00 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $00 $08 $40 $00 $00 $08 $00 $00 $00 $00 $50 $10 $00 $00 $00
+;	.db $03 $40
+;	.dsb 9, $00
+;	.db $40 $00 $00 $00 $00 $01 $00 $00 $40 $00 $00 $09 $00 $00 $00 $00
+;	.db $50 $00 $00 $00 $00 $03 $10 $00 $00 $00 $00 $0A $00 $00 $00 $00
+;	.db $40 $00 $00 $00 $00 $03 $00 $10 $50 $00 $00 $0B $01 $00 $00 $00
+;	.db $50 $00 $00 $70 $00 $03 $00 $00 $40 $50 $00 $00 $00 $01 $00 $04
+;	.db $10 $00 $00 $00 $00 $03 $00 $10 $40 $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB
+;	.dsb 10, $FF
+;	.db $7F $FF $FF $FF $FF $FB $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF
+;	.db $FF $FF $FF $FB $FF $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $0F $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $5F
+	
 
 .BANK 3		;THIS SEEMS TO BE THE LEVEL BACKGROUND. MAYBE FOR ALL LEVELS?
 .ORG $0000
 
 ; Data from C000 to FFFF (16384 bytes)
-.incbin "HOTL_mod_DATA_C000_.inc"	;This has the background tilemaps for sure.
+.incbin "HOTL_mod_DATA_C000_.inc"
 
 .BANK 4
 .ORG $0000
 
-; Data from 10000 to 121BF (8640 bytes)	;definetly maps, some later levels don't have any background, so this might be the key.
+; Data from 10000 to 121BF (8640 bytes)
 ;.DSB 8640,$00
-.incbin "HOTL_mod_DATA_10000_.inc"	;Seemingly not used by anything gameplay related. With the right -org-ing, the program works correctly. Maybe this is also a BG tilemap, but i'll play the game for longer to check it out.
-.org $121C0-$10000
+.incbin "HOTL_mod_DATA_10000_.inc"	;DOES NOT REALLY MAKE ANY DIFFERENCE IF THIS IS COMMENTED OUT.
+
 ; Data from 121C0 to 12305 (326 bytes)
 _DATA_121C0_HUD_TILEMAP:
 .db $80 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00
@@ -12753,7 +13402,7 @@ _DATA_2007C_:	;THIS MIGHT BE SOME SPRITE COORDINATES, AND SPRITE MAPS, AS THE PL
 .ORG $0000
 
 ; Data from 60000 to 600E5 (230 bytes)
-_DATA_60000_SOUND_NOTES:	;THESE MAY BE THE INSTRUMENT DATAS.
+_DATA_60000_:	;THESE MAY BE THE INSTRUMENT DATAS.
 .dsb 34, $00
 .db $E4 $0F $00 $0F $29 $0E $5D $0D $9C $0C $E7 $0B $3C $0B $9B $0A
 .db $02 $0A $73 $09 $EB $08 $6B $08 $F2 $07 $80 $07 $14 $07 $AE $06
@@ -12772,7 +13421,7 @@ _DATA_60000_SOUND_NOTES:	;THESE MAY BE THE INSTRUMENT DATAS.
 ; 11th entry of Pointer Table from 6064E (indexed by unknown)
 ; Data from 600E6 to 60126 (65 bytes)
 _DATA_600E6_:
-;.dsb 65,$00
+
 .db $13 $1E $01 $00 $01 $0C $0C $0C $0B $0B $0B $0A $0A $0A $09 $09
 .db $09 $08 $08 $08 $08 $07 $07 $07 $07 $07 $07 $06 $06 $06 $06 $05
 .db $05 $04 $00 $00 $00 $FF $01 $FE $02 $00 $02 $FE $02 $FF $01 $02
@@ -12886,16 +13535,8 @@ _DATA_6062C_:
 .db $3E $87
 
 ; Pointer Table from 6062E to 6064B (15 entries, indexed by _RAM_DD13_MUSIC_NR)
-.dw _DATA_60BE2_ _DATA_61276_ _DATA_60666_ ;This is the first song, the titlescreen music.
-.dw _DATA_6153E_ _DATA_61910_ _DATA_60666_ 
-.dw _DATA_60666_ _DATA_61CC2_ _DATA_61D0D_ 
-.dw _DATA_61D7A_ _DATA_60666_ _DATA_61E11_ 
-.dw _DATA_6203A_ _DATA_6224F_ _DATA_60666_
-
-
-
-
-
+.dw _DATA_60BE2_ _DATA_61276_ _DATA_60666_ _DATA_6153E_ _DATA_61910_ _DATA_60666_ _DATA_60666_ _DATA_61CC2_
+.dw _DATA_61D0D_ _DATA_61D7A_ _DATA_60666_ _DATA_61E11_ _DATA_6203A_ _DATA_6224F_ _DATA_60666_
 
 ; Data from 6064C to 6064D (2 bytes)
 .db $00 $00
@@ -12954,11 +13595,10 @@ _DATA_6071F_:
 _DATA_60732_SOUNDFX_TABLE:
 .dw _DATA_6066D_ _DATA_606CA_ _DATA_606DD_ _DATA_6070C_ _DATA_6071F_
 
-;_DATA_6073C_:
+
 ; Data from 6073C to 60BE1 (1190 bytes)
-.incbin "HOTL_mod_DATA_6073C_.inc" ;This is used, but strangely not referenced in code.
-;.DSB 1190,$00
-;.ORG $60BE2-$60000
+.incbin "HOTL_mod_DATA_6073C_.inc"
+
 ; 1st entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
 ; Data from 60BE2 to 61275 (1684 bytes)
 _DATA_60BE2_:
@@ -13916,7 +14556,7 @@ _LABEL_6286E_INIT_SOUND:	;THIS IS THE FIRST THING WE DO AFTER THE MAIN SOUND ROU
 	add a, a
 	ld e, a
 	ld d, $00
-	ld iy, _DATA_60000_SOUND_NOTES	;MY GUESS FOR THIS IS THAT IT'S THE INSTRUMENTS THE MUSIC USES. AT THE MOMENT, I DON'T WANT TO 
+	ld iy, _DATA_60000_	;MY GUESS FOR THIS IS THAT IT'S THE INSTRUMENTS THE MUSIC USES. AT THE MOMENT, I DON'T WANT TO 
 	add iy, de
 	ld e, (iy+0)
 	ld d, (iy+1)
@@ -13946,7 +14586,7 @@ _LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
 	jr _LABEL_628B2_CALC_CH_ADDRESS
 ;.org $628c4
 ; Data from 628C4 to 63FFF (5948 bytes)
-;.incbin "HOTL_mod_DATA_628C4_.inc"	;Absolutely no idea after all these months what this is for. It's not level data. It's not unused graphics. Not music. So I have no idea so far.
+.incbin "HOTL_mod_DATA_628C4_.inc"	;NO IDEA WHAT THIS IS. THE FIRST LEVEL DOES NOT USE IT, AND ITS NOT MUSIC EITHER, DESPITE BEING IN THAT BANK.
 
 ;So, the below banks are used for the compressed intro tilemaps, tiles and all that jazz. The very last bank is halfway used so far, because the letter tiles are stored in it. The rest, I have no idea yet what is used for. If you want to get rid of the intro, and the legal screens, this is where you want to start. The initial game is likely not using any of this at all. Almost a 100kb can be freed this way. Also, the second to last bank is almost empty, so code, and other things can go there, the software does not check. Additionally, I'll mark the offsets where the individual screens are loaded, but it's likely that i'll just rip these off, and use the free space for something else.
 
@@ -13954,39 +14594,39 @@ _LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
 .ORG $0000
 
 ; Data from 64000 to 67FFF (16384 bytes)
-_DATA_64000_COMP_GFX:
+_DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. IF COMMENTED OUT, OBVIOUSLY THE COMPRESSED STUFF AT THE BEGINNING WON'T SHOW.
 .incbin "HOTL_mod_DATA_64000_.inc"
 
 .BANK 26	;The US Gold Logo's compressed tilemap and stuff is here. Also the Title Screen with the Dragon Logo is also stored here, and Goldmoon's, Sturm's  tilemap and tiles as well.
-.ORG $0000	
+.ORG $0000
 
 ; Data from 68000 to 6BFFF (16384 bytes)
 .incbin "HOTL_mod_DATA_68000_.inc"
 
-.BANK 27	;Fifth bank to empty things.
+.BANK 27	;Compressed intro tilemaps and tile data.
 .ORG $0000
 ;Half of Caramon's graphics, Raistlin as a whole, Tanis's tilemap is here.
 ; Data from 6C000 to 6FFFF (16384 bytes)
-;.incbin "HOTL_mod_DATA_6C000_.inc"
+.incbin "HOTL_mod_DATA_6C000_.inc"
 
-.BANK 28	;Fourth bank that can be emptied.
+.BANK 28	;I'm not sure this has any level data yet, but the below is definetly true.
 .ORG $0000
 ;Tanis's, Tasslehoff's, Riverwind's and Flint's  intro tilemap and things are in here. Later on, we have to map the entry addresses where the tiles and stuff are stored.
 ; Data from 70000 to 73FFF (16384 bytes)
-;.incbin "HOTL_mod_DATA_70000_.inc"
+.incbin "HOTL_mod_DATA_70000_.inc"
 
 .BANK 29	;TASSLEHOFF AND FLINT HAS SOME GRAPHICS IN THIS, and some intro screens as well. Some part of the intro graphics are also reading from here.
 ;The intro legal screen's tilemap is here, that's for sure, then that continue to the next bank. Why not just move the whole piece of data there altogether? The NTSC legal screen is also stored here.
-.ORG $0000	;We have 32k empty now.
+.ORG $0000
 
 ; Data from 74000 to 77FFF (16384 bytes)
-;.incbin "HOTL_mod_DATA_74000_.inc"	;Data, the bank is almost full.
+.incbin "HOTL_mod_DATA_74000_.inc"	;Data, the bank is almost full.
 
-.BANK 30	;Okay, so we have a nice empty bank now! :)
+.BANK 30
 .ORG $0000
 
 ; Data from 78000 to 7BFFF (16384 bytes)
-;.incbin "HOTL_mod_DATA_78000_.inc"	;This bank is called, when the legal screen's things have to be decompressed, but the bottom part of the screen. Strange.
+.incbin "HOTL_mod_DATA_78000_.inc"	;This bank is called, when the legal screen's things have to be decompressed, but the bottom part of the screen. Strange.
 ;The "Based on the module DL1" part and the bottom of the screen. Why the game does it like this is beyond me.
 
 .BANK 31
