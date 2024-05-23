@@ -12298,11 +12298,11 @@ _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the co
 _DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll check later what are the attributes. There's a lot of stuff here.
 ;This goes to D600
 ;The first byte is the item type.
-;Second byte is the visibility of the chest. It seems, $00 is invisible, $01 is the normal visible chests. There's supposed to be a value for invisible chests as well.
+;Second byte is the Room Nr.
 ;Third byte is the distance in tiles from the beginning of the room.
 ;fourth byte is not yet known
 ;fifth byte tells the game that the chest can be set to visible with the 'Detect Invisible' spell. So far, it does not matter the value as long as it's not zero.
-
+;It seems the very last byte is a zero, so the game stops loading more things.
 
 ;$00 means the item is not valid anymore\picked up.
 
