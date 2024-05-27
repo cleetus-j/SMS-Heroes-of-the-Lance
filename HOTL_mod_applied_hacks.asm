@@ -189,7 +189,9 @@ _RAM_D912_HERO_GROUNDLEVEL2 dw				;The second "frame"'s hero ground level. If th
 .ende
 
 .enum $D91C export
-_RAM_D91C_NME_COORD_ARRAY db		;This is the first enemy's X coordinate. The next byte is the screen number, similarly to how the player movement works.
+_RAM_D91C_NME_COORD_ARRAY db		
+;This is the first enemy's X coordinate. 
+;The next byte is the screen number, similarly to how the player movement works.
 			;The next, third byte is the "ground" level for the enemy. Some of the enemies are floating, so this is why this might be important.
 			;Fourth byte hides the enemy.
 			;Fifth byte is the direction the enemy is facing. 01 is left, 00 is right.
@@ -356,21 +358,21 @@ _RAM_DE26_ db			;This does nothing at all. Even if it's zeroed, no difference in
 .ende
 
 .enum $DE29 export
-_RAM_DE29_ db			;Some level loading stuff, but not sure what it is.
+_RAM_DE29_METATILE_TILE_LOAD db			;Some level loading stuff, but not sure what it is.
 _RAM_DE2A_ dw			;Also used with level loading.
 .ende
 
 .enum $DE2E export
 _RAM_DE2E_BANKSWITCH_LEVEL db
 _RAM_DE2F_ dw
-_RAM_DE31_BANKSWITCH2 db	;These two are used for bankswitching. I'll check later what it does exactly.
+_RAM_DE31_METATILE_BANK db	;These two are used for bankswitching. I'll check later what it does exactly.
 _RAM_DE32_ dw
 _RAM_DE34_SCRN_SCROLL dw
 _RAM_DE36_ dw
 _RAM_DE38_ dw
 _RAM_DE3A_COLUMN_00_01 db
 _RAM_DE3B_ db
-_RAM_DE3C_ dw
+_RAM_DE3C_MAX_LVL_LEN2 dw
 _RAM_DE3E_MAX_LVL_LEN dw
 _RAM_DE40_ dw
 _RAM_DE42_ dw
@@ -644,8 +646,8 @@ call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
 
 _LABEL_206_ENTRY_AFTERCHECK:
 	di
-	ld hl, _RAM_DE29_
-	ld de, _RAM_DE29_ + 1
+	ld hl, _RAM_DE29_METATILE_TILE_LOAD
+	ld de, _RAM_DE29_METATILE_TILE_LOAD + 1
 	ld bc, $00CB
 	ld (hl), $00
 	ldir
@@ -1392,9 +1394,9 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	jr nz, +
 	ld a, (_RAM_DE52_ROOM_NR)
 	cp $01
-	jr nz, +
+	jr nz, +		;If the room nr is not 1, then jump to +.
 	ld a, $C0
-	ld (_RAM_DE6D_GAME_WIN), a
+	ld (_RAM_DE6D_GAME_WIN), a		;Mark the game as lost.
 +:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
@@ -1402,7 +1404,7 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 	inc a
 	ld (_RAM_DEF2_HOLD_PLYR), a
 	cp $02
-	jr nz, +
+	jr nz, +				;So, if the player has stopped, jump. If not, stop the player.
 	ld a, $FF
 	ld (_RAM_D907_HERO_ANIM_FRAME), a
 	ld a, (_RAM_DEF2_HOLD_PLYR)
@@ -1966,17 +1968,15 @@ _LABEL_BE0_:
 	ret
 
 _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets get into this one...
-	call _LABEL_BB7_CLR_SCREEN	;DOES NOTHING AS OF YET.
+	call _LABEL_BB7_CLR_SCREEN	
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld de, _RAM_D000_IN_RAM_SPRITETABLE + 1
-
 	ld bc, $01FF	;512 BYTES, so both tables are cleared at the same time.
 	ld (hl), c
 	ldir		;Sprites are cleared. End address is $D200.
 	ld hl, _RAM_D200_INRAM_TILEMAP
 	ld de, _RAM_D200_INRAM_TILEMAP + 1
 	LD BC, $03ff;$05FF	;1k C700
-
 	ld (hl), c
 	ldir		;We clear $FF again. $D700 is at the end.
 	ld hl, _RAM_C800_
@@ -1984,14 +1984,17 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	ld bc, $07FF	;2K but there is $100 missing.
 	ld (hl), $00
 	ldir		;We get around 2,5k of RAM cleared. CFFF is the end.
-	;I have no idea why this memory clearing is needed in three parts. One loop would be enough for this. Later on, I would like to optimize things like this.
+
+
+	;This so far is just clearing the RAM's part, where the level data goes.
+
 	ld a, (_RAM_DE52_ROOM_NR)		;So, the room nr. works like a pointer in this case,
-	ld hl, _DATA_1343_LVL_POINTERS - 2	;A little bit of offsetting is needed.
+	ld hl, _DATA_1343_LVL_POINTERS - 2	;This is needed, so the levels are in order.
 			;
 	add a, a	;The pointers are two bytes, so this is why *2. Level 1 would be 2 now of course.
 	ld e, a		;$02
 	ld d, $00	;$0002
-	add hl, de	;Add 4 bytes to the initial pointer. $1343 at the data points to --> .db $50 $00 $A1 $24 $5B $17 $0B $19 $00 $00
+	add hl, de	;Add 4 bytes to the initial pointer. This points to _DATA_13F1_
 	ld a, (hl)	;This is $50.
 	inc hl
 	ld h, (hl)	;$00
@@ -2008,12 +2011,12 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	and a		;3C3C.
 	sbc hl, de	;$02C0
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;Looks like this will be the room's length.
-	push af			;save A on the stack. It's still $20.
+	push af			;Save $40 on the stack
 	ld a, (_RAM_DEF4_FALLING_STONES)	;Check the falling stones value. I don't know why this is relevant here, as the only part where stones will fall on your head is after you defeat the dragon at the end.
 	cp $01
 	jr Nz, +		;Jump, if a!=1.
 	ld hl, (_RAM_DE3E_MAX_LVL_LEN)	;If this is 1, then get the max level len into hl. (We would still have it there either way.)
-	ld (_RAM_DE3C_), hl		;Store it here.
+	ld (_RAM_DE3C_MAX_LVL_LEN2), hl		;Store it here.
 	ld hl, $0240
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;Change the max len... Hm.
 +:
@@ -2028,32 +2031,33 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 ;So, what we've learned so far, is that the first two bytes on that level pointer thing is the maximum room lenght.
 
 +:
-	pop hl	;Okay, get HL back from the stack, which is still $1405.
+	pop hl	;HL $13F2 A:$50
 	srl a	
-	srl a	;$0F
-	ld b, a	;B is now $08.
-	inc hl
+	srl a	
+	ld b, a	;A $14 HL $13F1	$14
+	inc hl	;13F2
 	ld a, (hl)		;$00
-	inc hl
-	push hl			;HL is $1407 and pushed to stack.
-	ld hl, _DATA_12E1_	;7 entries this is some level separation thingy, the collision and enemies are not stored along with the level tilemap.
+	inc hl			;13F3
+	push hl			;HL is $13F3 and pushed to stack.
+	ld hl, _DATA_12E1_	;Load the address into HL.
+	;HL $12E1 a:$00 B:$14 DE:$0000
 	add a, a
 	ld e, a
 	ld d, $00
-	add hl, de		;For the first level, this is the same as that addres we've pushed.
-	ld a, (hl)		;$EF data at the source is: .dw _DATA_12EF_ _DATA_12F8_ _DATA_1301_ _DATA_130A_ _DATA_1313_ _DATA_131C_ _DATA_1325_
+	add hl, de		;
+	ld a, (hl)		; a:$EF
 	inc hl
-	ld h, (hl)		;$12
-	ld l, a			;12EF, the first one in the list. data there is: .db $02 $03 $05 $00 $80 $00 $80 $00 $80
-	ld a, (hl)		;02.
-	ld (_RAM_DE31_BANKSWITCH2), a	;So, some data is in different banks.
+	ld h, (hl)		; A:$12
+	ld l, a			;12EF
+	ld a, (hl)		;	A:$02.
+	ld (_RAM_DE31_METATILE_BANK), a	;Metatile bank.
 	;The default now, is that 02 is in slot 2, as it should be when the game is booted. Maybe this is for where the program should return to? I don't know yet.
 	inc hl
 	ld a, (hl)		;03.
 	ld (_RAM_DE2E_BANKSWITCH_LEVEL), a
 	inc hl
 	ld a, (hl)
-	ld (_RAM_DE29_), a	;05
+	ld (_RAM_DE29_METATILE_TILE_LOAD), a	;05	This is the tiles for the metatiles.
 	inc hl
 	ld e, (hl)		
 	inc hl
@@ -2063,12 +2067,12 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	ld e, (hl)
 	inc hl
 	ld d, (hl)
-	ld (_RAM_DE2F_), de	;Same $8000.
+	ld (_RAM_DE2F_), de	;Same $8000.	;These are some data pointers. This is also a metatile pointer.
 	inc hl
 	ld e, (hl)
 	inc hl
 	ld d, (hl)
-	ld (_RAM_DE2A_), de	;$8000.
+	ld (_RAM_DE2A_), de	;$8000.		
 	pop hl
 	ld e, (hl)
 	inc hl
@@ -2152,7 +2156,7 @@ _LABEL_D52_:
 	sbc hl, de
 	dec a
 	ld c, a
-	ld a, (_RAM_DE31_BANKSWITCH2)
+	ld a, (_RAM_DE31_METATILE_BANK)
 	ld (_RAM_FFFF_), a
 	ld de, (_RAM_DE32_)
 	add hl, de
@@ -2208,7 +2212,7 @@ _LABEL_D89_:
 	ld bc, $D200
 	and a
 	sbc hl, bc
-	ld a, (_RAM_DE29_)
+	ld a, (_RAM_DE29_METATILE_TILE_LOAD)
 	ld c, a
 	ld a, h
 	ld b, a
@@ -2232,7 +2236,7 @@ _LABEL_D89_:
 	ei
 	pop bc
 	pop hl
-	ld a, (_RAM_DE31_BANKSWITCH2)
+	ld a, (_RAM_DE31_METATILE_BANK)
 	ld (_RAM_FFFF_), a
 _LABEL_DF6_:
 	ld e, (hl)
@@ -3049,6 +3053,8 @@ _DATA_1343_LVL_POINTERS:
 ; 1st entry of Pointer Table from 1343 (indexed by _RAM_DE52_ROOM_NR)
 ; Data from 13F1 to 13FA (10 bytes)
 _DATA_13F1_:
+;So, starting to dissect this:
+;First byte is the level length.
 .db $50 $00 $A1 $24 $5B $17 $0B $19 $00 $00
 
 ; 2nd entry of Pointer Table from 1343 (indexed by _RAM_DE52_ROOM_NR)
@@ -6222,7 +6228,7 @@ _LABEL_3B77_SOUTH_ROOMCHANGE:	;We come here, when the player takes a southward m
 	ld (_RAM_D902_HERO_GROUNDLEVEL1), hl
 	ld (_RAM_D912_HERO_GROUNDLEVEL2), hl
 	jp _LABEL_726_LEVEL_WARP_LOAD
-
+	;The above looks like the part where the characters are falling down to the next level after the first one.
 _LABEL_3C32_:
 	ld b, $01
 	call _LABEL_3C54_
@@ -6517,7 +6523,7 @@ _LABEL_3DFD_ENDBOSS:
 	ld a, $01
 	ld (_RAM_DEF4_FALLING_STONES), a
 	ld hl, (_RAM_DE3E_MAX_LVL_LEN)
-	ld (_RAM_DE3C_), hl
+	ld (_RAM_DE3C_MAX_LVL_LEN2), hl
 	ld hl, $0240
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl
 +:
@@ -9537,7 +9543,7 @@ _LABEL_6316_:
 		ld   a, c
 		cp   $0B
 		jr   z, +
-_LABEL_637A_:	
+_LABEL_637A_:	;This is the take menu.
 		exx
 		ld   de, $0005
 		add  ix, de
@@ -9841,7 +9847,7 @@ _LABEL_6581_:
 		ld (hl), $00
 		ld a, $01
 		ld (_RAM_DEF3_ENEMY_MOV_ENA), a
-		ld de, _DATA_A8D4_
+		ld de, _DATA_A8D4_SLOW_MONST_TXT
 		jp _LABEL_658E_PLOT_FLSCRN_MSG
 	; Data from 6581 to 658D (13 bytes)
 ;	.db $36 $00 $3E $01 $32 $F3 $DE $11 $D4 $A8 $C3 $8E $65
@@ -10031,7 +10037,7 @@ _LABEL_666A_:
 		pop  hl
 		ret
 	
-_LABEL_6678_:	
+_LABEL_6678_:	;This does not seem to be used for now, at least that label is not.
 		ld   a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		add  a, a
 		or   $80
@@ -11177,6 +11183,7 @@ _DATA_70F7_COMPASS_TILEMAP:
 
 _LABEL_7117_ENABLE_DEBUG:
 ;THIS WILL PRINT SOME EXTRA INFO ON THE HUD, AND DISABLE THE REST OF THE INFO YOU ARE NORMALLY GIVEN.
+;TODO: This can be disabled\moved elsewhere, since the game will never use it, and really, aoart from debuggning, it has no use.
 	ld a, $1F
 	ld (_RAM_FFFF_), a	;SELECT THE LAST BANK. It has the tiles for the menu drawing, text and so on.
 	ld hl, _DATA_7C000_CHAR_BIO_TEXT
@@ -11200,7 +11207,7 @@ _LABEL_7117_ENABLE_DEBUG:
 	ret
 
 _LABEL_714D_DRAW_DEBUGHUD:	;If this is just a RET, then the debug HUD is not drawn. The normal hud under it is not updated, so players can still die, but you can use the warp and all that. Strangely, just above we also do something similar.
-	
+	;	TODO: This can be actually disabled, or moved somewhere else.
 	ld hl, (_RAM_D900_CHARA_COORD)
 	srl h
 	rr l
@@ -11331,71 +11338,75 @@ _LABEL_71E8_UNUSED:	;Does not seem to be referenced anywhere, and possibly not e
 _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	ld b, $05	;$05
 	ld ix, _RAM_D91C_NME_COORD_ARRAY
-	ld de, $001C
+	ld de, $001C	;28 bytes.
 -:
-	ld (ix+9), $00	;D925
-	ld (ix+10), $00	;D926
+	ld (ix+9), $00	;D925		;Reset enemy type.
+	ld (ix+10), $00	;D926		;Enemy health.
 	ld (ix+22), $00	;D932
 	ld (ix+23), $00	;D933
 	ld (ix+24), $00	;D934
-	ld (ix+5), $00	;D921
+	ld (ix+5), $00	;D921		;Direction.
 	add ix, de	;D938
 	djnz -		;INITING SOME RAM VALUES TO ZERO.
-	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NUMBER. EXAMPLE ROOM 1.
-	ld ix, _RAM_D91C_NME_COORD_ARRAY		;SET THE IX TO THE TABLE'S FIRST ADDRESS WE JUST RESET.
-	ld hl, _DATA_72D1_NME_ARRAY		;This is the full list of enemies in the ROM.
-	inc hl	;$72D2
-	ld b, a	;1-->B
+	;This inits the enemy array.It seems there is place for five-six enemies,
+
+	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NUMBER. EXAMPLE ROOM 4.
+	ld ix, _RAM_D91C_NME_COORD_ARRAY		
+	ld hl, _DATA_72D1_NME_ARRAY		
+	inc hl	
+	ld b, a	
 _LABEL_724D_NME:
 	ld de, $0006
--:
-	ld a, (hl)	;$01 IS ON THAT ADDRESS.
+-:				;We enter into a loop.
+	ld a, (hl)	;$$05.
 	and a
-	ret z		;RETURN IF VALUE 0.	IF THIS IS NZ, THEN MONSTERS WON'T SPAWN. TRAPS AND ITEMS STILL WORK THOUGH.
+	ret z		;return if the number is zero
 	cp b		;COMPARE WITH ROOM NR.
-	jr z, +		;IF THE ROOM NR IS THE SAME AS THE READ VAL, JUMP TO +. THE NZ HERE WILL SPAWN AS MANY ENEMIES AS THE ENGINE CAN, AND MAKE THE GAME REALLY REALLY HARD.
-	ret nc		;SETTING TO C WILL DISABLE SOME ENEMIES, BUT NOT ALL OF THEM. THE HUMAN-LIKE ENEMIES WILL NOT SPAWN.
-	add hl, de
-	jr -
-
+	jr z, +		;if we are at the room nr we have to, then jump ahead a bit.
+	ret nc		;return, if the room nr is less than what we have read.
+	add hl, de	;increment the offset\look at the next thing in the array.
+	jr -		;loop back
+	;So one monster entry is seven bytes.
 +:
-	dec hl
+	;We arrive here when we hit the right room nr.
+	dec hl		;Okay, so get the previous byte before the room.
 	ld a, (hl)
-	add a, $08
-	ld (ix+9), a
+	add a, $08	;Add eight to what we have read.
+	ld (ix+9), a	;This will be the enemy type.
 	cp $13
-	jr nz, +		;SET TO Z WILL SPAWN SOME ENEMY TYPES EARLY IN THE GAME, NEEDS INVESTIGATION.
-	ld (ix+5), $01
-+:
+	jr nz, +		;If the enemy type is the endboss, then jump ahead.
+	ld (ix+5), $01	;If this is not the endboss, then set a direction and continue.
++:					;ENDBOSS DETECTED.
 	inc hl
+	inc hl			;Jump ahead two bytes.
+	ld a, (hl)
+	ld (ix+0), a	;This is the X coordinate of the enemy.
+	ld (ix+16), a	;There is also a copy here.
 	inc hl
 	ld a, (hl)
-	ld (ix+0), a
-	ld (ix+16), a
-	inc hl
-	ld a, (hl)
-	ld (ix+1), a
+	ld (ix+1), a	;Screen nr.
 	ld (ix+17), a
 	ld (ix+7), $00
 	ld (ix+2), $74
-	ld (ix+18), $74
+	ld (ix+18), $74	;These are the monster's "ground" level. Since the game is not really the most classical platformer, this is actually needed to be put here.
 	ld (ix+3), $00
 	ld (ix+19), $00
-	ld a, (ix+9)
+	ld a, (ix+9)	;So get the enemy type again.
 	sub $09
 	ex de, hl
 	add a, a
 	push bc
 	ld c, a
 	ld b, $00
-	ld hl, _DATA_72BB_
+	ld hl, _DATA_72BB_NME_HP_CALC	;BC_000E DE:730A IX:D91C
 	add hl, bc
-	ld a, (hl)
+	ld a, (hl)	;$04
 	inc hl
-	ld c, (hl)
+	ld c, (hl)	;$00
 	ex de, hl
 	ld b, a
--:
+-:		;The above seems to calculate some health stuff I think, based on the enemy type.
+
 	ld a, $06
 	call _LABEL_652_LOAD_NEW_SCRN
 	add a, c
@@ -11411,15 +11422,22 @@ _LABEL_724D_NME:
 	inc hl
 	inc hl
 	jr _LABEL_724D_NME
-
+	;Okay, so this loops back, and loads the rest of the enemies for the stage, until there is none left to load.
 ; Data from 72BB to 72D0 (22 bytes)
-_DATA_72BB_:
-.db $02 $03 $04 $01 $06 $0C $05 $03 $03 $00 $03 $FE $03 $FE $04 $00
+_DATA_72BB_NME_HP_CALC:	;This is used for some enemy health calculation. It seems that it's semi-randomized.
+;.db $02 $03 $04 $01 $06 $0C $05 $03 $03 $00 $03 $FE $03 $FE $04 $00
+;.db $04 $03 $06 $00 $01 $50
+;These numbers are used in a calculation, that gives the enemy the final 
+;health when the stage is loaded.
+.db $02 $03 $04 $01 $06 $0C $05 $03 $06 $00 $03 $FE $03 $FE $04 $00
 .db $04 $03 $06 $00 $01 $50
 
+
 ; Data from 72D1 to 7564 (660 bytes)
-_DATA_72D1_NME_ARRAY:
-.db $05 $02 $0f $01 $0f $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03  ;.db $01 $01 $90 $01 $00 $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03
+_DATA_72D1_NME_ARRAY:	
+;See the RAM value where these are documented, whyt most of these bytes do, but only a few of them are inportant for modifications.
+;Basically every monster is a six byte entry.
+.db $01 $01 $90 $01 $00 $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03;$05 $02 $0f $01 $0f $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03  ;.
 .db $00 $00 $08 $02 $A4 $00 $00 $00 $02 $02 $C8 $00 $00 $00 $06 $02
 .db $18 $01 $00 $00 $07 $03 $2C $01 $00 $00 $01 $03 $26 $02 $00 $00
 .db $08 $03 $B2 $02 $00 $00 $08 $04 $40 $00 $00 $00 $01 $04 $58 $02
@@ -11461,7 +11479,7 @@ _DATA_72D1_NME_ARRAY:
 .db $09 $4B $80 $05 $00 $00 $09 $4C $80 $05 $00 $00 $05 $51 $00 $03
 .db $00 $00 $04 $52 $00 $06
 .dsb 14, $00
-
+;There is some empty space for enemies, maybe this can be used later.
 _LABEL_7565_TRAP_INIT:	;This seems to be related to the traps as well. Based on a quick look, maybe this is the projectile moving code. This runs on every frame.
 	ld b, $06
 	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
@@ -11742,7 +11760,7 @@ _LABEL_7771_DRAGONDEAD_STONES:	;This runs, when the Endboss, the Dragon is defea
 	ld a, (_RAM_DE76_CR_DMGLINK)
 	adc a, $00
 	ld (_RAM_DE76_CR_DMGLINK), a	;Turn off the damage link between Caramon and Raistlin. Since we will now run from the falling stones, it would be bad to lose Raistlin because of this link between the two brothers.
-	ld hl, (_RAM_DE3C_)
+	ld hl, (_RAM_DE3C_MAX_LVL_LEN2)
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl
 	ld a, $08
 	ld hl, _RAM_C834_
@@ -12132,6 +12150,7 @@ _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this goes to deallocate traps 
 
 _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used are not removed at the end of their fall, and remain at ground level, but at least they don't damage the player.
 	;Some stuff also tells me that this also does change the dead players to permadead as well upon exiting a level.
+	;Later Jimmy: Yes it does.
 	ld (ix+9), $00
 	ld a, (ix+24)
 	cp $0B
@@ -12183,7 +12202,7 @@ _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used
 +:
 	push hl
 	push bc
-	call _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE
+	call _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE	;This is where the game will put the dead characters as permanently deceased.
 	dec a
 	ld l, a
 	ld h, $00
@@ -12274,8 +12293,9 @@ _LABEL_7AED_:
 	rr e
 	ret
 
-_LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. If the companion does die, and this is just a RET, then there is no tombstone put on the stage.
-	;ret
+_LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. 
+;If the companion does die, and this is just a RET, then there is no tombstone put on the stage.
+	
 	ld a, (_RAM_DE52_ROOM_NR)	;Sample: 01 as level
 	add a, a	;2
 	ld hl, _DATA_1343_LVL_POINTERS - 2	;Get the level pointers-2 bytes. I think there is a label there for that too.
@@ -12303,8 +12323,10 @@ _DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll 
 ;fourth byte is not yet known
 ;fifth byte tells the game that the chest can be set to visible with the 'Detect Invisible' spell. So far, it does not matter the value as long as it's not zero.
 ;It seems the very last byte is a zero, so the game stops loading more things.
-
 ;$00 means the item is not valid anymore\picked up.
+
+;TODO: Move this to a different ROM bank, and expand it, if needed. An item randomizer would be nice to be here.
+;The two smaller pieces of data could be also moved as well.
 
 .db $18 $01 $40 $00 $00 
 .db $17 $01 $17 $00 $00 
@@ -12354,6 +12376,7 @@ _DATA_7D2C_:	;This is connected to some trap processing on the stages, or projec
 .db $13 $1C $1E $11 $01 $07
 
 _LABEL_7D42_LOAD_PLYRSTAT:	;Loads the player stats, inventory and all into RAM.
+	;TODO: Move this to a different bank, so some stuff can be freed here.
 	ld hl, _DATA_7D6C_PLYRSTATS
 	ld de, _RAM_DBA0_PLYR_STATS
 	ld b, $08	;08	;HOW MANY PLAYERS ARE TOTALLY.
@@ -12382,8 +12405,8 @@ _LABEL_7D42_LOAD_PLYRSTAT:	;Loads the player stats, inventory and all into RAM.
 	ret
 
 ; Data from 7D6C to 7E73 (264 bytes)
+;TODO: Move this to a different ROM bank to free up more space for permanent code, since this is loaded only once at the beginning of a new game.
 _DATA_7D6C_PLYRSTATS:
-;.dsb 264,$00
 ;Goldmoon's starting details.
 .dsb 16, $00	;Items.
 .db $01 $01 	;Starting item. 01 seems to be the Blue Crystal Staff.
@@ -12522,7 +12545,11 @@ _LABEL_7E74_:
 _DATA_7E8F_VDPREGVALS:
 .db $36 $E0 $FF $FF $FF $FF $FB $00 $06 $00 $FF
 
-_LABEL_7E9A_REGION_CHKSETUP:	;Checks if the console is PAL or NTSC. The game is not released in NA, so this is not really needed. NTSC speed differences are getting compensated, and a different legal screen is shown in this mode. The game is not any faster though.
+_LABEL_7E9A_REGION_CHKSETUP:	
+;Checks if the console is PAL or NTSC. 
+;The game is not released in NA, so this is not really needed. NTSC speed differences are getting compensated, and a different legal screen is shown in this mode. 
+;The game is not any faster though.
+;TODO: This code is not really needed, so removing it, or moving it to a different bank would be preferable.
 	di
 	ld hl, _DATA_7E8F_VDPREGVALS
 	call _LABEL_61F_WRITE_VDP_REG	;WE WRITE THE INITIAL VDP REGISTERS, GET A DEFAULT VDP STATE.
@@ -12557,6 +12584,7 @@ _LABEL_7E9A_REGION_CHKSETUP:	;Checks if the console is PAL or NTSC. The game is 
 	ret
 
 _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
+	;TODO: This code can be also moved elsewhere, since it does not include any other bankswitching, therefore it should be good for relocation.
 	xor a
 	ld l, a
 	ld h, a			;Reset HL.
@@ -12601,7 +12629,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ret
 
 ; Data from 7F3A to 7FEF (182 bytes)
-;.dsb 182, $00	;We have a lot of empty space at the end of the very first bank to play with. It's not code, and nothing reads this.
+;This is empty space, and it could be even more, since many things can be moved around without much of a hassle.
 
 .BANK 1 SLOT 1
 .ORG $0000
@@ -12647,7 +12675,7 @@ _DATA_A7C2_SCORE_SCR_TEXT:	;MONSTERS KILLED, AND OTHER TEXT. USED ON THE SCORE S
 .db $6E $74 $73 $20 $66 $6F $72 $20 $69 $74 $65 $6D $73 $3A $FF
 
 ; Data from A871 to AC6B (1019 bytes)
-_DATA_A871_MENUTXT:	;THIS IS RELATED SOMEHOW TO THE INGAME MENU, WHEN YOU OPEN IT UP, COMMENTING IT OUT WILL GLITH THE HUD OUT, AND THE MENU AS WELL.
+_DATA_A871_MENUTXT:	;Menu text.
 
 .db $20 $20 $4D $41 $49 $4E $20 $4D $45 $4E $55 $0D $48 $65 $72 $6F
 .db $20 $73 $65 $6C $65 $63 $74 $0D $4D $61 $67 $69 $63 $20 $75 $73
@@ -12656,7 +12684,7 @@ _DATA_A871_MENUTXT:	;THIS IS RELATED SOMEHOW TO THE INGAME MENU, WHEN YOU OPEN I
 .db $55 $73 $65 $0D $54 $61 $6B $65 $0D $47 $69 $76 $65 $0D $44 $72
 .db $6F $70 $0D $53 $63 $6F $72 $65 $0D $45 $78 $69 $74 $20 $6D $65
 .db $6E $75 $FF 
-_DATA_A8D4_:	;Potion effect texts.
+_DATA_A8D4_SLOW_MONST_TXT:	;Potion effect texts.	"The monsters appear to slow down."
 	.DB $0D $0D $0D $54 $68 $65 $20 $6D $6F $6E $73 $74 $65
 	.db $72 $73 $20 $61 $70 $70 $65 $61 $72 $0D $0D $74 $6F $20 $73 $6C
 	.db $6F $77 $20 $64 $6F $77 $6E $FF 
@@ -12708,7 +12736,9 @@ _DATA_AA1B_RAIST_STAFF_NOTREADY:	;Raistlin has not readied the staff of Magius. 
 ; Data from AA5F to AADA (124 bytes)	
 _DATA_AA5F_RAISTLIN_NOT_4_TXT:	;Magic user spells. Raistlin is not one of the first four characters. Exit menu.
 	.db $4D $41 $47 $49 $43 $20 $55 $53 $45 $52 $20 $53 $50 $45 $4C $4C
-	.db $53 $0D $0D $0D $52 $61 $69 $73 $74 $6C $69 $6E $20 $69 $73 $20
+	.db $53 $0D $0D $0D 
+;Raistlin is not one of the first four characters.
+	.db $52 $61 $69 $73 $74 $6C $69 $6E $20 $69 $73 $20
 	.db $6E $6F $74 $20 $6F $6E $65 $20 $6F $66 $0D $0D $20 $20 $74 $68
 	.db $65 $20 $66 $69 $72 $73 $74 $20 $66 $6F $75 $72 $0D $0D $20 $20
 	.db $20 $20 $63 $68 $61 $72 $61 $63 $74 $65 $72 $73 $0D $0D $45 $78
