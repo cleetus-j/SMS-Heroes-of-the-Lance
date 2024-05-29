@@ -91,7 +91,7 @@ _RAM_C720_NEW_HERO_SELECTIONTILES db	;Used to hold the tiles of the hero, while 
 .enum $C7FE export
 _RAM_C7FE_HEROSELECT_VAR db
 _RAM_C7FF_FIRST_SELECTED_COMPANION db
-_RAM_C800_ dsb $24		;This is the actual tilemap for the screen! If you modify these, the relevant 16x16 metatiles are changed. Starting at $C800 would modify the very first metatile.
+_RAM_C800_1ST_METATILE_ROW dsb $24		;This is the actual tilemap for the screen! If you modify these, the relevant 16x16 metatiles are changed. Starting at $C800 would modify the very first metatile.
 _RAM_C824_ dsb $10
 _RAM_C834_ dsb $4
 .ende
@@ -400,7 +400,7 @@ _RAM_DE5A_ db
 _RAM_DE5B_COMBAT_MARK dw	;If this is not zero, we are in combat, and able to attack.
 _RAM_DE5D_ db
 _RAM_DE5E_FLOORFALLXCOORD dw
-_RAM_DE60_ dw
+_RAM_DE60_ dw				;This one looks like some pointer in where the next door will take you.
 _RAM_DE62_ db
 _RAM_DE63_ db
 _RAM_DE64_ dw
@@ -448,15 +448,15 @@ _RAM_DEAF_ db
 .ende
 
 .enum $DEB3 export
-_RAM_DEB3_ dw
+_RAM_DEB3_SPRITE_SET_ADDR dw				;Used with the sprites double buffer system. If this is frozen, then the game won't switch from one sprite set from another, and all of them will be garbled after some point.
 _RAM_DEB5_FRAMESET db
-_RAM_DEB6_ db
+_RAM_DEB6_PLYR_FLIP db		;This looks like something for sprite flipping. The game does not store separate sprites for the left-right oriented sprites, just the right.
 _RAM_DEB7_INRAM_SPRITETABLE_TEMP dw
 _RAM_DEB9_ANIM_POINTER dw		;Some pointer, that helps with animations, but the connecting data is not obvious what it is now.
 _RAM_DEBB_DEBUG db
 _RAM_DEBC_INRAM_HUD_PORTRAITS db
 _RAM_DEBD_SECOND_HERO_ARRAY dsb $6	;A small array starting with the second hero.
-_RAM_DEC3_ db
+_RAM_DEC3_LAST_HERO db				;This holds the last hero's number in the array.
 _RAM_DEC4_PALETTE_LOAD_POINTER db	;This is just a pointer, from where the code gets the palette data, and showes it out to the VDP directly.
 _RAM_DEC5_FADEOUT_WORKPAL dsb $f	;The code writes here the temporary palette for fadeout.
 .ende
@@ -467,9 +467,9 @@ _RAM_DED4_FADEOUT_BG_PAL dsb $F		;It's not marked in the code, but here, some pa
 .ende
 
 .enum $DEE4 export
-_RAM_DEE4_ db
+_RAM_DEE4_DECOMP db			;Used around the decompression routines, and one other place, but this is possibly free to use otherwise.
 _RAM_DEE5_MENUORGAME db			;If this is $FF, then we are in a menu, or info screen, anything not gameplay.
-_RAM_DEE6_ db				;I don't know what these do at the moment.
+_RAM_DEE6_ db				;I don't know what these do at the moment. It seems to be around Raistlin's spells and things like that.
 _RAM_DEE7_ db				;Used with the magic missile, but I just don't know what it is.
 _RAM_DEE8_PROJECTILE_TYPE db		;What the spellcasters will shoot. Or if you use a bow, that would also count as a similar projectile.
 _RAM_DEE9_HOLDPERSON_VAR db		;Used with the spell, but not sure yet what it does, maybe some temp space.
@@ -559,7 +559,7 @@ _LABEL_38_:
 	reti
 
 ; Data from 59 to 63 (11 bytes)
-.dsb 11, $00	;11 
+;.dsb 11, $00	;11 
 .org $0064	;With the ORG, this above is not needed, we can use that space for something later.
 _LABEL_64_:
 	dec a
@@ -607,6 +607,7 @@ _LABEL_66_:
 
 .org $00AB
 ; Data from AB to 1FF (341 bytes)
+;This is actually used in many places and in many ways.
 _DATA_AB_:	
 .dsb 32, $00
 .db $04 $A4 $00 $00 $04 $A4 $08 $00 $04 $A4 $10 $00 $04 $A4 $18 $00
@@ -658,14 +659,14 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	call _LABEL_61F_WRITE_VDP_REG	;DO SOME VDP HOUSEKEEPING AGAIN.
 	call _LABEL_63B_CLEAR_SAT	;CLEAR SAT.
 	;ld a, (_RAM_DE97_)
-	nop
-	nop
-	nop
-	;and a
-	nop
-	;jr nz, +
-	nop
-	nop
+	;nop
+	;nop
+	;nop
+	;;and a
+	;nop
+	;;jr nz, +
+	;nop
+	;nop
 	;ld a, $18
 	;ld (_RAM_FFFF_), a	;lOAD BANK 24.
 	;call _LABEL_623E8_PREP_MUS_BANK
@@ -695,16 +696,16 @@ _LABEL_206_ENTRY_AFTERCHECK:
 ;	ld bc, $1415	;NTSC LEGAL SCREEN DATA OFFSET.
 ;+:
 ;	ld a, b	
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop	
+	;nop
+	;nop
+	;nop
+	;nop
+	;nop
+	;nop
+	;nop
+	;nop
+	;nop
+	;nop	
 
 ;The region check for the legal screen is now disabled.
 	push bc
@@ -719,6 +720,7 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	xor a
 	ld (_RAM_C000_RAM_START), a;($C000), a 
 	ld (_RAM_C001_),a;($C001), a
+.org $275
 _LABEL_275_:
 	ld bc, $01F4		;SET UP A TIMER.
 -:
@@ -777,7 +779,7 @@ _LABEL_2D7_GAME_INIT:	;THIS IS WHEN YOU START A NORMAL GAME.
 	ld a, $FF
 	ld c, $02
 	call _LABEL_6242B_SET_MUS	;SELECT STAGE MUSIC
-	call _LABEL_3504_CHAR_BIOS		;SHOW THE CHAR. BIOS.
+	;call _LABEL_3504_CHAR_BIOS		;SHOW THE CHAR. BIOS. This at the moment is not really needed, i'll remove it.
 	jp _LABEL_697_GAME_ENTRY			;GO TO GAME.
 
 _LABEL_2ED_GAME_DEMO:	;DISABLES PLAYER INPUT, LOADS SIMULATED ONES, AND STARTS THE GAME.
@@ -803,7 +805,7 @@ _LABEL_2FF_PREPNPLAYSFX:	;If this is returned early, then there will bw no sound
 	ld (_RAM_FFFF_), a	;And switch back.
 	pop bc			;Restore this older value.
 	ret
-
+.org $314
 ; Data from 314 to 334 (33 bytes)		;This is connected with some animations, but not sure what this is yet.
 _DATA_314_:
 .db $00 $01 $01 $01 $01 $02 $02 $02 $02 $03 $03 $03 $03 $04 $04 $04
@@ -841,19 +843,20 @@ _DATA_3B8_:
 _DATA_3C8_:
 .db $00 $3F $2A $15 $1F $0F $0B $07 $06 $02 $01 $2F $03 $33 $33 $33
 
-; Data from 3D8 to 467 (144 bytes)
-_DATA_3D8_CHAR_PALS:
-.dsb 15, $00
-.db $3F $00 $15 $2A $3F $04 $19 $25 $10 $2B $17 $03 $01 $06 $1B $2F
-.db $3F $00 $15 $2A $01 $06 $1B $2F $10 $24 $39 $3E $11 $05 $1A $2F
-.db $3F $00 $01 $16 $2B $02 $07 $0B $06 $1B $2F $3F $2A $15 $10 $25
-.db $3A $00 $10 $24 $39 $3E $03 $02 $01 $06 $1B $2F $16 $2B $15 $2A
-.db $3F $00 $05 $1A $2F $01 $06 $1B $2F $2A $15 $10 $25 $3A $16 $2B
-.db $3F $00 $05 $1A $2F $10 $24 $39 $3E $00 $01 $06 $1B $2F $15 $2A
-.db $3F $00 $04 $19 $2E $1F $0B $17 $07 $02 $01 $06 $1B $2F $15 $2A
-.db $3F $00 $14 $29 $3E $10 $25 $3A $05 $1A $01 $06 $0B $2F $15 $2A
-.db $3F
+;; Data from 3D8 to 467 (144 bytes)
+;_DATA_3D8_CHAR_PALS:
+;.dsb 15, $00
+;.db $3F $00 $15 $2A $3F $04 $19 $25 $10 $2B $17 $03 $01 $06 $1B $2F
+;.db $3F $00 $15 $2A $01 $06 $1B $2F $10 $24 $39 $3E $11 $05 $1A $2F
+;.db $3F $00 $01 $16 $2B $02 $07 $0B $06 $1B $2F $3F $2A $15 $10 $25
+;.db $3A $00 $10 $24 $39 $3E $03 $02 $01 $06 $1B $2F $16 $2B $15 $2A
+;.db $3F $00 $05 $1A $2F $01 $06 $1B $2F $2A $15 $10 $25 $3A $16 $2B
+;.db $3F $00 $05 $1A $2F $10 $24 $39 $3E $00 $01 $06 $1B $2F $15 $2A
+;.db $3F $00 $04 $19 $2E $1F $0B $17 $07 $02 $01 $06 $1B $2F $15 $2A
+;.db $3F $00 $14 $29 $3E $10 $25 $3A $05 $1A $01 $06 $0B $2F $15 $2A
+;.db $3F
 
+.org $468
 ; Data from 468 to 472 (11 bytes)
 _DATA_468_VDP_INIT_DATA:
 .db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F
@@ -876,29 +879,29 @@ _LABEL_48C_LOAD_VDP_DATA:
 	jr nz, -
 	ret
 
---:	
-		call _LABEL_4BD_VDP_OUTSETUP
--:	
-		in a, (Port_VDPData)
-		ld (de), a
-		inc de
-		dec bc
-		ld a, b
-		or c
-		jr nz, -
-		ret
-	
-_LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM? It is not used though.
-		di
-		ld a, $1F	;Bank 31.
-		ld (_RAM_FFFF_), a
-		ld de, $8000	;This is the beginning of Slot 2 ROM page.
-		ld bc, $4000	;16k of data.
-		ld hl, $0000
-		call --
--:	
-		jr -
-
+;--:	
+;		call _LABEL_4BD_VDP_OUTSETUP
+;-:	
+;		in a, (Port_VDPData)
+;		ld (de), a
+;		inc de
+;		dec bc
+;		ld a, b
+;		or c
+;		jr nz, -
+;		ret
+;	
+;_LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM? I suspect during development, the last bank was RAM and not ROM.
+;		di
+;		ld a, $1F	;Bank 31.
+;		ld (_RAM_FFFF_), a
+;		ld de, $8000	;This is the beginning of Slot 2 ROM page.
+;		ld bc, $4000	;16k of data.
+;		ld hl, $0000
+;		call --
+;-:	
+;		jr -
+.org $4BB
 _LABEL_4BB_VDP_RAM_WRITESETUP:	;VDP RAM WRITE
 	set 6, h
 _LABEL_4BD_VDP_OUTSETUP:		;This is used to do general VDP tasks, nor just write.
@@ -913,12 +916,12 @@ _LABEL_4BD_VDP_OUTSETUP:		;This is used to do general VDP tasks, nor just write.
 ;.dsb 9, $00
 ;.db $11 $C4 $DE $01 $20 $00 $ED $B0 $C9
 
-_LABEL_4C6_:	
-		ld   de, _RAM_DEC4_PALETTE_LOAD_POINTER
-		ld   bc, $0020
-		ldir
-		ret
-
+;_LABEL_4C6_:	
+;		ld   de, _RAM_DEC4_PALETTE_LOAD_POINTER
+;		ld   bc, $0020
+;		ldir
+;		ret
+;These above are not used, or referenced anywhere.
 .org $04CF
 _LABEL_4CF_LOAD2PALS:
 	xor a
@@ -1979,12 +1982,38 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	LD BC, $03ff;$05FF	;1k C700
 	ld (hl), c
 	ldir		;We clear $FF again. $D700 is at the end.
-	ld hl, _RAM_C800_
-	ld de, _RAM_C800_ + 1
+	ld hl, _RAM_C800_1ST_METATILE_ROW
+	ld de, _RAM_C800_1ST_METATILE_ROW + 1
 	ld bc, $07FF	;2K but there is $100 missing.
 	ld (hl), $00
 	ldir		;We get around 2,5k of RAM cleared. CFFF is the end.
+	;The game draws the level per rows. Each row is made up from 4x4 metatile. C800 is the first of these rows, and every $100 there is
+	;a new row, until we reach the HUD.
+	;Then, the tiles that make up these metatiles are loaded. Actually the order does not matter, but from C000 (beginning of RAM)
+	;the tiles come in, then at C100 the tile offsets. This offset means, if the tile comes from the first or the second 256
+	;tile part of VRAM.
+	;So in short:	8
+		;-$C000	Tile 1 for metatiles
+		;-$C100 Tile 1 offset
+		;-$C200 Tile 2
+		;-$C300 Tile 2 offset
+		;-$C400 Tile 3
+		;-$C500 Tile 3 offset
+		;-$C600 Tile 4
+		;-$C700 Tile 4 offset
 
+		;So the tiles alone are almost 2k of RAM. VERY wasteful IMO.
+
+		;-$C800 Metatile row 1
+		;-$C900 Metatile row 2
+		;-$CA00 Metatile row 3
+		;-$CB00 Metatile row 4
+		;-$CC00 Metatile row 5
+		;-$CD00 Metatile row 6
+		;-$CE00 Metatile row 7
+		;-$CF00 Metatile row 8
+
+		;This is $700 in size.
 
 	;This so far is just clearing the RAM's part, where the level data goes.
 
@@ -2012,6 +2041,9 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	sbc hl, de	;$02C0
 	ld (_RAM_DE3E_MAX_LVL_LEN), hl	;Looks like this will be the room's length.
 	push af			;Save $40 on the stack
+	
+;	This sets the level length above.	
+	
 	ld a, (_RAM_DEF4_FALLING_STONES)	;Check the falling stones value. I don't know why this is relevant here, as the only part where stones will fall on your head is after you defeat the dragon at the end.
 	cp $01
 	jr Nz, +		;Jump, if a!=1.
@@ -2039,7 +2071,8 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	ld a, (hl)		;$00
 	inc hl			;13F3
 	push hl			;HL is $13F3 and pushed to stack.
-	ld hl, _DATA_12E1_	;Load the address into HL.
+	ld hl, _DATA_12E1_GFX_BANK_ARRAY	;Load the address into HL.
+	;This is a bank, that stores which level needs which ROM bank for loading the data from.
 	;HL $12E1 a:$00 B:$14 DE:$0000
 	add a, a
 	ld e, a
@@ -2072,8 +2105,11 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	ld e, (hl)
 	inc hl
 	ld d, (hl)
-	ld (_RAM_DE2A_), de	;$8000.		
-	pop hl
+	ld (_RAM_DE2A_), de	;$8000.	
+	;My guess, is that the origin addresses are loaded in order from each bank.	Think of it as a pointer. If the code is 
+	;sane, then it should be the same order as the banks.
+
+	pop hl			;We get back that $1343.
 	ld e, (hl)
 	inc hl
 	ld d, (hl)
@@ -2081,8 +2117,8 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	push de			;Okay, this is nice! Push DE
 	pop ix			;And now, it's in IX!
 	ld a, (_RAM_DE52_ROOM_NR)
-	cp $28
-	jr nz, +		;Jump if this is not room 40.
+	cp $04;$28
+	jr z, +		;Jump if this is not room 40. IIRC this is the final dragon room. nz
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02
 	jr nz, +		;Jump if we don't need falling stones later.
@@ -2101,7 +2137,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	ld a, (hl)
 	ld (_RAM_DE53_COMPASS), a	;Hm, so the compass data is also loaded here.
 	exx
-	ld de, _RAM_C800_
+	ld de, _RAM_C800_1ST_METATILE_ROW
 	ld bc, $0004
 	exx				;These are saved for later in the shadow regs.
 	xor a
@@ -2406,7 +2442,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	call _LABEL_2C54_CHARA_ANIM
 	call _LABEL_59B_MAIN
 	di
-	ld hl, _RAM_C800_
+	ld hl, _RAM_C800_1ST_METATILE_ROW
 	ld (_RAM_DE2F_), hl
 	ld a, $02
 	ld (_RAM_DE2E_BANKSWITCH_LEVEL), a
@@ -2991,7 +3027,7 @@ _LABEL_128F_:	;This is connected to the unused routine, so this is also probably
 
 
 ; Pointer Table from 12E1 to 12EE (7 entries, indexed by unknown)
-_DATA_12E1_:
+_DATA_12E1_GFX_BANK_ARRAY:
 .dw _DATA_12EF_ _DATA_12F8_ _DATA_1301_ _DATA_130A_ _DATA_1313_ _DATA_131C_ _DATA_1325_
 
 ; 1st entry of Pointer Table from 12E1 (indexed by unknown)
@@ -3851,7 +3887,7 @@ _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinat
 	jr z, +
 	ld de, $0800		;Okay, so if we are in the second set, then set the destination at 2k away. This is where that bad ram usage seems to come from.
 +:
-	ld (_RAM_DEB3_), de
+	ld (_RAM_DEB3_SPRITE_SET_ADDR), de
 	ld (_RAM_DEA9_), hl
 	ld hl, (_RAM_DE42_)
 	ld (_RAM_DE44_SCRNSCRL_2FRMSET), hl
@@ -3937,7 +3973,7 @@ _LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
 	sbc hl, de
 	ld (_RAM_DEA3_), hl
 	ld a, (ix+4)
-	ld (_RAM_DEB6_), a
+	ld (_RAM_DEB6_PLYR_FLIP), a
 	ld e, (ix+13)
 	ld d, (ix+14)
 	ld a, (ix+15)
@@ -3946,7 +3982,7 @@ _LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
 	pop iy
 	ld d, $00
 	ld hl, (_RAM_DEA1_)
-	ld a, (_RAM_DEB6_)
+	ld a, (_RAM_DEB6_PLYR_FLIP)
 	and a
 	jr z, +
 	ld e, (ix+20)
@@ -3976,7 +4012,7 @@ _LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
 	ld a, (_RAM_DEAF_)
 	ld c, a
 	exx
-	ld a, (_RAM_DEB6_)
+	ld a, (_RAM_DEB6_PLYR_FLIP)
 	and a
 	jp nz, _LABEL_2D7E_
 _LABEL_2D21_:
@@ -4133,7 +4169,7 @@ _LABEL_2D92_:
 
 _LABEL_2DE2_:
 	
-	ld hl, (_RAM_DEB3_)
+	ld hl, (_RAM_DEB3_SPRITE_SET_ADDR)
 	ld de, $0020
 	ld bc, $0004
 	exx
@@ -4262,7 +4298,7 @@ _LABEL_2EB1_SETVRAM_ADDR_THENLOAD:
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl	;Save the sprite table's address.
 	ld c, Port_VDPAddress
-	ld hl, (_RAM_DEB3_)				;This address holds the source address for the data load.
+	ld hl, (_RAM_DEB3_SPRITE_SET_ADDR)				;This address holds the source address for the data load.
 	out (c), l
 	ld a, h
 	set 6, a
@@ -4276,7 +4312,7 @@ _LABEL_2EC8_RELOAD_SPR_TMP:		;This is one part where the code jumps here. The wh
 	ld (_RAM_DEB7_INRAM_SPRITETABLE_TEMP), hl	;Copy here the address of this part of the inram sprite table.
 _LABEL_2ECE_SET_VDP_ADDR_ANDLOAD:	;This is the part without the address reloading part.
 	ld c, Port_VDPAddress	;Get the VDP's address.
-	ld hl, (_RAM_DEB3_)
+	ld hl, (_RAM_DEB3_SPRITE_SET_ADDR)
 	di			;Disable interrupts for safe operation.
 	out (c), l		;Send out whatever is in L to the VDP. This should be an address' first part.
 	ld a, h			;The high address will be the second part of the command.
@@ -4312,7 +4348,7 @@ _LABEL_2EDF_VDP_DATA_LOADLOOP:	;This part, we enter into a data load loop.
 	exx
 	add hl, de
 	djnz _LABEL_2EDF_VDP_DATA_LOADLOOP
-	ld (_RAM_DEB3_), hl
+	ld (_RAM_DEB3_SPRITE_SET_ADDR), hl
 	ret
 
 +:				;If C is not zero, then jump here.
@@ -4449,7 +4485,7 @@ _LABEL_2EDF_VDP_DATA_LOADLOOP:	;This part, we enter into a data load loop.
 	add hl, de
 	dec b				;B holds how many tiles are needed to be loaded. I guess these are tiles, and not something else.
 	jp nz, _LABEL_2EDF_VDP_DATA_LOADLOOP		;If we have anything left, jump back, and do this all over again.
-	ld (_RAM_DEB3_), hl
+	ld (_RAM_DEB3_SPRITE_SET_ADDR), hl
 	ret
 
 _LABEL_2FB7_DRAWSPRITES:	;THIS IS THE SPRITE DRAW ROUTINE.
@@ -4994,7 +5030,7 @@ _LABEL_334C_DECOMPRESS_ART:	;$14 OR $01 AT FIRST. 0001 0100 OR 0000 0001
 	cp $20
 	jp nc, _LABEL_3503_JUST_RET
 	ld a, (hl)
-	ld (_RAM_DEE4_), a
+	ld (_RAM_DEE4_DECOMP), a
 	inc hl
 	dec bc
 	ld a, (ix+7)
@@ -5012,7 +5048,7 @@ _LABEL_33A6_DECOMPRESS:
 	ld d, (hl)
 	inc hl
 	dec bc
-	ld a, (_RAM_DEE4_)
+	ld a, (_RAM_DEE4_DECOMP)
 	cp d
 	jr z, +
 	ld (iy+0), d
@@ -5086,7 +5122,7 @@ _LABEL_341D_:
 	ld d, (hl)
 	inc hl
 	dec bc
-	ld a, (_RAM_DEE4_)
+	ld a, (_RAM_DEE4_DECOMP)
 	cp d
 	jr z, +
 	ld (iy+0), d
@@ -5157,7 +5193,7 @@ _LABEL_3498_:
 	ld d, (hl)
 	inc hl
 	dec bc
-	ld a, (_RAM_DEE4_)
+	ld a, (_RAM_DEE4_DECOMP)
 	cp d
 	jr z, +
 	ld a, d
@@ -5223,80 +5259,80 @@ _LABEL_34DA_:
 
 _LABEL_3503_JUST_RET:
 	ret
-
-_LABEL_3504_CHAR_BIOS:
-;THIS SHOWS THE PLAYABLE CHARACTERS BIOS BEFORE WE GO INTO THE MAIN GAME.
-	ld a, $1F
-	ld (_RAM_FFFF_), a	;BANK 31.
-	ld hl, _DATA_7C000_CHAR_BIO_TEXT
-	ld de, $2800
-	ld bc, $0C00
-	di
-	call _LABEL_48C_LOAD_VDP_DATA
-	;SHOWING THE TEXT FIRST
-	ei
-	ld hl, $0140
-	ld (_RAM_DE62_), hl
-	ld hl, _DATA_366C_CHAR_DATA
-_LABEL_3520_CHAR_SHOW:	;THIS SHOWS THE COMPANIONS, AND SHOWS BIOS, PICTURES AND SO ON.
-	ld a, (hl)
-	inc hl
-	and a
-	jr z, _LABEL_3581_JUSTRET	;IF THIS IS ZERO, JUST RETURN, AND START THE GAME.
-	push hl
-	ld hl, $0000
-	call _LABEL_334C_DECOMPRESS_ART	;TILES
-	pop hl
-	ld a, (hl)
-	inc hl
-	push hl
-	ld hl, $3800
-	call _LABEL_334C_DECOMPRESS_ART	;TILEMAP
-	pop hl
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	inc hl
-	push hl
-	ex de, hl
-	ld de, _RAM_C040_SELECTED_MENUITEMINRAM_PAL
-	ld bc, $0010
-	ldir
-	ld hl, _DATA_3D8_CHAR_PALS
-	ld bc, $0010
-	ldir
-	ld hl, _RAM_C040_SELECTED_MENUITEMINRAM_PAL
-	call _LABEL_4CF_LOAD2PALS	;LOAD PALS INTO RAM, AND THEN INTO VRAM.
-	pop hl
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	inc hl
-	push hl
-	ld a, d
-	or e
-	jr z, +
-	call _LABEL_35A6_RANDOM
-+:
-	ld de, _DATA_A73A_TEXT_CHARSTAT	
-	call _LABEL_35A6_RANDOM	;PRINTS THE PRESS BUTTON TEXT.
--:
-	call _LABEL_59B_MAIN
-	call _LABEL_552_CHECK_AB_BUTTONS	;CHECK FOR ANY AB BUTTON PRESS.
-	ld a, (_RAM_DE95_GAMEPAD)
-	ld b, a
-	ld a, (_RAM_DE94_GAMEPAD)
-	or b
-	jr z, -
-	push bc
-	call _LABEL_4F9_PALETTE_FADEOUT
-	pop bc
-	pop hl
-	ld a, b
-	and a
-	jp z, _LABEL_3520_CHAR_SHOW
-_LABEL_3581_JUSTRET:
-	ret
+;The character BIOs are disabled for now, as manybe later i'll repack them.
+;_LABEL_3504_CHAR_BIOS:
+;;THIS SHOWS THE PLAYABLE CHARACTERS BIOS BEFORE WE GO INTO THE MAIN GAME.
+;	ld a, $1F
+;	ld (_RAM_FFFF_), a	;BANK 31.
+;	ld hl, _DATA_7C000_CHAR_BIO_TEXT
+;	ld de, $2800
+;	ld bc, $0C00
+;	di
+;	call _LABEL_48C_LOAD_VDP_DATA
+;	;SHOWING THE TEXT FIRST
+;	ei
+;	ld hl, $0140
+;	ld (_RAM_DE62_), hl
+;	ld hl, _DATA_366C_CHAR_DATA
+;_LABEL_3520_CHAR_SHOW:	;THIS SHOWS THE COMPANIONS, AND SHOWS BIOS, PICTURES AND SO ON.
+;	ld a, (hl)
+;	inc hl
+;	and a
+;	jr z, _LABEL_3581_JUSTRET	;IF THIS IS ZERO, JUST RETURN, AND START THE GAME.
+;	push hl
+;	ld hl, $0000
+;	call _LABEL_334C_DECOMPRESS_ART	;TILES
+;	pop hl
+;	ld a, (hl)
+;	inc hl
+;	push hl
+;	ld hl, $3800
+;	call _LABEL_334C_DECOMPRESS_ART	;TILEMAP
+;	pop hl
+;	ld e, (hl)
+;	inc hl
+;	ld d, (hl)
+;	inc hl
+;	push hl
+;	ex de, hl
+;	ld de, _RAM_C040_SELECTED_MENUITEMINRAM_PAL
+;	ld bc, $0010
+;	ldir
+;	ld hl, _DATA_3D8_CHAR_PALS
+;	ld bc, $0010
+;	ldir
+;	ld hl, _RAM_C040_SELECTED_MENUITEMINRAM_PAL
+;	call _LABEL_4CF_LOAD2PALS	;LOAD PALS INTO RAM, AND THEN INTO VRAM.
+;	pop hl
+;	ld e, (hl)
+;	inc hl
+;	ld d, (hl)
+;	inc hl
+;	push hl
+;	ld a, d
+;	or e
+;	jr z, +
+;	call _LABEL_35A6_RANDOM
+;+:
+;	ld de, _DATA_A73A_TEXT_CHARSTAT	
+;	call _LABEL_35A6_RANDOM	;PRINTS THE PRESS BUTTON TEXT.
+;-:
+;	call _LABEL_59B_MAIN
+;	call _LABEL_552_CHECK_AB_BUTTONS	;CHECK FOR ANY AB BUTTON PRESS.
+;	ld a, (_RAM_DE95_GAMEPAD)
+;	ld b, a
+;	ld a, (_RAM_DE94_GAMEPAD)
+;	or b
+;	jr z, -
+;	push bc
+;	call _LABEL_4F9_PALETTE_FADEOUT
+;	pop bc
+;	pop hl
+;	ld a, b
+;	and a
+;	jp z, _LABEL_3520_CHAR_SHOW
+;_LABEL_3581_JUSTRET:
+;	ret
 
 _LABEL_3582_DRAW_NUMBERS_DEBUG:
 	ex de, hl
@@ -5449,13 +5485,13 @@ _DATA_3645_:
 .db $3F $3B $22 $3C $21 $3D $2F $3E $00 $4A $01 $4B $02 $4C $03 $4D
 .db $04 $4E $05 $4F $06 $50 $FF
 
-; Data from 366C to 369D (50 bytes)
-_DATA_366C_CHAR_DATA:
-.db $05 $04 $E8 $03 $DB $A0 $07 $06 $F8 $03 $2C $A5 $09 $08 $08 $04
-.db $A1 $A1 $0B $0A $18 $04 $46 $A3 $0D $0C $28 $04 $00 $A0 $0F $0E
-.db $38 $04 $21 $A6 $11 $10 $48 $04 $3A $A4 $13 $12 $58 $04 $76 $A2
-.db $00 $00
-
+;; Data from 366C to 369D (50 bytes)DISABLED
+;_DATA_366C_CHAR_DATA:
+;.db $05 $04 $E8 $03 $DB $A0 $07 $06 $F8 $03 $2C $A5 $09 $08 $08 $04
+;.db $A1 $A1 $0B $0A $18 $04 $46 $A3 $0D $0C $28 $04 $00 $A0 $0F $0E
+;.db $38 $04 $21 $A6 $11 $10 $48 $04 $3A $A4 $13 $12 $58 $04 $76 $A2
+;.db $00 $00
+.org $369E
 _LABEL_369E_NME_N_TRAP:	;Some enemy thingy here.
 	call _LABEL_7565_TRAP_INIT	;Well, this one simply won't let the traps work, so maybe it's not that simple as I thought. It handles trap types, and things like that.
 	call _LABEL_3CCF_MONST_AI	;The enemies spawn, but they are not moving, so this is likely the "AI" of the enemy. AI is a very fashionable word today.
@@ -5684,7 +5720,7 @@ _LABEL_3839_PIT_DEATH:	;This runs when the player falls into a pit.
 	ld bc, $0007
 	ld a, (de)
 	ldir
-	ld (_RAM_DEC3_), a
+	ld (_RAM_DEC3_LAST_HERO), a
 	call _LABEL_7E74_
 	ld (hl), $00
 	ld bc, (_RAM_DE6F_)
@@ -7739,7 +7775,7 @@ _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCU
 	ld bc, $0007
 	ld a, (de)
 	ldir
-	ld (_RAM_DEC3_), a
+	ld (_RAM_DEC3_LAST_HERO), a
 	ld hl, (_RAM_DE6F_)
 	ld (_RAM_D900_CHARA_COORD), hl
 	ld (_RAM_D910_SECOND_HERO_COORD), hl
@@ -8939,7 +8975,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 		inc ix
 		inc ix
 		ld b, $20
-		ld hl, _RAM_C800_
+		ld hl, _RAM_C800_1ST_METATILE_ROW
 -:	
 		in a, (Port_VDPData)
 		ld (hl), a
@@ -8954,7 +8990,7 @@ _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines t
 		di
 		call _LABEL_4BB_VDP_RAM_WRITESETUP
 		ei
-		ld de, _RAM_C800_
+		ld de, _RAM_C800_1ST_METATILE_ROW
 		ld b, $08
 -:	
 		ld a, (de)
@@ -11304,7 +11340,7 @@ _LABEL_71B9_INC_CHKNEXT_CHAR:		;The player is fine.
 
 _LABEL_71E8_UNUSED:	;Does not seem to be referenced anywhere, and possibly not even used. No idea what this is.
 	;ret
-		ld a, (_RAM_DEC3_)		;Getting this value..
+		ld a, (_RAM_DEC3_LAST_HERO)		;Getting this value..
 		call _LABEL_6573_CALC_DMG
 		ld de, _RAM_DBB4_GOLDMOON_MAXHP
 		add hl, de
@@ -11329,10 +11365,10 @@ _LABEL_71E8_UNUSED:	;Does not seem to be referenced anywhere, and possibly not e
 	
 +:	
 		ld c, (ix+0)
-		ld a, (_RAM_DEC3_)
+		ld a, (_RAM_DEC3_LAST_HERO)
 		ld (ix+0), a
 		ld a, c
-		ld (_RAM_DEC3_), a
+		ld (_RAM_DEC3_LAST_HERO), a
 		ret
 
 _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
@@ -11792,7 +11828,7 @@ _LABEL_7771_DRAGONDEAD_STONES:	;This runs, when the Endboss, the Dragon is defea
 	jr nz, -
 	ld bc, $08C0
 	ld hl, $3800
-	ld de, _RAM_C800_
+	ld de, _RAM_C800_1ST_METATILE_ROW
 _LABEL_77CB_REMOVE_DRAGONHEAD:	;This removes the dragon, when the Crystal Staff hits the dragon.
 	;ret
 	push bc
@@ -12639,14 +12675,15 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 
 .BANK 2
 .ORG $0000
+;.org $274a
+; Data from 8000 to A739 (10042 bytes)	;This below has level tile\metatile data in it.
+.incbin "HOTL_mod_DATA_8000_notxt.inc"	;This file only has the level data, not the text.
 
-; Data from 8000 to A739 (10042 bytes)	;Still no idea what this does.
-.incbin "HOTL_mod_DATA_8000_.inc"
 
-;.org $A73A
 ; Data from A73A to A7C1 (136 bytes)
-_DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
-.db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
+;_DATA_A73A_TEXT_CHARSTAT:	;PRESS BUTTON, AND THE CHAR STATS TEXT.
+;.db $FE $A2 $3D $50 $72 $65 $73 $73 $20 $42 $75 $74 $74 $6F $6E $FF
+.org $A74A-$8000
 _DATA_A74A_COMPANION_STATS_TEXT:
 .dsb 12, $20
 .db $4D $49 $4E $20 $20 $20 $20 $20 $20 $20 $4D $41 $58 $0D $53 $74
