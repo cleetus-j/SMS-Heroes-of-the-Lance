@@ -940,17 +940,18 @@ _LABEL_4CF_LOAD2PALS:
 	djnz -
 	ret
 
-_LABEL_4E7_:	;This is not used by the code. Some VDP data loading. The indexing part is a bit strange, especially with the +0. Maybe this is some other error in the disassembly.	
-		ld a, c
-		out (Port_VDPAddress), a
-		ld a, (ix+0)
-		ld a, $C0
-		out (Port_VDPAddress), a
-		ld a, (ix+0)
-		ld a, b
-		out (Port_VDPData), a
-		ei
-		ret
+;_LABEL_4E7_:	;This is not used by the code. Some VDP data loading. 
+;;The indexing part is a bit strange, especially with the +0. Maybe this is some other error in the disassembly.	
+;		ld a, c
+;		out (Port_VDPAddress), a
+;		ld a, (ix+0)
+;		ld a, $C0
+;		out (Port_VDPAddress), a
+;		ld a, (ix+0)
+;		ld a, b
+;		out (Port_VDPData), a
+;		ei
+;		ret
 
 .org $04F9
 _LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette details into the VDP. As it can be seen, this is a fadeout routine as well.
@@ -1095,7 +1096,9 @@ _LABEL_59B_MAIN:
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
+	;ret
 	call _LABEL_5F4_RESET
+;Since the reset is not enables anymore, this routine will be empty for now.
 ; Data from 5E8 to 5F3 (12 bytes)
 ;.dsb 12, $00	;This is what it gets disassembled to, but does not seem to be valid, since the jump is a bit far for it, and at the moment, I don't know where it would jump either.
 ;		ld   a, (_RAM_DE9E_)
@@ -1104,23 +1107,26 @@ _LABEL_59B_MAIN:
 ;		ld   a, d
 ;		ld   (_RAM_DE25_MUSIC_COUNTER), a
 ;		jr   _LABEL_59B_MAIN
-.db $3A $9E $DE $A7 $20 $E4 $7A $32 $25 $DE $18 $A7
-_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. The SMS2 doesn't, and neither the MD--->SMS adapter.
-	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
-	and $10			;MASK OUT ALL OTHER BUTTONS.
-	ld c, a
-	ld a, (_RAM_DE22_RESET)
-	sub c
-	ret z			;If the button is not pressed, then we should just return.
-	ld a, c
-	ld (_RAM_DE22_RESET), a
-	bit 4, a
-	ret nz
-	xor a
-	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
-	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
-	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
-	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
+;.db $3A $9E $DE $A7 $20 $E4 $7A $32 $25 $DE $18 $A7
+.org $5f4
+_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. 
+;The SMS2 doesn't, and neither the MD--->SMS adapter.
+	ret
+;	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
+;	and $10			;MASK OUT ALL OTHER BUTTONS.
+;	ld c, a
+;	ld a, (_RAM_DE22_RESET)
+;	sub c
+;	ret z			;If the button is not pressed, then we should just return.
+;	ld a, c
+;	ld (_RAM_DE22_RESET), a
+;	bit 4, a
+;	ret nz
+;	xor a
+;	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
+;	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
+;	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
+;	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
 ;The devs thought about this, I think they programmed this on an SMS1, otherwise they would not bother with this small feature.
 _LABEL_612_MUTE_PSG:
 	ld hl, _DATA_61B_MUTEPSG
@@ -2325,19 +2331,21 @@ _LABEL_E17_:
 	pop bc
 	dec b
 	jp nz, _LABEL_D29_
-	jr +
+	;jr +
 
 ; Data from E3A to E40 (7 bytes)
 ;.db $E1 $C1 $E1 $D1 $C1 $D1 $C1
-_LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy code. This is somehow connected with the chests in the game.
-		pop hl
-		pop bc
-		pop hl
-		pop de
-		pop bc
-		pop de
-		pop bc
-+:			;But the code jump here often, after a room change.
+;_LABEL_E3A_:	;We save registers again. 
+;The game does not jump here on my disassy code. This is somehow connected with the chests in the game.
+;Instead of removing this piece of not used code, they made a jump... Brilliant.
+;		pop hl
+;		pop bc
+;		pop hl
+;		pop de
+;		pop bc
+;		pop de
+;		pop bc
+;+:			;But the code jump here often, after a room change.
 	ld a, $08
 	ld (_RAM_FFFF_), a	;Get bank 8.
 	ld hl, (_DATA_20078_)	;Get the very first data from this address.
@@ -2466,6 +2474,7 @@ _LABEL_E3A_:	;We save registers again. The game does not jump here on my disassy
 	add hl, de
 	ex de, hl
 	ld b, $08
+.org $F50
 _LABEL_F50_:
 	push bc
 	push de
@@ -2841,191 +2850,192 @@ _LABEL_116F_:	;We come here from the column calculations and other shenanigans, 
 	jp nz, _LABEL_116F_
 	ret
 
-_LABEL_11C5_:	;This does not seem to be executed either. Some drawing routines, and scrolling, yet the game does not jump here. However, after redirecting the code here, it seems this works just as well as the used one. I wonder what happened that this is not used.
-		ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
-		ld (_RAM_FFFF_), a
-		ld a, (_RAM_DE4F_)
-		cp $02
-		jp z, ++
-		ld hl, (_RAM_DE2F_)
-		ld de, (_RAM_DE50_COLUMN_DRW_NR)
-		add hl, de
-		ld a, h
-		add a, $0D
-		ld h, a
-		ld a, (_RAM_DE3B_)
-		ld b, $C4
-		and a
-		jr z, +
-		ld b, $C0
-		inc h
-+:	
-		push hl
-		ld hl, (_RAM_DE4C_)
-		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
-		add hl, de
-		ld de, $06C0
-		add hl, de
-		pop de
-		ld a, h
-		cp $3F
-		jp c, +++
-		sub $07
-		ld h, a
-		jp +++
-	
-++:	
-		ld hl, (_RAM_DE2F_)
-		ld de, (_RAM_DE50_COLUMN_DRW_NR)
-		add hl, de
-		ld a, (_RAM_DE3B_)
-		ld b, $C0
-		and a
-		jr z, 2
-		ld b, $C4
-		push hl
-		ld hl, (_RAM_DE4C_)
-		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
-		add hl, de
-		pop de
-		jp +++
-	
-+++:	
-		ld a, b
-		ld (_RAM_DE6A_), a
-		add a, $02
-		ld (_RAM_DE6B_), a
-		ld a, l
-		out (Port_VDPAddress), a
-		nop
-		nop
-		ld a, h
-		set 6, a
-		out (Port_VDPAddress), a
-		ld b, $10
-		ld a, (_RAM_DE3A_COLUMN_00_01)
-		and a
-		jp nz, _LABEL_128F_
-_LABEL_123F_:	
-		push bc
-		ld a, (de)
-		ld c, a
-		ld a, (_RAM_DE6A_)
-		ld b, a
-		ld a, (bc)
-		out (Port_VDPData), a
-		ld a, (_RAM_DE6A_)
-		ld b, a
-		inc b
-		ld a, (bc)
-		out (Port_VDPData), a
-		inc l
-		inc l
-		ld a, l
-		and $3F
-		jr nz, +
-		ld a, l
-		sub $40
-		ld l, a
-		out (Port_VDPAddress), a
-		nop
-		nop
-		ld a, h
-		set 6, a
-		out (Port_VDPAddress), a
-+:	
-		ld a, (_RAM_DE6B_)
-		ld b, a
-		ld a, (bc)
-		out (Port_VDPData), a
-		ld a, (_RAM_DE6B_)
-		ld b, a
-		inc b
-		ld a, (bc)
-		out (Port_VDPData), a
-		inc l
-		inc l
-		ld a, l
-		and $3F
-		jr nz, +
-		ld a, l
-		sub $40
-		ld l, a
-		out (Port_VDPAddress), a
-		nop
-		nop
-		ld a, h
-		set 6, a
-		out (Port_VDPAddress), a
-+:	
-		inc de
-		pop bc
-		dec b
-		jp nz, _LABEL_123F_
-		ret
-	
-_LABEL_128F_:	;This is connected to the unused routine, so this is also probably never executed either. Looks like some drawing routine.
-		push bc
-		ld a, (de)
-		inc de
-		ld c, a
-		ld a, (_RAM_DE6B_)
-		ld b, a
-		ld a, (bc)
-		out (Port_VDPData), a
-		ld a, (_RAM_DE6B_)
-		ld b, a
-		inc b
-		ld a, (bc)
-		out (Port_VDPData), a
-		ld a, (de)
-		ld c, a
-		inc l
-		inc l
-		ld a, l
-		and $3F
-		jr nz, +
-		ld a, l
-		sub $40
-		ld l, a
-		out (Port_VDPAddress), a
-		nop
-		nop
-		ld a, h
-		set 6, a
-		out (Port_VDPAddress), a
-+:	
-		ld a, (_RAM_DE6A_)
-		ld b, a
-		ld a, (bc)
-		out (Port_VDPData), a
-		ld a, (_RAM_DE6A_)
-		ld b, a
-		inc b
-		ld a, (bc)
-		out (Port_VDPData), a
-		inc l
-		inc l
-		ld a, l
-		and $3F
-		jr nz, +
-		ld a, l
-		sub $40
-		ld l, a
-		out (Port_VDPAddress), a
-		nop
-		nop
-		ld a, h
-		set 6, a
-		out (Port_VDPAddress), a
-+:	
-		pop bc
-		dec b
-		jp nz, _LABEL_128F_
-		ret
+;_LABEL_11C5_:	;This does not seem to be executed either. Some drawing routines, and scrolling, yet the game does not jump here. However, after redirecting the code here, it seems this works just as well as the used one. I wonder what happened that this is not used.
+;		ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
+;		ld (_RAM_FFFF_), a
+;		ld a, (_RAM_DE4F_)
+;		cp $02
+;		jp z, ++
+;		ld hl, (_RAM_DE2F_)
+;		ld de, (_RAM_DE50_COLUMN_DRW_NR)
+;		add hl, de
+;		ld a, h
+;		add a, $0D
+;		ld h, a
+;		ld a, (_RAM_DE3B_)
+;		ld b, $C4
+;		and a
+;		jr z, +
+;		ld b, $C0
+;		inc h
+;+:	
+;		push hl
+;		ld hl, (_RAM_DE4C_)
+;		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
+;		add hl, de
+;		ld de, $06C0
+;		add hl, de
+;		pop de
+;		ld a, h
+;		cp $3F
+;		jp c, +++
+;		sub $07
+;		ld h, a
+;		jp +++
+;	
+;++:	
+;		ld hl, (_RAM_DE2F_)
+;		ld de, (_RAM_DE50_COLUMN_DRW_NR)
+;		add hl, de
+;		ld a, (_RAM_DE3B_)
+;		ld b, $C0
+;		and a
+;		jr z, 2
+;		ld b, $C4
+;		push hl
+;		ld hl, (_RAM_DE4C_)
+;		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
+;		add hl, de
+;		pop de
+;		jp +++
+;	
+;+++:	
+;		ld a, b
+;		ld (_RAM_DE6A_), a
+;		add a, $02
+;		ld (_RAM_DE6B_), a
+;		ld a, l
+;		out (Port_VDPAddress), a
+;		nop
+;		nop
+;		ld a, h
+;		set 6, a
+;		out (Port_VDPAddress), a
+;		ld b, $10
+;		ld a, (_RAM_DE3A_COLUMN_00_01)
+;		and a
+;		jp nz, _LABEL_128F_
+;_LABEL_123F_:	
+;		push bc
+;		ld a, (de)
+;		ld c, a
+;		ld a, (_RAM_DE6A_)
+;		ld b, a
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		ld a, (_RAM_DE6A_)
+;		ld b, a
+;		inc b
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		inc l
+;		inc l
+;		ld a, l
+;		and $3F
+;		jr nz, +
+;		ld a, l
+;		sub $40
+;		ld l, a
+;		out (Port_VDPAddress), a
+;		nop
+;		nop
+;		ld a, h
+;		set 6, a
+;		out (Port_VDPAddress), a
+;+:	
+;		ld a, (_RAM_DE6B_)
+;		ld b, a
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		ld a, (_RAM_DE6B_)
+;		ld b, a
+;		inc b
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		inc l
+;		inc l
+;		ld a, l
+;		and $3F
+;		jr nz, +
+;		ld a, l
+;		sub $40
+;		ld l, a
+;		out (Port_VDPAddress), a
+;		nop
+;		nop
+;		ld a, h
+;		set 6, a
+;		out (Port_VDPAddress), a
+;+:	
+;		inc de
+;		pop bc
+;		dec b
+;		jp nz, _LABEL_123F_
+;		ret
+;	
+;_LABEL_128F_:	;This is connected to the unused routine, so this is also probably never executed either. Looks like some drawing routine.
+;	ret
+;		push bc
+;		ld a, (de)
+;		inc de
+;		ld c, a
+;		ld a, (_RAM_DE6B_)
+;		ld b, a
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		ld a, (_RAM_DE6B_)
+;		ld b, a
+;		inc b
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		ld a, (de)
+;		ld c, a
+;		inc l
+;		inc l
+;		ld a, l
+;		and $3F
+;		jr nz, +
+;		ld a, l
+;		sub $40
+;		ld l, a
+;		out (Port_VDPAddress), a
+;		nop
+;		nop
+;		ld a, h
+;		set 6, a
+;		out (Port_VDPAddress), a
+;+:	
+;		ld a, (_RAM_DE6A_)
+;		ld b, a
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		ld a, (_RAM_DE6A_)
+;		ld b, a
+;		inc b
+;		ld a, (bc)
+;		out (Port_VDPData), a
+;		inc l
+;		inc l
+;		ld a, l
+;		and $3F
+;		jr nz, +
+;		ld a, l
+;		sub $40
+;		ld l, a
+;		out (Port_VDPAddress), a
+;		nop
+;		nop
+;		ld a, h
+;		set 6, a
+;		out (Port_VDPAddress), a
+;+:	
+;		pop bc
+;		dec b
+;		jp nz, _LABEL_128F_
+;		ret
+;Disabled at may 30 13:37
 
-
-
+.org $12E1
 ; Pointer Table from 12E1 to 12EE (7 entries, indexed by unknown)
 _DATA_12E1_GFX_BANK_ARRAY:
 .dw _DATA_12EF_ _DATA_12F8_ _DATA_1301_ _DATA_130A_ _DATA_1313_ _DATA_131C_ _DATA_1325_
@@ -3898,16 +3908,16 @@ _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinat
 	ret
 
 
-_LABEL_2C46_:	;This does not seem to be used.	
-		xor a
-		ld (_RAM_DEB5_FRAMESET), a	;Set it to the first frameset.
-		ld a, $D0			;This marks the end of sprite drawing. If the VDP gets this on the sprite list, it stops drawing them, and won't look any further.
-		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
-		ret
-_LABEL_2C50_:	;Not used.
-		call _LABEL_2DE2_ ;This is still a long one... But since this is not used, i'll get there eventually.
-		ret
-
+;_LABEL_2C46_:	;This does not seem to be used.	
+;		xor a
+;		ld (_RAM_DEB5_FRAMESET), a	;Set it to the first frameset.
+;		ld a, $D0			;This marks the end of sprite drawing. If the VDP gets this on the sprite list, it stops drawing them, and won't look any further.
+;		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
+;		ret
+;_LABEL_2C50_:	;Not used.
+;		call _LABEL_2DE2_ ;This is still a long one... But since this is not used, i'll get there eventually.
+;		ret
+.org $2c54
 _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF THE CODE.
 	ld hl, (_RAM_DEA9_)	;OKAY, THIS AGAIN.
 	ld (hl), $D0
@@ -3952,13 +3962,13 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 
 ; Data from 2CA0 to 2CA6 (7 bytes)
 ;.db $16 $00 $CB $7B $C8 $15 $C9
-_LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
-		ld d, $00
-		bit 7, e
-		ret z
-		dec d
-		ret
-
+;_LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
+;		ld d, $00
+;		bit 7, e
+;		ret z
+;		dec d
+;		ret
+;removed may 30
 +++:
 	ld l, (ix+16)
 	ld h, (ix+17)
@@ -4015,6 +4025,8 @@ _LABEL_2CA0_:	;Does not seem to be used either. Valid code, but that's it.
 	ld a, (_RAM_DEB6_PLYR_FLIP)
 	and a
 	jp nz, _LABEL_2D7E_
+
+.org $2D21
 _LABEL_2D21_:
 	ld d, $00
 	ld hl, (_RAM_DEA7_)
@@ -5632,7 +5644,7 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	add a, a	;2X. 0
 	ld e, a
 	ld d, $00	;DE is now $0004 for example.
-	ld hl, _DATA_51FD_	;HL now has this address, and stays that way if Goldmoon is active.
+	ld hl, _DATA_51FD_ENEMY_PLYR_TYPE_POINTERS	;HL now has this address, and stays that way if Goldmoon is active.
 	add hl, de		;Add the companion value.
 	ld a, (hl)
 	inc hl
@@ -6545,8 +6557,8 @@ _LABEL_3D99_:
 
 ; Jump Table from 3DE7 to 3DFC (11 entries, indexed by _RAM_D941_)
 _DATA_3DE7_:
-.dw _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E59_ _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3E5E_
-.dw _LABEL_3E5E_ _LABEL_3E5E_ _LABEL_3DFD_ENDBOSS
+.dw _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E59_HOLLOW_SOLDIER _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY
+.dw _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3DFD_ENDBOSS
 
 ; 11th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3DFD_ENDBOSS:
@@ -6593,11 +6605,11 @@ _LABEL_3DFD_ENDBOSS:
 	ret
 
 ; 5th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
-_LABEL_3E59_:
+_LABEL_3E59_HOLLOW_SOLDIER:
 	ld a, $02
 	call _LABEL_2FF_PREPNPLAYSFX
 ; 1st entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
-_LABEL_3E5E_:
+_LABEL_3E5E_NORMAL_ENEMY:
 	ld l, (ix+0)
 	ld h, (ix+1)
 	ld de, (_RAM_D900_CHARA_COORD)
@@ -6760,7 +6772,7 @@ _LABEL_3F7E_:
 	add a, a
 	ld e, a
 	ld d, $00
-	ld hl, _DATA_51FD_
+	ld hl, _DATA_51FD_ENEMY_PLYR_TYPE_POINTERS
 	add hl, de
 	ld a, (hl)
 	inc hl
@@ -6850,8 +6862,8 @@ _LABEL_3F7E_:
 	ret
 
 ; Data from 4020 to 4EC3 (3748 bytes)
-.incbin "HOTL_mod_DATA_4020_.inc"
-
+.incbin "HOTL_mod_DATA_4020_.inc"	;If this is commented out, then the characters won't move, so this is used.
+.org $4EC4
 ; Data from 4EC4 to 4F22 (95 bytes)
 _DATA_4EC4_:
 .db $10 $10 $2D $18 $0A $12 $1D $2A $1E $0B $15 $1A $2A $1D $0B $10
@@ -6863,136 +6875,136 @@ _DATA_4EC4_:
 
 ; 1st entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 4F23 to 4F4E (44 bytes)
-_DATA_4F23_:
+_DATA_4F23_GOLDMOON:
 .db $20 $40 $24 $40 $34 $40 $46 $40 $56 $40 $5C $40 $72 $40 $76 $40
 .db $7A $40 $84 $40 $8E $40 $98 $40 $9C $40 $A0 $40 $AA $40 $AE $40
 .db $BC $40 $C0 $40 $C4 $40 $CA $40 $D0 $40 $D4 $40
 
 ; 2nd entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 4F4F to 4F7A (44 bytes)
-_DATA_4F4F_:
+_DATA_4F4F_STURM:
 .db $E0 $40 $E4 $40 $F6 $40 $08 $41 $1A $41 $20 $41 $3A $41 $40 $41
 .db $46 $41 $54 $41 $60 $41 $6E $41 $72 $41 $76 $41 $82 $41 $86 $41
 .db $94 $41 $98 $41 $9C $41 $A2 $41 $A8 $41 $AC $41
 
 ; 3rd entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 4F7B to 4FA6 (44 bytes)
-_DATA_4F7B_:
+_DATA_4F7B_CARAMON:
 .db $BA $41 $BE $41 $D0 $41 $E2 $41 $F4 $41 $FA $41 $14 $42 $1A $42
 .db $20 $42 $2A $42 $32 $42 $3A $42 $3E $42 $42 $42 $4E $42 $52 $42
 .db $60 $42 $64 $42 $68 $42 $6E $42 $74 $42 $78 $42
 
 ; 4th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 4FA7 to 4FD2 (44 bytes)
-_DATA_4FA7_:
+_DATA_4FA7_RAISTLIN:
 .db $84 $42 $88 $42 $9A $42 $AC $42 $BE $42 $C4 $42 $E8 $42 $EC $42
 .db $F0 $42 $FA $42 $04 $43 $0E $43 $12 $43 $16 $43 $26 $43 $2A $43
 .db $38 $43 $3C $43 $40 $43 $46 $43 $4C $43 $6C $43
 
 ; 5th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 4FD3 to 4FFE (44 bytes)
-_DATA_4FD3_:
+_DATA_4FD3_TANIS:
 .db $70 $43 $74 $43 $86 $43 $98 $43 $AA $43 $B0 $43 $CA $43 $D0 $43
 .db $D6 $43 $DE $43 $E6 $43 $EE $43 $F2 $43 $F6 $43 $02 $44 $06 $44
 .db $14 $44 $18 $44 $1C $44 $22 $44 $28 $44 $42 $44
 
 ; 6th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 4FFF to 502A (44 bytes)
-_DATA_4FFF_:
+_DATA_4FFF_TASSLEHOFF:
 .db $76 $44 $7A $44 $8C $44 $9E $44 $B0 $44 $B6 $44 $CC $44 $D0 $44
 .db $D4 $44 $E0 $44 $EC $44 $F8 $44 $FC $44 $04 $45 $12 $45 $16 $45
 .db $24 $45 $28 $45 $2C $45 $32 $45 $38 $45 $38 $45
 
 ; 7th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 502B to 5056 (44 bytes)
-_DATA_502B_:
+_DATA_502B_RIVERWIND:
 .db $60 $45 $64 $45 $76 $45 $88 $45 $9A $45 $A0 $45 $BA $45 $C0 $45
 .db $C6 $45 $D0 $45 $D8 $45 $E0 $45 $E4 $45 $E8 $45 $F4 $45 $F8 $45
 .db $06 $46 $0A $46 $0E $46 $14 $46 $1A $46 $1E $46
 
 ; 8th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 5057 to 5082 (44 bytes)
-_DATA_5057_:
+_DATA_5057_FLINT:
 .db $2C $46 $30 $46 $42 $46 $54 $46 $66 $46 $6C $46 $82 $46 $86 $46
 .db $8A $46 $96 $46 $A4 $46 $B0 $46 $B4 $46 $B8 $46 $C8 $46 $CC $46
 .db $DA $46 $DE $46 $E2 $46 $E8 $46 $EE $46 $EE $46
 
 ; 9th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 5083 to 50A6 (36 bytes)
-_DATA_5083_:
+_DATA_5083_G_GARGOYLE:
 .db $04 $47 $08 $47 $1A $47 $2C $47 $38 $47 $46 $47 $4E $47 $5A $47
 .db $66 $47 $72 $47 $80 $47 $8E $47 $9A $47 $A8 $47 $AE $47 $B4 $47
 .db $B8 $47 $C0 $47
 
 ; 10th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 50A7 to 50CA (36 bytes)
-_DATA_50A7_:
+_DATA_50A7_B_GARGOYLE:
 .db $00 $48 $04 $48 $16 $48 $28 $48 $32 $48 $3C $48 $46 $48 $50 $48
 .db $5A $48 $64 $48 $6E $48 $78 $48 $82 $48 $8C $48 $94 $48 $9C $48
 .db $A4 $48 $AC $48
 
 ; 11th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 50CB to 50EE (36 bytes)
-_DATA_50CB_:
+_DATA_50CB_TROLL:
 .db $0C $4B $10 $4B $22 $4B $34 $4B $40 $4B $4E $4B $5E $4B $6A $4B
 .db $78 $4B $88 $4B $94 $4B $A2 $4B $AA $4B $BA $4B $C4 $4B $CC $4B
 .db $D0 $4B $D8 $4B
 
 ; 12th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 50EF to 5112 (36 bytes)
-_DATA_50EF_:
+_DATA_50EF_GHOST:
 .db $E4 $4B $EC $4B $F4 $4B $FC $4B $06 $4C $10 $4C $1A $4C $24 $4C
 .db $2E $4C $38 $4C $42 $4C $4C $4C $56 $4C $60 $4C $6A $4C $74 $4C
 .db $7C $4C $84 $4C
 
 ; 13th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 5113 to 5136 (36 bytes)
-_DATA_5113_:
+_DATA_5113_HOLLOW_SOLDIER:
 .db $8A $4C $8E $4C $A0 $4C $B2 $4C $C0 $4C $CE $4C $DC $4C $E6 $4C
 .db $F4 $4C $00 $4D $0C $4D $16 $4D $24 $4D $2E $4D $34 $4D $3A $4D
 .db $3E $4D $46 $4D
 
 ; 14th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 5137 to 515A (36 bytes)
-_DATA_5137_:
+_DATA_5137_L_DWARF:
 .db $D8 $48 $DC $48 $EE $48 $00 $49 $08 $49 $10 $49 $18 $49 $20 $49
 .db $28 $49 $30 $49 $38 $49 $40 $49 $48 $49 $50 $49 $5C $49 $6A $49
 .db $70 $49 $78 $49
 
 ; 15th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 515B to 517E (36 bytes)
-_DATA_515B_:
+_DATA_515B_S_DWARF:
 .db $86 $49 $8A $49 $9C $49 $AE $49 $BA $49 $C6 $49 $D2 $49 $DE $49
 .db $E6 $49 $EE $49 $F6 $49 $02 $4A $0E $4A $1A $4A $20 $4A $28 $4A
 .db $2E $4A $36 $4A
 
 ; 16th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 517F to 51A2 (36 bytes)
-_DATA_517F_:
+_DATA_517F_SOLDIER:
 .db $44 $4A $48 $4A $5A $4A $6C $4A $7A $4A $88 $4A $96 $4A $A0 $4A
 .db $AE $4A $BA $4A $C6 $4A $D0 $4A $DE $4A $E8 $4A $EE $4A $F4 $4A
 .db $F8 $4A $00 $4B
 
 ; 17th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 51A3 to 51C6 (36 bytes)
-_DATA_51A3_:
+_DATA_51A3_SPIDER:
 .db $54 $4D $58 $4D $62 $4D $6A $4D $76 $4D $82 $4D $8E $4D $9A $4D
 .db $A6 $4D $B2 $4D $BE $4D $CA $4D $D6 $4D $E2 $4D $EA $4D $F2 $4D
 .db $F6 $4D $FE $4D
 
 ; 18th entry of Pointer Table from 51FD (indexed by _RAM_D909_FIRST_COMPANION)
 ; Data from 51C7 to 51FC (54 bytes)
-_DATA_51C7_:
+_DATA_51C7_S_DRAGON:
 .db $0C $4E $10 $4E $EB $51 $34 $4E $3E $4E $48 $4E $52 $4E $5C $4E
 .db $66 $4E $70 $4E $7A $4E $84 $4E $8E $4E $98 $4E $A0 $4E $A8 $4E
 .db $B0 $4E $B8 $4E $FF $07 $F4 $06 $F4 $00 $F4 $05 $F4 $04 $F4 $03
 .db $F4 $02 $F4 $01 $F4 $FF
 
 ; Pointer Table from 51FD to 5222 (19 entries, indexed by _RAM_D909_FIRST_COMPANION)
-_DATA_51FD_:
-.dw _DATA_4F23_ _DATA_4F4F_ _DATA_4F7B_ _DATA_4FA7_ _DATA_4FD3_ _DATA_4FFF_ _DATA_502B_ _DATA_5057_
-.dw _DATA_5083_ _DATA_50A7_ _DATA_50CB_ _DATA_50EF_ _DATA_5113_ _DATA_5137_ _DATA_515B_ _DATA_517F_
-.dw _DATA_51A3_ _DATA_51C7_ _DATA_51C7_
+_DATA_51FD_ENEMY_PLYR_TYPE_POINTERS:	;The first eight is the player characters, and the rest are the enemies.
+.dw _DATA_4F23_GOLDMOON _DATA_4F4F_STURM _DATA_4F7B_CARAMON _DATA_4FA7_RAISTLIN _DATA_4FD3_TANIS _DATA_4FFF_TASSLEHOFF _DATA_502B_RIVERWIND _DATA_5057_FLINT
+.dw _DATA_5083_G_GARGOYLE _DATA_50A7_B_GARGOYLE _DATA_50CB_TROLL _DATA_50EF_GHOST _DATA_5113_HOLLOW_SOLDIER _DATA_5137_L_DWARF _DATA_515B_S_DWARF _DATA_517F_SOLDIER
+.dw _DATA_51A3_SPIDER _DATA_51C7_S_DRAGON _DATA_51C7_S_DRAGON
 
 _LABEL_5223_CHECKTRAP:		;Defo some trap stuff.
 	ld hl, (_RAM_D900_CHARA_COORD)	;Yup, get first companion X coordinate.
