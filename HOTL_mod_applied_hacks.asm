@@ -412,7 +412,7 @@ _RAM_DE6A_ db
 _RAM_DE6B_ db
 _RAM_DE6C_NME_MOVE7BIT db
 _RAM_DE6D_GAME_WIN db		;If this is not zero, the game is won automatically.
-_RAM_DE6E_ db
+_RAM_DE6E_PLYR_JUMPORSTAND db
 _RAM_DE6F_ dw
 _RAM_DE71_ db
 _RAM_DE72_LVL_LOAD dw	;This is used in the level transition routine. Freezing it will however not prevent anyone from going elsewhere in the game.
@@ -1202,7 +1202,6 @@ _LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will l
 	ret
 
 ++:
-
 	push hl
 	push de
 	push bc			;Push these the second time, and they are do needed. The game works, but after a complete screen change, the game resets.
@@ -1299,7 +1298,9 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD.
 _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
-	call _LABEL_5819_MARKDEAD_PERMADEAD		;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. Since at the moment we start the game, this will have no effect.
+	call _LABEL_5819_MARKDEAD_PERMADEAD		
+	;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. 
+	;Since at the moment we start the game, this will have no effect.
 	call _LABEL_59B_MAIN
 	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES.
 	call _LABEL_7971_INIT_TRAPS	
@@ -1678,8 +1679,8 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	dec a	;Decrement the value.
 	ld (_RAM_DE96_STOPGAME), a	;Put it back and jump ahead.
 	jr ++
-
-+:	;Normal flow.
+;
++:	;;Normal flow.
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	call z, _LABEL_374B_AB_DEBUG_BUTTON	;If the player can move, call that routine with the debug parts.
@@ -5650,11 +5651,11 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	inc hl
 	ld h, (hl)
 	ld l, a
-	ld a, (ix+10)
+	ld a, (ix+10)	;Player action.
 	and a
-	jp z, _LABEL_3938_	;Not noticeable what this does.
+	jp z, _LABEL_3938_	;Jump here, if the player is just doing nothing\standing still.
 
-
+	;We are not standing still. A is the player action still.
 	ld e, a
 	add a, a
 	ld e, a
@@ -5666,11 +5667,11 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	ld l, a
 	ld e, (hl)
 	ld a, e
-	ld (_RAM_DE6E_), a
+	ld (_RAM_DE6E_PLYR_JUMPORSTAND), a
 	inc hl
 	ld a, (ix+11)
 	cp e
-	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE
+	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE		;This seems to be like to check if we can damage the player or not. If this is NZ, then the player and the enemy also gets damaged, kinda like some reflection.
 	add a, a
 	ld e, a
 	ld d, $00
@@ -5679,31 +5680,33 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	inc a
 	jp nz, _LABEL_3887_
 _LABEL_37C8_:
-	ld a, (ix+10)
+	ld a, (ix+10)		;Get the player action again.
 	cp $04
-	jr nz, +
+	jr nz, +			; Jump to + if we are not turning.
+	;We are turning.
 	ld a, (ix+4)
 	xor $01
-	ld (ix+4), a
+	ld (ix+4), a		;We get the player direction, and invert it.
 	jp _LABEL_3876_
 
 +:
 	cp $12
 	jp z, _LABEL_3B6E_NORTH_ROOMCHANGE
 	cp $13
-	jp z, _LABEL_3B77_SOUTH_ROOMCHANGE
+	jp z, _LABEL_3B77_SOUTH_ROOMCHANGE	;So this part just checks if we go up or down.
 	cp $0F
-	jp nz, _LABEL_3876_
+	jp nz, _LABEL_3876_					;Jump there, if we are not falling.
+	;We are falling.
 	ld a, (_RAM_DE54_HOLD_PLYR)
 	and a
-	jr z, _LABEL_3839_PIT_DEATH
+	jr z, _LABEL_3839_PIT_DEATH			;If we can move, then we will die. There is one stage where you won't die from falling, but that's not here I guess.
 	ld a, (ix+0)
 	cp $C0
-	jr nc, +
-	ld (ix+11), $00
-	jp _LABEL_3786_FLOORCHECK
+	jr nc, +							;This is a coordinate check here.
+	ld (ix+11), $00						;Set the animation frame to the very first one.
+	jp _LABEL_3786_FLOORCHECK			;I was wrong, this is that part where that stage is checked where the player falls. We go to this label if that's not that case, and we check the floor as usual.
 
-+:
++:				;This is the part where we fall down on that one screen.
 	pop hl
 	xor a
 	ld (_RAM_DE54_HOLD_PLYR), a
@@ -5724,9 +5727,9 @@ _LABEL_37C8_:
 	ld (ix+11), $00
 	ld (ix+7), $00
 	call _LABEL_5B9D_ALARMBELLS_TXT_SCRN
-	jp _LABEL_726_LEVEL_WARP_LOAD
+	jp _LABEL_726_LEVEL_WARP_LOAD	;Yup, this is clearly that part.
 
-_LABEL_3839_PIT_DEATH:	;This runs when the player falls into a pit.
+_LABEL_3839_PIT_DEATH:	;This runs when the player falls into a pit. If you have played the game, then you know what this does, and what happens.
 	ld hl, _RAM_DEBD_SECOND_HERO_ARRAY
 	ld de, _RAM_DEBC_INRAM_HUD_PORTRAITS
 	ld bc, $0007
@@ -5962,7 +5965,7 @@ _LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	cp $02
 	jr z, +
 	cp $01
-	jr z, _LABEL_3A54_
+	jr z, _LABEL_3A54_GOLDMOON_PROJ_SPELL
 	cp $09
 	jr z, _LABEL_3A71_
 	cp $06
@@ -6015,7 +6018,7 @@ _LABEL_3A4A_:
 	ld l, $2C
 	jr _LABEL_3AA1_
 
-_LABEL_3A54_:
+_LABEL_3A54_GOLDMOON_PROJ_SPELL:		;This runs whenever Goldmoon uses a projectile spell.
 	ld a, (_RAM_DEE8_PROJECTILE_TYPE)
 	inc a
 	jp z, _LABEL_3786_FLOORCHECK
@@ -6145,7 +6148,7 @@ _LABEL_3AAF_DRAWPROJECTILE:
 	ld (iy+1), h
 	ld (iy+17), h
 	ret
-
+	;This above might be some projectile stuff.
 _LABEL_3B2E_:
 	ld a, (_RAM_DE6A_)
 	and a
@@ -6540,7 +6543,7 @@ _LABEL_3D99_:
 	jr z, -
 	jp nc, _LABEL_3F7E_
 +++:
-	ld hl, _DATA_3DE7_
+	ld hl, _DATA_3DE7_ENEMY_BEHAVIOUR
 	ld a, (ix+9)
 	sub $09
 	add a, a
@@ -6556,12 +6559,13 @@ _LABEL_3D99_:
 	jp (hl)
 
 ; Jump Table from 3DE7 to 3DFC (11 entries, indexed by _RAM_D941_)
-_DATA_3DE7_:
+_DATA_3DE7_ENEMY_BEHAVIOUR:
 .dw _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E59_HOLLOW_SOLDIER _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY
 .dw _LABEL_3E5E_NORMAL_ENEMY _LABEL_3E5E_NORMAL_ENEMY _LABEL_3DFD_ENDBOSS
 
 ; 11th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3DFD_ENDBOSS:
+;Sets the dragon sprite's direction, stones, level length and so on. Also turns on the dragon's fire as well, does not need too big of an explanation.
 	xor a
 	ld (_RAM_DEF3_ENEMY_MOV_ENA), a
 	ld (_RAM_D920_MNE1_DIR), a
@@ -6606,10 +6610,12 @@ _LABEL_3DFD_ENDBOSS:
 
 ; 5th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3E59_HOLLOW_SOLDIER:
+;Hollow soldiers have that annoying sound when they just existing. This is that part.
 	ld a, $02
 	call _LABEL_2FF_PREPNPLAYSFX
 ; 1st entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3E5E_NORMAL_ENEMY:
+;The basic theory here is that once the enemy is on screen, it tries to close in on you and attack until you're dead.
 	ld l, (ix+0)
 	ld h, (ix+1)
 	ld de, (_RAM_D900_CHARA_COORD)
@@ -7001,7 +7007,7 @@ _DATA_51C7_S_DRAGON:
 .db $F4 $02 $F4 $01 $F4 $FF
 
 ; Pointer Table from 51FD to 5222 (19 entries, indexed by _RAM_D909_FIRST_COMPANION)
-_DATA_51FD_ENEMY_PLYR_TYPE_POINTERS:	;The first eight is the player characters, and the rest are the enemies.
+_DATA_51FD_ENEMY_PLYR_TYPE_POINTERS:	;The first eight is the player characters, and the rest are the enemies. Some enemies can be used as players, but of course the code is not really made for it.
 .dw _DATA_4F23_GOLDMOON _DATA_4F4F_STURM _DATA_4F7B_CARAMON _DATA_4FA7_RAISTLIN _DATA_4FD3_TANIS _DATA_4FFF_TASSLEHOFF _DATA_502B_RIVERWIND _DATA_5057_FLINT
 .dw _DATA_5083_G_GARGOYLE _DATA_50A7_B_GARGOYLE _DATA_50CB_TROLL _DATA_50EF_GHOST _DATA_5113_HOLLOW_SOLDIER _DATA_5137_L_DWARF _DATA_515B_S_DWARF _DATA_517F_SOLDIER
 .dw _DATA_51A3_SPIDER _DATA_51C7_S_DRAGON _DATA_51C7_S_DRAGON
@@ -7216,7 +7222,7 @@ _LABEL_53A3_FLOORCOLLISION: ;If this is just a return, then the floor collision 
 	jr nz, +	;Jump if we are not jumping. No pun intended.
 	ld a, (ix+11)	;So, this might be a jump check?
 	ld b, a
-	ld a, (_RAM_DE6E_)	;FF is we are standing.
+	ld a, (_RAM_DE6E_PLYR_JUMPORSTAND)	;FF is we are standing.
 	cp b
 	ret nc
 	jr ++
@@ -7609,7 +7615,7 @@ _LABEL_5573_ENEMY_ACTION:
 +:
 	srl c
 ++:
-	call _LABEL_57CC_DAMAGE_OTHERS
+	call _LABEL_57CC_DAMAGE_OTHERS		;The game is kind enough to damage others in your party as well.
 	call _LABEL_5689_HITDETECT
 	ld a, $01
 	call _LABEL_2FF_PREPNPLAYSFX
@@ -7828,7 +7834,10 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	call _LABEL_5BA7_RIVERWIND_PROT_SCRN
 	ret
 
-_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. If this is disabled, no other parties are damaged by the first companion's damage received.
+_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. 
+;This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, 
+;but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. 
+;If this is disabled, no other parties are damaged by the first companion's damage received.
 
 	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
 	ld a, c
