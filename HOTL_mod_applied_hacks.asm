@@ -351,7 +351,8 @@ _RAM_DE06_ db
 
 .enum $DE22 export
 _RAM_DE22_RESET db
-_RAM_DE23_CONSOLE_REGION db
+_RAM_DE23_CONSOLE_REGION db	;This is as the name suggests is the part for the console region detection. Not used, since the game is not released in any NTSC country, yet the game is still compensating for it.
+;So, this is also free to use now.
 _RAM_DE24_NTSC_COMP db
 _RAM_DE25_MUSIC_COUNTER db
 _RAM_DE26_ db			;This does nothing at all. Even if it's zeroed, no difference in gameplay behaviour.
@@ -558,8 +559,8 @@ _LABEL_38_:
 	ei
 	reti
 
-; Data from 59 to 63 (11 bytes)
-;.dsb 11, $00	;11 
+
+
 .org $0064	;With the ORG, this above is not needed, we can use that space for something later.
 _LABEL_64_:
 	dec a
@@ -633,8 +634,9 @@ _DATA_AB_:
 .org $0200
 _LABEL_200_ENTRY:	;Entry for the program, but nothing as a main loop or anything.
 	ld sp, $DFF0
-	call _LABEL_7E9A_REGION_CHKSETUP	;This region check is not really needed, since the game is only released in PAL regions, no NTSC compatibility needed.
+	;call _LABEL_7E9A_REGION_CHKSETUP	;This region check is not really needed, since the game is only released in PAL regions, no NTSC compatibility needed.
 	;I think i'll keep the code where they are at the moment, before I have to rearrange stuff again.
+	;disabled.
 ld a, $18
 ld (_RAM_FFFF_), a	;lOAD BANK 24.
 call _LABEL_623E8_PREP_MUS_BANK
@@ -855,7 +857,7 @@ _DATA_3C8_:
 ;.db $3F $00 $04 $19 $2E $1F $0B $17 $07 $02 $01 $06 $1B $2F $15 $2A
 ;.db $3F $00 $14 $29 $3E $10 $25 $3A $05 $1A $01 $06 $0B $2F $15 $2A
 ;.db $3F
-
+;The character screens are disabled.
 .org $468
 ; Data from 468 to 472 (11 bytes)
 _DATA_468_VDP_INIT_DATA:
@@ -963,7 +965,17 @@ _LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette detail
 	push bc
 	ld hl, _RAM_DEC4_PALETTE_LOAD_POINTER
 	ld b, $20
+	;this is changed from here until my next comment
+	push af
+	ld a,(_RAM_FFFF_)
+	ld (_RAM_DE23_CONSOLE_REGION),a
+	ld a,31
+	ld (_RAM_FFFF_),a
 	call _LABEL_51E_FADEOUT
+	ld a,(_RAM_DE23_CONSOLE_REGION)	;this is not used for anything else.
+	ld (_RAM_FFFF_),a
+	pop af
+	;This is changed around, as the fadeout is in a different bank now.
 	ld hl, _RAM_DEC4_PALETTE_LOAD_POINTER
 	di
 	call _LABEL_4CF_LOAD2PALS
@@ -974,43 +986,41 @@ _LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette detail
 	pop bc
 	djnz -
 	ret
+;I can't relocate this for now, as there's no space at where the code is called. I won't give up though.
 
-_LABEL_51E_FADEOUT:	;If this is commented out, the screen at the character BIO will just glitch out before changing to another one. If this works, then the screen will fade out, so it looks nice.
 
-	ld d, $00
-	ld a, (hl)
-	call +
-	ld d, a
-	ld a, (hl)
-	srl a
-	srl a
-	call +
-	sla a
-	sla a
-	or d
-	ld d, a
-	ld a, (hl)
-	srl a
-	srl a
-	srl a
-	srl a
-	call +
-	sla a
-	sla a
-	sla a
-	sla a
-	or d
-	ld (hl), a
-	inc hl
-	djnz _LABEL_51E_FADEOUT
-	ret
 
-+:
-	and $03
-	ret z
-	dec a
-	ret
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.org $0552	;We have to keep things where they are supposed to be .
 _LABEL_552_CHECK_AB_BUTTONS:
 	ld a, $FF
 	out (Port_IOPortControl), a
@@ -1054,7 +1064,7 @@ _LABEL_552_CHECK_AB_BUTTONS:
 	and $20
 	ld (_RAM_DE95_GAMEPAD), a
 	ret
-
+;Relocating this won't really help, since the code for the bankswitch almost eats all the space I could win.
 _LABEL_59B_MAIN:
 	ei
 	xor a
@@ -1255,11 +1265,19 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld (_RAM_DE52_ROOM_NR), a	;SET THE STARTING ROOM.
 
 ;MESS HERE.
+	;A is not needed to be saved.
+	ld a,31
+	ld (_RAM_FFFF_),a
 	call _LABEL_7D42_LOAD_PLYRSTAT	;Load player stats of course, I mapped some things at the data part.
+	;relocated to bank 31.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
+	;relocated
 	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
+	;relocated
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;We clear the SAT table stored in RAM. Since we'll use this later, this small clearing does not affect much.
 	ld ix, _RAM_D900_CHARA_COORD
+	;relocated
+	;Luckily A is not needed now, so it can be destroyed.
 	;Why are the numbers so spread apart?
 	ld (ix+9), $01			;Show the player. If this is zero, the companions are not shown.
 	ld (ix+7), $06			;Action nr. This handles what the player is doing at the moment.
@@ -1296,13 +1314,22 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld c, $01
 	call _LABEL_6242B_SET_MUS	;SELECT MUSIC BANK, MUSIC AND START IT.
 +:
-	call _LABEL_6F06_HUD		;DRAW THE HUD.
+	call _LABEL_6F06_HUD		;DRAW THE HUD. Uses bankswitching, so this is not a low hanging fruit as the previous ones.
 _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
+	push af
+	ld a,(_RAM_FFFF_)
+	ld (_RAM_DE23_CONSOLE_REGION),a
+	ld a,31
+	ld (_RAM_FFFF_),a
 	call _LABEL_5819_MARKDEAD_PERMADEAD		
+	ld a,(_RAM_DE23_CONSOLE_REGION)
+	ld (_RAM_FFFF_),a
+	pop af
+	;this is also relocated
 	;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. 
 	;Since at the moment we start the game, this will have no effect.
 	call _LABEL_59B_MAIN
-	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES.
+	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES. I will relocate the data part later, since it would save more than half a Kb.
 	call _LABEL_7971_INIT_TRAPS	
 	ld a, (_RAM_DE55_WATERFALL)	;See if the loaded new screen will be a waterfall\healing for the party.
 	and $01
@@ -1693,6 +1720,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	jp _LABEL_757_GAME_MAIN
 
 _LABEL_A10_ANIM_SPRITES:			;This runs a few times a frame, so let's see if this is anything legible to me. Yes, this is some sprite move\copy thing.
+;Strangely, this cannot be relocated, as the game would start to lag.
 	ld de, (_RAM_DEA9_)	;In other parts, these were used for one of the in-ram sprites.
 	push de			;Save this address for later.
 	ld hl, $0040		;64- I guess this is how many sprites are to copy or move.
@@ -3871,24 +3899,24 @@ _DATA_2ACC_:	;No idea what this is, but used with the level loading. The last st
 .db $00 $01 $01 $01 $01 $01 $01 $09 $03 $03 $00 $0A $01 $01 $01 $01
 .db $01 $09 $03 $03
 
-_LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. THERE ARE TWO TABLES. IF THIS IS DISABLED, I CAN'T SEE ANY MAJOR DIFFERENCE. PROBABLY HERE TO BE SAFE, OR THERE IS A BUG ALONG THE WAY THAT THIS FIXES.
-	xor a
-	ld (_RAM_DEB5_FRAMESET), a
-	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
-	ld de, _RAM_D400_IN_RAM_SPRITETABLE + 1
-	ld bc, $00FF
-	ld (hl), $D0	;THIS SEEMS LIKE THE INRAM SAT TABLE.
-	ldir
-	ld hl, $0000
-	ld (_RAM_DE42_), hl
-	ld hl, _RAM_D900_CHARA_COORD
-	ld de, _RAM_D900_CHARA_COORD + 1
-	ld bc, $014F
-	ld (hl), $00
-	ldir
-	call _LABEL_2C1A_FRAMESET_COPY
-	ret
-
+;_LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. THERE ARE TWO TABLES. IF THIS IS DISABLED, I CAN'T SEE ANY MAJOR DIFFERENCE. PROBABLY HERE TO BE SAFE, OR THERE IS A BUG ALONG THE WAY THAT THIS FIXES.
+;	xor a
+;	ld (_RAM_DEB5_FRAMESET), a
+;	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
+;	ld de, _RAM_D400_IN_RAM_SPRITETABLE + 1
+;	ld bc, $00FF
+;	ld (hl), $D0	;THIS SEEMS LIKE THE INRAM SAT TABLE.
+;	ldir
+;	ld hl, $0000
+;	ld (_RAM_DE42_), hl
+;	ld hl, _RAM_D900_CHARA_COORD
+;	ld de, _RAM_D900_CHARA_COORD + 1
+;	ld bc, $014F
+;	ld (hl), $00
+;	ldir
+;	call _LABEL_2C1A_FRAMESET_COPY
+;	ret
+.org $2C1A
 _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinates and other things for the second frame, for the smoother but slower animation.
 	ld a, (_RAM_DEB5_FRAMESET)	;It seems, this checks if we are in the first, or second set of frames.
 	xor $40
@@ -7879,46 +7907,46 @@ _DATA_5800_:
 .dsb 16, $00
 .db $01 $05 $02 $03 $03 $04 $04 $05 $05
 
-_LABEL_5819_MARKDEAD_PERMADEAD:	;When you leave the level\screen, the dead characters are marked permanently, so you can't revive them.
-	ld b, $08	;Player numbers.
-	ld hl, _RAM_DBB5_GOLDMOON_HP
--:
-	ld a, (hl)	;READ GOLDMOON'S HEALTH INTO A.
-	and a
-	jr Nz, +	;IF THIS IS Z, PLAYERS ARE SHOWN AS PERMADEAD. If she's not dead, then jump ahead.
-	dec hl		;Whoops, she's dead.
-	ld a, (hl)
-	inc hl		;It's nothing there...Hm.
-	and a
-	jr z, +		;Jump if it's zero.
-	push hl
-	push bc
-	dec hl
-	ld (hl), $00
-	ld de, $0006
-	add hl, de
-	ld e, l
-	ld d, h
-	inc de
-	ld bc, $000D
-	ld (hl), $00
-	ldir
-	pop bc
-	pop hl
-+:	
-	
-	ld de, $0028
-	add hl, de
-	djnz -
-	ld hl, _RAM_DCF2_DEAD_CHARS		;When a character dies, this array gets filled. The tombstone coordinate is also here that I see too.
-	ld de, _RAM_DCF2_DEAD_CHARS + 1
-	ld (hl), $00
-	ld bc, $001F
-	ldir			
-	ret
-
+;_LABEL_5819_MARKDEAD_PERMADEAD:	;When you leave the level\screen, the dead characters are marked permanently, so you can't revive them.
+;	ld b, $08	;Player numbers.
+;	ld hl, _RAM_DBB5_GOLDMOON_HP
+;-:
+;	ld a, (hl)	;READ GOLDMOON'S HEALTH INTO A.
+;	and a
+;	jr Nz, +	;IF THIS IS Z, PLAYERS ARE SHOWN AS PERMADEAD. If she's not dead, then jump ahead.
+;	dec hl		;Whoops, she's dead.
+;	ld a, (hl)
+;	inc hl		;It's nothing there...Hm.
+;	and a
+;	jr z, +		;Jump if it's zero.
+;	push hl
+;	push bc
+;	dec hl
+;	ld (hl), $00
+;	ld de, $0006
+;	add hl, de
+;	ld e, l
+;	ld d, h
+;	inc de
+;	ld bc, $000D
+;	ld (hl), $00
+;	ldir
+;	pop bc
+;	pop hl
+;+:	
+;	
+;	ld de, $0028
+;	add hl, de
+;	djnz -
+;	ld hl, _RAM_DCF2_DEAD_CHARS		;When a character dies, this array gets filled. The tombstone coordinate is also here that I see too.
+;	ld de, _RAM_DCF2_DEAD_CHARS + 1
+;	ld (hl), $00
+;	ld bc, $001F
+;	ldir			
+;	ret
+.org $5851
 _LABEL_5851_APPLYDAMAGE:	;Runs whenever damage should apply, for the player, for the enemies and the traps as well.
-
+		;Readming from IY, which hold the enemy coordinates, IY+9 or who's the first companion.
 	cp $12
 	jr nz, +
 	ld a, $20
@@ -7940,7 +7968,7 @@ _LABEL_5851_APPLYDAMAGE:	;Runs whenever damage should apply, for the player, for
 	ld hl, $8000
 	add hl, de
 	ld a, $08
-	ld (_RAM_FFFF_), a
+	ld (_RAM_FFFF_), a	;Okay, so Bank 8 holds this, right at the start.
 	ld d, (hl)
 	inc hl
 	ld e, (hl)
@@ -7948,7 +7976,7 @@ _LABEL_5851_APPLYDAMAGE:	;Runs whenever damage should apply, for the player, for
 	inc hl
 	inc hl
 	ld a, (hl)
-	ld (_RAM_FFFF_), a
+	ld (_RAM_FFFF_), a	;A second bankswitch...wow there's definetly no way to make this easier...
 	ld a, d
 	add a, $06
 	ld l, a
@@ -12154,35 +12182,34 @@ _LABEL_79DB_ADJUST_TRAPADDRESS:			;Okay, the coffee kicked in, so, this checks f
 	add hl, de							;Add the offset to the destination.
 	jr -								;And then return.
 
-_LABEL_79E7_SPAWN_ITEMTRAP:	;Puts traps and boxes in the game. Traps activate only once when you are in a level, but if you fix the RAM value, and return into the room, the trap is there again. Item numbers correlate with the equipment you can give to your party. I guess the level data contains the coordinates where the boxes, and traps are, but D600 has the item types.
-	ld hl, _DATA_7B16_ITEMNTRAP	;Source
-	ld de, _RAM_D600_ITEMNTRAP_TYPES	;Dest.
-	ld b, $96	;150 bytes.
--:
-	ld a, (hl)	;Read a byte from the source.
-	and a		;Lose carry.
-	jr z, _LABEL_7A01_	;Jump if the byte is zero. Wonder what is this...
-	ld c, $04		;If not, load 4 into C.
-	ldi			;Load one
-	ldi			;two
-	ldi			;three
-	ldi			;four
-	ldi			;five bytes.
-	jr -			;Jump back. Since this is LDI, all addresses were incremented in the background.
 
-_LABEL_7A01_:	;Well, even if this is ret'd, nothing noticeable happens. After weeks coming back to this, this is still not clear.
-	;ret
-	xor a	;Reset a.
-	ld hl, _DATA_AB_	;Get this address into HL.
-	ld c, $05
-	ldi
-	ldi
-	ldi
-	ldi
-	ldi			;Increment both HL and DE, and copy the content to DE. Also decrease C.
-	djnz _LABEL_7A01_	;Loop back, until b=0.
-	ret
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.org $7A14
 _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this goes to deallocate traps in RAM upon level switching.
 	;ret
 	push af
@@ -12371,56 +12398,54 @@ _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies.
 	ld b, (hl)
 	ret
 
-; Data from 7B16 to 7D0A (501 bytes)
-_DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll check later what are the attributes. There's a lot of stuff here.
-;This goes to D600
-;The first byte is the item type.
-;Second byte is the Room Nr.
-;Third byte is the distance in tiles from the beginning of the room.
-;fourth byte is not yet known
-;fifth byte tells the game that the chest can be set to visible with the 'Detect Invisible' spell. So far, it does not matter the value as long as it's not zero.
-;It seems the very last byte is a zero, so the game stops loading more things.
-;$00 means the item is not valid anymore\picked up.
 
-;TODO: Move this to a different ROM bank, and expand it, if needed. An item randomizer would be nice to be here.
-;The two smaller pieces of data could be also moved as well.
 
-.db $18 $01 $40 $00 $00 
-.db $17 $01 $17 $00 $00 
-.db $1C $02 $37 $00 $00 
-.db $10 $02 $09 $00 $14
-.db $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
-.db $01 $00 $00 $2C $04 $10 $00 $40 $45 $04 $12 $00 $80 $44 $04 $08
-.db $00 $80 $44 $04 $20 $00 $80 $31 $04 $26 $00 $60 $1A $05 $27 $00
-.db $00 $20 $06 $34 $00 $00 $29 $07 $29 $1F $00 $29 $07 $2D $1F $00
-.db $29 $07 $31 $1F $00 $45 $07 $21 $00 $80 $2D $08 $0C $00 $00 $1E
-.db $09 $21 $00 $00 $44 $09 $50 $00 $80 $46 $09 $33 $00 $80 $33 $0B
-.db $18 $1B $00 $19 $0B $1A $1B $00 $32 $0B $1C $1B $00 $19 $0B $1E
-.db $1B $00 $14 $0B $04 $00 $00 $48 $0C $39 $00 $80 $38 $0C $02 $00
-.db $00 $12 $0D $0A $1C $00 $13 $0D $0C $20 $00 $14 $0D $0E $20 $00
-.db $15 $0D $2E $20 $00 $16 $0D $2C $20 $00 $32 $0E $02 $00 $00 $1E
-.db $0F $0C $00 $00 $1F $0F $0E $00 $00 $2D $0F $02 $00 $00 $32 $0F
-.db $08 $00 $00 $33 $0F $10 $00 $00 $33 $0F $12 $00 $00 $1C $12 $01
-.db $16 $00 $1D $12 $04 $16 $00 $20 $12 $05 $00 $00 $45 $12 $06 $00
-.db $80 $44 $12 $07 $00 $80 $19 $12 $08 $00 $00 $1B $12 $09 $00 $00
-.db $10 $14 $02 $00 $14 $44 $14 $0A $00 $80 $34 $17 $32 $00 $00 $0E
-.db $18 $14 $00 $0C $0F $18 $28 $00 $14 $35 $19 $01 $00 $00 $35 $19
-.db $03 $00 $00 $18 $1A $06 $00 $00 $20 $1C $0A $00 $00 $31 $1E $2E
-.db $00 $00 $10 $1E $3C $00 $00 $36 $1F $30 $00 $00 $19 $20 $12 $14
-.db $00 $1A $21 $12 $14 $00 $1B $22 $12 $14 $00 $0E $24 $02 $00 $0C
-.db $0F $26 $04 $00 $14 $44 $26 $0F $00 $80 $44 $28 $0A $00 $80 $37
-.db $28 $3D $00 $00 $33 $2B $08 $00 $00 $20 $2F $14 $00 $00 $47 $35
-.db $1A $00 $80 $48 $35 $18 $00 $80 $47 $35 $16 $00 $80 $48 $35 $14
-.db $00 $80 $47 $35 $12 $00 $80 $48 $35 $10 $00 $80 $47 $35 $0E $00
-.db $80 $44 $37 $13 $00 $80 $44 $37 $4A $00 $80 $44 $37 $4D $00 $80
-.db $0F $37 $46 $00 $14 $2E $37 $3C $00 $00 $30 $38 $76 $00 $00 $20
-.db $38 $30 $00 $00 $2F $3A $04 $00 $00 $1E $3C $08 $00 $00 $2D $3C
-.db $30 $00 $00 $30 $3C $3C $00 $00 $2F $3E $16 $00 $00 $2F $3E $18
-.db $00 $00 $2F $3E $1A $00 $00 $1F $3F $04 $00 $00 $2E $40 $52 $00
-.db $00 $2E $41 $6E $00 $00 $44 $44 $1E $00 $80 $11 $44 $20 $00 $40
-.db $1F $46 $42 $00 $00 $44 $4B $5C $00 $80 $44 $4B $6B $00 $80 $31
-.db $50 $2C $00 $00 $00
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.org $7D0B
 ; Data from 7D0B to 7D2B (33 bytes)
 _DATA_7D0B_:	;This is also some trap thing.
 .db $00 $02 $01 $04 $03 $06 $05 $08 $07 $0A $09 $0C $0B $0E $0D $0F
@@ -12432,153 +12457,151 @@ _DATA_7D2C_:	;This is connected to some trap processing on the stages, or projec
 .db $11 $11 $0D $03 $05 $07 $01 $09 $0B $09 $09 $0F $00 $12 $15 $14
 .db $13 $1C $1E $11 $01 $07
 
-_LABEL_7D42_LOAD_PLYRSTAT:	;Loads the player stats, inventory and all into RAM.
-	;TODO: Move this to a different bank, so some stuff can be freed here.
-	ld hl, _DATA_7D6C_PLYRSTATS
-	ld de, _RAM_DBA0_PLYR_STATS
-	ld b, $08	;08	;HOW MANY PLAYERS ARE TOTALLY.
---:
-	ld c, $21
--:
-	ldi
-	ld a, c
-	and a
-	jr nz, -
-	ld c, $07
-	ld a, l
-	sub c
-	ld l, a
-	ld a, h
-	sbc a, $00
-	ld h, a
-	ldi
-	ldi
-	ldi
-	ldi
-	ldi
-	ldi
-	ldi
-	djnz --
-	ret
 
-; Data from 7D6C to 7E73 (264 bytes)
-;TODO: Move this to a different ROM bank to free up more space for permanent code, since this is loaded only once at the beginning of a new game.
-_DATA_7D6C_PLYRSTATS:
-;Goldmoon's starting details.
-.dsb 16, $00	;Items.
-.db $01 $01 	;Starting item. 01 seems to be the Blue Crystal Staff.
-.db $00 $00 	;If this is non-zero, the inventory will taken as full.
-.db $13 $13 	;Hitpoints.
-.db $00 $05 
-.db $00 $05 	;These might be damage points.
-.db $0C $0C 	;Strength and Intelligence
-.db $10 $0C 	;Wisdom and Constitution
-.db $0E $11		;Dexterity and Charisma
-.db $06			;No idea yet.
-;00-No Ranged Weapon.
-;01-Blue Crystal Staff.
-;02-Staff of Magius.
-;03-Bow.
-;04-Longsword.
-;05-Dagger.
-;06-Hoopak.
-;07-Jo Stick. Hm, never seen this in the game.
-;08-Hunting Knife.
-;09-Spear.
-;0A-Two handed sword. I never seen this either!
-;0B-Hand Axe.
-;0C-Sword.
-;0D-Also Sword.
-;0E-Green Quiver.	-->This is for the bow.
-;0F-Red Quiver.		-->Same.
-;10-Pouch.
-;11-Bracelet.
-;12-Shield.
-;13-Shield again.
-;14-Shield.
-;15-Shield. how many of these are there?
-;16-=.=
-;17-Gem.
-;18-Gem.	;Maybe there is a list of items that are in the game, and this gets them in the pockets of the Companions.
-;19-Gem.
-;1A-Gem.
-;1B-Gem.
-;1C-Gold bar.
-;1D-Silver bar.
-;1E-Gold Chalice.
-;1F-Silver Chalice.
-;20-Coins.
-;21-TBD		Oh interesting! So this is not implemented, or it is, but unused?
-;22-TBD
-;23-TBD
-;24-TBD
-;25-TBD
-;26-TBD
-;27-TBD		Lot of empty slots here.
-;28-Bow
-;29-Longsword
-;2A-Sword.
-;2B-Dagger.
-;2C-Hunting Knife.
-;2D-Scroll.
-;2E-Scroll.
-;2F-Green Potion
-;30-Orange Potion.
-;31-Red Potion
-;32-Blue Potion
-;33-Yellow potion.
-;34-Ring.
-;35-Gem Ring.	-never seen this either,
-;36-Wand.
-;37-Disks of Mishakal
-;38-Brown Potion
-;39-Glitches the game out.
-;3A-No name displayed.
-;3B-Glitched name.
-;3C-Same.
-;3D-same.
-;3E-same.
-;3F-glitch+ goldmoon's name at the end.
-;40-Sturm	You can use others as well!
-;41-Caramon
-;42-Raistlin
-;43-Tanis
-;44-Tasslehoff
-;45-Riverwind
-;46-Flint
-;47-Dead Character
-;48-Glitch
-;The rest might be just glitches, and invalid things, so that's where I stop.
 
-.dsb 16, $00
-.db $0A $00 
-.db $00 $00 
-.db $1D $1D 
-.db $02 $06 
-.db $00 $05 
-.db $11 $0E 
-.db $0B $10 
-.db $0C $0C
-.db $05
-.dsb 16, $00
-.db $04 $09 $00 $00 $24 $24 $02 $06 $00 $05 $14 $0C $0A $11 $0B $0F
-.db $06
-.dsb 16, $00
-.db $02 $02 $00 $00 $08 $08 $03 $03 $00 $00 $0A $11 $0E $0A $10 $0A
-.db $05 $0E $14
-.dsb 14, $00
-.db $04 $83 $00 $00 $23 $23 $02 $05 $00 $02 $10 $0C $0D $0C $10 $0F
-.db $04 $10 $14
-.dsb 14, $00
-.db $07 $86 $00 $00 $0F $0F $04 $04 $00 $00 $0D $09 $0C $0E $10 $0B
-.db $05 $0E $14
-.dsb 14, $00
-.db $04 $83 $00 $00 $22 $22 $02 $05 $00 $05 $13 $0D $0E $0D $10 $0D
-.db $05
-.dsb 16, $00
-.db $0B $0B $00 $00 $2A $2A $02 $04 $00 $02 $10 $07 $0C $12 $0A $0D
-.db $06
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.org $7E74
 _LABEL_7E74_:
 	;ret
 	call _LABEL_6573_CALC_DMG
@@ -12602,88 +12625,88 @@ _LABEL_7E74_:
 _DATA_7E8F_VDPREGVALS:
 .db $36 $E0 $FF $FF $FF $FF $FB $00 $06 $00 $FF
 
-_LABEL_7E9A_REGION_CHKSETUP:	
-;Checks if the console is PAL or NTSC. 
-;The game is not released in NA, so this is not really needed. NTSC speed differences are getting compensated, and a different legal screen is shown in this mode. 
-;The game is not any faster though.
-;TODO: This code is not really needed, so removing it, or moving it to a different bank would be preferable.
-	di
-	ld hl, _DATA_7E8F_VDPREGVALS
-	call _LABEL_61F_WRITE_VDP_REG	;WE WRITE THE INITIAL VDP REGISTERS, GET A DEFAULT VDP STATE.
-	ei
-	halt
-	halt
-	halt
-	ld hl, _RAM_DE9D_TIMER
-	ld bc, $0000
-	halt
-	ld a, (hl)
--:
-	inc bc
-	cp (hl)
-	jr z, - ;THIS IS SOME WAITING RIGHT HERE, BUT IT'S NOT REALLY NECESSARY.
-	di
-	ld a, b
-	cp $0D
-	jp nc, _LABEL_7E9A_REGION_CHKSETUP
-	cp $08
-	jp c, _LABEL_7E9A_REGION_CHKSETUP	;USELESS COMPARISON,WE'LL BRANCH BACK ANYWAYS.
-	ld h, b
-	ld l, c
-	ld de, $0A41
-	and a
-	sbc hl, de
-	ld a, $00
-	jr nc, +		;WON'T GET TAKEN.
-	ld a, $01
-+:
-	ld (_RAM_DE23_CONSOLE_REGION), a	;GET THE CONSOLE'S REGION, AND THEN SET UP THE CORRECT LEGAL SCREEN. 0 IS PAL, ANYTHING ELSE IS NTSC.
-	ret
+;_LABEL_7E9A_REGION_CHKSETUP:	
+;;Checks if the console is PAL or NTSC. 
+;;The game is not released in NA, so this is not really needed. NTSC speed differences are getting compensated, and a different legal screen is shown in this mode. 
+;;The game is not any faster though.
+;;TODO: This code is not really needed, so removing it, or moving it to a different bank would be preferable.
+;	di
+;	ld hl, _DATA_7E8F_VDPREGVALS
+;	call _LABEL_61F_WRITE_VDP_REG	;WE WRITE THE INITIAL VDP REGISTERS, GET A DEFAULT VDP STATE.
+;	ei
+;	halt
+;	halt
+;	halt
+;	ld hl, _RAM_DE9D_TIMER
+;	ld bc, $0000
+;	halt
+;	ld a, (hl)
+;-:
+;	inc bc
+;	cp (hl)
+;	jr z, - ;THIS IS SOME WAITING RIGHT HERE, BUT IT'S NOT REALLY NECESSARY.
+;	di
+;	ld a, b
+;	cp $0D
+;	jp nc, _LABEL_7E9A_REGION_CHKSETUP
+;	cp $08
+;	jp c, _LABEL_7E9A_REGION_CHKSETUP	;USELESS COMPARISON,WE'LL BRANCH BACK ANYWAYS.
+;	ld h, b
+;	ld l, c
+;	ld de, $0A41
+;	and a
+;	sbc hl, de
+;	ld a, $00
+;	jr nc, +		;WON'T GET TAKEN.
+;	ld a, $01
+;+:
+;	ld (_RAM_DE23_CONSOLE_REGION), a	;GET THE CONSOLE'S REGION, AND THEN SET UP THE CORRECT LEGAL SCREEN. 0 IS PAL, ANYTHING ELSE IS NTSC.
+;	ret
 
-_LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
-	;TODO: This code can be also moved elsewhere, since it does not include any other bankswitching, therefore it should be good for relocation.
-	xor a
-	ld l, a
-	ld h, a			;Reset HL.
-	ld (_RAM_DE5B_COMBAT_MARK), hl	;No combat.
-	ld (_RAM_DE74_PT_FOR_CMBT), hl	;Reset points for combat.
-	ld (_RAM_DE76_CR_DMGLINK), a	;THIS SEEMS TO BE THE "LINK" BETWEEN CARAMON AND RAISTLIN. IF THIS IS ZERO, THE TWO WON'T GET DAMAGED TOGETHER.
-	ld (_RAM_DE96_STOPGAME), a	;This stops the game compleretely. Nor the enemies or the player is able to move. Music play continues. Oh yes, if this value is non-zero.
-	ld (_RAM_DE56_WINPOINT_ADD), a	;Adds 10k points to items if this is not zero. I guess when you win the game, it gives you this amount.
-	ld (_RAM_DE55_WATERFALL), a
-	ld (_RAM_DEE5_MENUORGAME), a		;NO EFFECT AS NOW.
-	ld (_RAM_DEEE_PROT_EVIL_TIMER), a
-	ld (_RAM_DEF1_STR_POTION), a		;BOTH DOES NOTHING IMMEDIATE.
-	ld (_RAM_DE54_HOLD_PLYR), a	;IF THIS IS NOT ZERO, THE PLAYER CHARACTER WON'T BE ABLE TO MOVE.
-	ld (_RAM_DEF4_FALLING_STONES), a		;DOES SOME DAMAGE RELATED THING.
-	ld (_RAM_DEF3_ENEMY_MOV_ENA), a	;NON-ZERO VALUE WILL PREVENT ENEMIES FROM MOVING.
-	ld (_RAM_DEF2_HOLD_PLYR), a	;THIS ONE ALSO STOPS THE PLAYER IN PLACE.
-	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a
-	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT. After two months, I still have no idea what this does.
-	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
-	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
-	ld a, (_RAM_DE6D_GAME_WIN)
-	ld (_RAM_DE6C_NME_MOVE7BIT), a	;BIT 7 WILL STOP ENEMIES FROM MOVING. BIT 6 DOES NOTHING YET.
-	xor a
-	ld (_RAM_DE6D_GAME_WIN), a	;In case we have won, the winning flag is cleared.
-	ld a, $FF
-	ld (_RAM_DEE6_), a
-	ld (_RAM_DEE8_PROJECTILE_TYPE), a		
-	ld hl, _RAM_DE7A_KILLCOUNT_ARRAY
-	ld de, _RAM_DE7A_KILLCOUNT_ARRAY + 1
-	ld bc, $0015
-	ld (hl), $00
-	ldir		;SO, THIS INITS THE MONSTER KILLCOUNT ARRAY, THAT IS SHOWN AT THE SCORE\GAME OVER SCREEN IN THE MENU.		
-	ld hl, _RAM_DCF2_DEAD_CHARS
-	ld de, _RAM_DCF2_DEAD_CHARS + 1
-	ld bc, $001F
-	ld (hl), $00	;THIS RAM PART IS WRITTEN WITH NULLS ONLY SO FAR. Marked as unused.
-	ldir
-	ld hl, $0064
-	ld (_RAM_DEEC_RAIST_STFFCHRG), hl	;GIVE 100 CHARGES TO RAISTLIN'S STAFF.
-	add hl, hl
-	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl	;GIVE 200 CHARGES TO GOLDMOON'S STAFF.
-	ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ; Data from 7F3A to 7FEF (182 bytes)
 ;This is empty space, and it could be even more, since many things can be moved around without much of a hassle.
@@ -13378,7 +13401,7 @@ _DATA_125C0_HUD_DATA:	;HUD AND PORTRAITS.
 
 ; Data from 20000 to 20077 (120 bytes)
 _DATA_20000_:	;MESSES UP SPRITES REALLY BAD, SO THIS MIGHT BE SOME SPRITE MAP, OR A COLLECTION OF POINTES, I DON'T KNOW.
-
+;Also used with the damage calculation.
 .db $84 $80 $00 $00 $00 $00 $94 $80 $BE $81 $08 $00 $98 $8A $D2 $8B
 .db $08 $00 $40 $96 $7A $97 $08 $00 $74 $A3 $26 $A4 $08 $00 $E8 $A9
 .db $0A $AB $08 $00 $64 $B5 $86 $B6 $08 $00 $00 $80 $42 $81 $09 $00
@@ -14347,7 +14370,7 @@ _LABEL_62645_SOUND_ENGINE:
 	push hl
 	push ix
 	push iy				;SAVE ALL REGISTERS ON STACK.
-	ld a, (_RAM_DE23_CONSOLE_REGION)	;CHECK THE CONSOLE REGION.
+	ld a, $00;(_RAM_DE23_CONSOLE_REGION)	;CHECK THE CONSOLE REGION. disabled check, there's no need for this now.
 	and a
 	jr z, _LABEL_62660_SOUND_MAIN			;JUMP THERE IF CONSOLE IS PAL REGION.
 	ld hl, _RAM_DE24_NTSC_COMP			;OTHERWISE IT'S NTSC.
@@ -14723,3 +14746,365 @@ _DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. 
 ; Data from 7C000 to 7FFFF (16384 bytes)
 _DATA_7C000_CHAR_BIO_TEXT:	;This got tiles of letters, and other data that is not decipherable yet.
 .incbin "HOTL_mod_DATA_7C000_.inc"
+;The above is a reduced file, that does not contain the character BIO tilemaps, and other things that are not going to get used anyway.
+;Some code will come here, that could be relocated from the main fixed bank, since they are not used too much.
+_LABEL_51E_FADEOUT:	;If this is commented out, the screen at the character BIO will just glitch out before changing to another one. If this works, then the screen will fade out, so it looks nice.
+
+	ld d, $00
+	ld a, (hl)
+	call +
+	ld d, a
+	ld a, (hl)
+	srl a
+	srl a
+	call +
+	sla a
+	sla a
+	or d
+	ld d, a
+	ld a, (hl)
+	srl a
+	srl a
+	srl a
+	srl a
+	call +
+	sla a
+	sla a
+	sla a
+	sla a
+	or d
+	ld (hl), a
+	inc hl
+	djnz _LABEL_51E_FADEOUT
+	ret
+
++:
+	and $03
+	ret z
+	dec a
+	ret
+_LABEL_7D42_LOAD_PLYRSTAT:	;Loads the player stats, inventory and all into RAM.
+	;TODO: Move this to a different bank, so some stuff can be freed here.
+	ld hl, _DATA_7D6C_PLYRSTATS
+	ld de, _RAM_DBA0_PLYR_STATS
+	ld b, $08	;08	;HOW MANY PLAYERS ARE TOTALLY.
+--:
+	ld c, $21
+-:
+	ldi
+	ld a, c
+	and a
+	jr nz, -
+	ld c, $07
+	ld a, l
+	sub c
+	ld l, a
+	ld a, h
+	sbc a, $00
+	ld h, a
+	ldi
+	ldi
+	ldi
+	ldi
+	ldi
+	ldi
+	ldi
+	djnz --
+	ret
+
+; Data from 7D6C to 7E73 (264 bytes)
+;TODO: Move this to a different ROM bank to free up more space for permanent code, since this is loaded only once at the beginning of a new game.
+_DATA_7D6C_PLYRSTATS:
+;Goldmoon's starting details.
+.dsb 16, $00	;Items.
+.db $01 $01 	;Starting item. 01 seems to be the Blue Crystal Staff.
+.db $00 $00 	;If this is non-zero, the inventory will taken as full.
+.db $13 $13 	;Hitpoints.
+.db $00 $05 
+.db $00 $05 	;These might be damage points.
+.db $0C $0C 	;Strength and Intelligence
+.db $10 $0C 	;Wisdom and Constitution
+.db $0E $11		;Dexterity and Charisma
+.db $06			;No idea yet.
+;00-No Ranged Weapon.
+;01-Blue Crystal Staff.
+;02-Staff of Magius.
+;03-Bow.
+;04-Longsword.
+;05-Dagger.
+;06-Hoopak.
+;07-Jo Stick. Hm, never seen this in the game.
+;08-Hunting Knife.
+;09-Spear.
+;0A-Two handed sword. I never seen this either!
+;0B-Hand Axe.
+;0C-Sword.
+;0D-Also Sword.
+;0E-Green Quiver.	-->This is for the bow.
+;0F-Red Quiver.		-->Same.
+;10-Pouch.
+;11-Bracelet.
+;12-Shield.
+;13-Shield again.
+;14-Shield.
+;15-Shield. how many of these are there?
+;16-=.=
+;17-Gem.
+;18-Gem.	;Maybe there is a list of items that are in the game, and this gets them in the pockets of the Companions.
+;19-Gem.
+;1A-Gem.
+;1B-Gem.
+;1C-Gold bar.
+;1D-Silver bar.
+;1E-Gold Chalice.
+;1F-Silver Chalice.
+;20-Coins.
+;21-TBD		Oh interesting! So this is not implemented, or it is, but unused?
+;22-TBD
+;23-TBD
+;24-TBD
+;25-TBD
+;26-TBD
+;27-TBD		Lot of empty slots here.
+;28-Bow
+;29-Longsword
+;2A-Sword.
+;2B-Dagger.
+;2C-Hunting Knife.
+;2D-Scroll.
+;2E-Scroll.
+;2F-Green Potion
+;30-Orange Potion.
+;31-Red Potion
+;32-Blue Potion
+;33-Yellow potion.
+;34-Ring.
+;35-Gem Ring.	-never seen this either,
+;36-Wand.
+;37-Disks of Mishakal
+;38-Brown Potion
+;39-Glitches the game out.
+;3A-No name displayed.
+;3B-Glitched name.
+;3C-Same.
+;3D-same.
+;3E-same.
+;3F-glitch+ goldmoon's name at the end.
+;40-Sturm	You can use others as well!
+;41-Caramon
+;42-Raistlin
+;43-Tanis
+;44-Tasslehoff
+;45-Riverwind
+;46-Flint
+;47-Dead Character
+;48-Glitch
+;The rest might be just glitches, and invalid things, so that's where I stop.
+
+.dsb 16, $00
+.db $0A $00 
+.db $00 $00 
+.db $1D $1D 
+.db $02 $06 
+.db $00 $05 
+.db $11 $0E 
+.db $0B $10 
+.db $0C $0C
+.db $05
+.dsb 16, $00
+.db $04 $09 $00 $00 $24 $24 $02 $06 $00 $05 $14 $0C $0A $11 $0B $0F
+.db $06
+.dsb 16, $00
+.db $02 $02 $00 $00 $08 $08 $03 $03 $00 $00 $0A $11 $0E $0A $10 $0A
+.db $05 $0E $14
+.dsb 14, $00
+.db $04 $83 $00 $00 $23 $23 $02 $05 $00 $02 $10 $0C $0D $0C $10 $0F
+.db $04 $10 $14
+.dsb 14, $00
+.db $07 $86 $00 $00 $0F $0F $04 $04 $00 $00 $0D $09 $0C $0E $10 $0B
+.db $05 $0E $14
+.dsb 14, $00
+.db $04 $83 $00 $00 $22 $22 $02 $05 $00 $05 $13 $0D $0E $0D $10 $0D
+.db $05
+.dsb 16, $00
+.db $0B $0B $00 $00 $2A $2A $02 $04 $00 $02 $10 $07 $0C $12 $0A $0D
+.db $06
+;This is good to relocate, as the game is only using these once.
+_LABEL_79E7_SPAWN_ITEMTRAP:	;Puts traps and boxes in the game. Traps activate only once when you are in a level, but if you fix the RAM value, and return into the room, the trap is there again. Item numbers correlate with the equipment you can give to your party. I guess the level data contains the coordinates where the boxes, and traps are, but D600 has the item types.
+	ld hl, _DATA_7B16_ITEMNTRAP	;Source
+	ld de, _RAM_D600_ITEMNTRAP_TYPES	;Dest.
+	ld b, $96	;150 bytes.
+-:
+	ld a, (hl)	;Read a byte from the source.
+	and a		;Lose carry.
+	jr z, _LABEL_7A01_	;Jump if the byte is zero. Wonder what is this...
+	ld c, $04		;If not, load 4 into C.
+	ldi			;Load one
+	ldi			;two
+	ldi			;three
+	ldi			;four
+	ldi			;five bytes.
+	jr -			;Jump back. Since this is LDI, all addresses were incremented in the background.
+
+_LABEL_7A01_:	;Well, even if this is ret'd, nothing noticeable happens. After weeks coming back to this, this is still not clear.
+	;ret
+	xor a	;Reset a.
+	ld hl, _DATA_AB_	;Get this address into HL.
+	ld c, $05
+	ldi
+	ldi
+	ldi
+	ldi
+	ldi			;Increment both HL and DE, and copy the content to DE. Also decrease C.
+	djnz _LABEL_7A01_	;Loop back, until b=0.
+	ret
+
+; Data from 7B16 to 7D0A (501 bytes)
+_DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll check later what are the attributes. There's a lot of stuff here.
+;This goes to D600
+;The first byte is the item type.
+;Second byte is the Room Nr.
+;Third byte is the distance in tiles from the beginning of the room.
+;fourth byte is not yet known
+;fifth byte tells the game that the chest can be set to visible with the 'Detect Invisible' spell. So far, it does not matter the value as long as it's not zero.
+;It seems the very last byte is a zero, so the game stops loading more things.
+;$00 means the item is not valid anymore\picked up.
+
+;TODO: Move this to a different ROM bank, and expand it, if needed. An item randomizer would be nice to be here.
+;The two smaller pieces of data could be also moved as well.
+
+.db $18 $01 $40 $00 $00 
+.db $17 $01 $17 $00 $00 
+.db $1C $02 $37 $00 $00 
+.db $10 $02 $09 $00 $14
+.db $45 $03 $30 $00 $80 $2F $03 $36 $00 $00 $2D $04
+.db $01 $00 $00 $2C $04 $10 $00 $40 $45 $04 $12 $00 $80 $44 $04 $08
+.db $00 $80 $44 $04 $20 $00 $80 $31 $04 $26 $00 $60 $1A $05 $27 $00
+.db $00 $20 $06 $34 $00 $00 $29 $07 $29 $1F $00 $29 $07 $2D $1F $00
+.db $29 $07 $31 $1F $00 $45 $07 $21 $00 $80 $2D $08 $0C $00 $00 $1E
+.db $09 $21 $00 $00 $44 $09 $50 $00 $80 $46 $09 $33 $00 $80 $33 $0B
+.db $18 $1B $00 $19 $0B $1A $1B $00 $32 $0B $1C $1B $00 $19 $0B $1E
+.db $1B $00 $14 $0B $04 $00 $00 $48 $0C $39 $00 $80 $38 $0C $02 $00
+.db $00 $12 $0D $0A $1C $00 $13 $0D $0C $20 $00 $14 $0D $0E $20 $00
+.db $15 $0D $2E $20 $00 $16 $0D $2C $20 $00 $32 $0E $02 $00 $00 $1E
+.db $0F $0C $00 $00 $1F $0F $0E $00 $00 $2D $0F $02 $00 $00 $32 $0F
+.db $08 $00 $00 $33 $0F $10 $00 $00 $33 $0F $12 $00 $00 $1C $12 $01
+.db $16 $00 $1D $12 $04 $16 $00 $20 $12 $05 $00 $00 $45 $12 $06 $00
+.db $80 $44 $12 $07 $00 $80 $19 $12 $08 $00 $00 $1B $12 $09 $00 $00
+.db $10 $14 $02 $00 $14 $44 $14 $0A $00 $80 $34 $17 $32 $00 $00 $0E
+.db $18 $14 $00 $0C $0F $18 $28 $00 $14 $35 $19 $01 $00 $00 $35 $19
+.db $03 $00 $00 $18 $1A $06 $00 $00 $20 $1C $0A $00 $00 $31 $1E $2E
+.db $00 $00 $10 $1E $3C $00 $00 $36 $1F $30 $00 $00 $19 $20 $12 $14
+.db $00 $1A $21 $12 $14 $00 $1B $22 $12 $14 $00 $0E $24 $02 $00 $0C
+.db $0F $26 $04 $00 $14 $44 $26 $0F $00 $80 $44 $28 $0A $00 $80 $37
+.db $28 $3D $00 $00 $33 $2B $08 $00 $00 $20 $2F $14 $00 $00 $47 $35
+.db $1A $00 $80 $48 $35 $18 $00 $80 $47 $35 $16 $00 $80 $48 $35 $14
+.db $00 $80 $47 $35 $12 $00 $80 $48 $35 $10 $00 $80 $47 $35 $0E $00
+.db $80 $44 $37 $13 $00 $80 $44 $37 $4A $00 $80 $44 $37 $4D $00 $80
+.db $0F $37 $46 $00 $14 $2E $37 $3C $00 $00 $30 $38 $76 $00 $00 $20
+.db $38 $30 $00 $00 $2F $3A $04 $00 $00 $1E $3C $08 $00 $00 $2D $3C
+.db $30 $00 $00 $30 $3C $3C $00 $00 $2F $3E $16 $00 $00 $2F $3E $18
+.db $00 $00 $2F $3E $1A $00 $00 $1F $3F $04 $00 $00 $2E $40 $52 $00
+.db $00 $2E $41 $6E $00 $00 $44 $44 $1E $00 $80 $11 $44 $20 $00 $40
+.db $1F $46 $42 $00 $00 $44 $4B $5C $00 $80 $44 $4B $6B $00 $80 $31
+.db $50 $2C $00 $00 $00
+_LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
+	;TODO: This code can be also moved elsewhere, since it does not include any other bankswitching, therefore it should be good for relocation.
+	xor a
+	ld l, a
+	ld h, a			;Reset HL.
+	ld (_RAM_DE5B_COMBAT_MARK), hl	;No combat.
+	ld (_RAM_DE74_PT_FOR_CMBT), hl	;Reset points for combat.
+	ld (_RAM_DE76_CR_DMGLINK), a	;THIS SEEMS TO BE THE "LINK" BETWEEN CARAMON AND RAISTLIN. IF THIS IS ZERO, THE TWO WON'T GET DAMAGED TOGETHER.
+	ld (_RAM_DE96_STOPGAME), a	;This stops the game compleretely. Nor the enemies or the player is able to move. Music play continues. Oh yes, if this value is non-zero.
+	ld (_RAM_DE56_WINPOINT_ADD), a	;Adds 10k points to items if this is not zero. I guess when you win the game, it gives you this amount.
+	ld (_RAM_DE55_WATERFALL), a
+	ld (_RAM_DEE5_MENUORGAME), a		;NO EFFECT AS NOW.
+	ld (_RAM_DEEE_PROT_EVIL_TIMER), a
+	ld (_RAM_DEF1_STR_POTION), a		;BOTH DOES NOTHING IMMEDIATE.
+	ld (_RAM_DE54_HOLD_PLYR), a	;IF THIS IS NOT ZERO, THE PLAYER CHARACTER WON'T BE ABLE TO MOVE.
+	ld (_RAM_DEF4_FALLING_STONES), a		;DOES SOME DAMAGE RELATED THING.
+	ld (_RAM_DEF3_ENEMY_MOV_ENA), a	;NON-ZERO VALUE WILL PREVENT ENEMIES FROM MOVING.
+	ld (_RAM_DEF2_HOLD_PLYR), a	;THIS ONE ALSO STOPS THE PLAYER IN PLACE.
+	ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a
+	ld (_RAM_DE71_), a		;NOT APPARENT WHAT THESE DO AT THE MOMENT. After two months, I still have no idea what this does.
+	inc a			;WE CLEAR A FEW THINGS HERE AND THERE.
+	ld (_RAM_DEBB_DEBUG), a	;TURN DEBUG OFF.
+	ld a, (_RAM_DE6D_GAME_WIN)
+	ld (_RAM_DE6C_NME_MOVE7BIT), a	;BIT 7 WILL STOP ENEMIES FROM MOVING. BIT 6 DOES NOTHING YET.
+	xor a
+	ld (_RAM_DE6D_GAME_WIN), a	;In case we have won, the winning flag is cleared.
+	ld a, $FF
+	ld (_RAM_DEE6_), a
+	ld (_RAM_DEE8_PROJECTILE_TYPE), a		
+	ld hl, _RAM_DE7A_KILLCOUNT_ARRAY
+	ld de, _RAM_DE7A_KILLCOUNT_ARRAY + 1
+	ld bc, $0015
+	ld (hl), $00
+	ldir		;SO, THIS INITS THE MONSTER KILLCOUNT ARRAY, THAT IS SHOWN AT THE SCORE\GAME OVER SCREEN IN THE MENU.		
+	ld hl, _RAM_DCF2_DEAD_CHARS
+	ld de, _RAM_DCF2_DEAD_CHARS + 1
+	ld bc, $001F
+	ld (hl), $00	;THIS RAM PART IS WRITTEN WITH NULLS ONLY SO FAR. Marked as unused.
+	ldir
+	ld hl, $0064
+	ld (_RAM_DEEC_RAIST_STFFCHRG), hl	;GIVE 100 CHARGES TO RAISTLIN'S STAFF.
+	add hl, hl
+	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl	;GIVE 200 CHARGES TO GOLDMOON'S STAFF.
+	ret
+	;Luckily this code does not use anything that's not relocateable.
+
+	_LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. THERE ARE TWO TABLES. IF THIS IS DISABLED, I CAN'T SEE ANY MAJOR DIFFERENCE. PROBABLY HERE TO BE SAFE, OR THERE IS A BUG ALONG THE WAY THAT THIS FIXES.
+	xor a
+	ld (_RAM_DEB5_FRAMESET), a
+	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
+	ld de, _RAM_D400_IN_RAM_SPRITETABLE + 1
+	ld bc, $00FF
+	ld (hl), $D0	;THIS SEEMS LIKE THE INRAM SAT TABLE.
+	ldir
+	ld hl, $0000
+	ld (_RAM_DE42_), hl
+	ld hl, _RAM_D900_CHARA_COORD
+	ld de, _RAM_D900_CHARA_COORD + 1
+	ld bc, $014F
+	ld (hl), $00
+	ldir
+	call _LABEL_2C1A_FRAMESET_COPY
+	ret
+_LABEL_5819_MARKDEAD_PERMADEAD:	;When you leave the level\screen, the dead characters are marked permanently, so you can't revive them.
+	ld b, $08	;Player numbers.
+	ld hl, _RAM_DBB5_GOLDMOON_HP
+-:
+	ld a, (hl)	;READ GOLDMOON'S HEALTH INTO A.
+	and a
+	jr Nz, +	;IF THIS IS Z, PLAYERS ARE SHOWN AS PERMADEAD. If she's not dead, then jump ahead.
+	dec hl		;Whoops, she's dead.
+	ld a, (hl)
+	inc hl		;It's nothing there...Hm.
+	and a
+	jr z, +		;Jump if it's zero.
+	push hl
+	push bc
+	dec hl
+	ld (hl), $00
+	ld de, $0006
+	add hl, de
+	ld e, l
+	ld d, h
+	inc de
+	ld bc, $000D
+	ld (hl), $00
+	ldir
+	pop bc
+	pop hl
++:	
+	
+	ld de, $0028
+	add hl, de
+	djnz -
+	ld hl, _RAM_DCF2_DEAD_CHARS		;When a character dies, this array gets filled. The tombstone coordinate is also here that I see too.
+	ld de, _RAM_DCF2_DEAD_CHARS + 1
+	ld (hl), $00
+	ld bc, $001F
+	ldir			
+	ret
