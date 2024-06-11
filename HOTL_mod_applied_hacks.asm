@@ -2195,7 +2195,8 @@ _LABEL_D29_:
 	srl h
 	rr l
 	srl h
-	rr l
+	rr l		;Okay, so we shift right H, and what would fall off at the last bit will go into
+	;carry. The RR will get this carry, and load it into L's most significant bit. 
 	add hl, de
 	ex de, hl
 	ld b, $08
