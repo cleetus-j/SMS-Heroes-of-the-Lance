@@ -637,6 +637,7 @@ _LABEL_200_ENTRY:	;Entry for the program, but nothing as a main loop or anything
 	;call _LABEL_7E9A_REGION_CHKSETUP	;This region check is not really needed, since the game is only released in PAL regions, no NTSC compatibility needed.
 	;I think i'll keep the code where they are at the moment, before I have to rearrange stuff again.
 	;disabled.
+	jp _LABEL_697_GAME_ENTRY;+	;Disable intro, and jump to game.
 ld a, $18
 ld (_RAM_FFFF_), a	;lOAD BANK 24.
 call _LABEL_623E8_PREP_MUS_BANK
@@ -646,7 +647,7 @@ ld (_RAM_FFFF_), a
 ld a, $01			;SET NR. OF MUSIC.
 ld c, a
 call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
-
++:	;This was not here: 06/24/24
 _LABEL_206_ENTRY_AFTERCHECK:
 	di
 	ld hl, _RAM_DE29_METATILE_TILE_LOAD
@@ -1272,7 +1273,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	;relocated to bank 31.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
 	;relocated
-	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
+	;call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	;relocated
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;We clear the SAT table stored in RAM. Since we'll use this later, this small clearing does not affect much.
 	ld ix, _RAM_D900_CHARA_COORD
@@ -1307,6 +1308,8 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld (_RAM_DE9E_), a
 	ld a, (_RAM_DE97_)
 	and a
+	;changed 06/24/24
+	jp +
 	jr nz, +
 	ld a, $18
 	ld (_RAM_FFFF_), a
@@ -1321,7 +1324,7 @@ _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
 	ld (_RAM_DE23_CONSOLE_REGION),a
 	ld a,31
 	ld (_RAM_FFFF_),a
-	call _LABEL_5819_MARKDEAD_PERMADEAD		
+	;call _LABEL_5819_MARKDEAD_PERMADEAD		
 	ld a,(_RAM_DE23_CONSOLE_REGION)
 	ld (_RAM_FFFF_),a
 	pop af
@@ -1329,8 +1332,8 @@ _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
 	;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. 
 	;Since at the moment we start the game, this will have no effect.
 	call _LABEL_59B_MAIN
-	Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES. I will relocate the data part later, since it would save more than half a Kb.
-	call _LABEL_7971_INIT_TRAPS	
+	;Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES. I will relocate the data part later, since it would save more than half a Kb.
+	;call _LABEL_7971_INIT_TRAPS	
 	ld a, (_RAM_DE55_WATERFALL)	;See if the loaded new screen will be a waterfall\healing for the party.
 	and $01
 	jr z, +			;If it's not, jump and load the level instead.
@@ -1529,6 +1532,8 @@ _DATA_8A8_:
 .db $FF
 
 _LABEL_8B9_GAME_OVER:	;THIS GETS CALLED, WHEN ALL CHARS ARE DEAD\PERMADEAD.
+	;changed 06/24/24
+	;call _LABEL_59B_MAIN
 	call _LABEL_5C0C_PREPSCRN_4_MSG
 	di
 	call _LABEL_6B42_DRW_SOLID_CLR_SCRN
@@ -1711,7 +1716,8 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld a, (_RAM_DEF2_HOLD_PLYR)
 	and a
 	call z, _LABEL_374B_AB_DEBUG_BUTTON	;If the player can move, call that routine with the debug parts.
-	call _LABEL_53A3_FLOORCOLLISION		;Run the floor collision check.
+	;changed 06/24/24
+	;call _LABEL_53A3_FLOORCOLLISION		;Run the floor collision check.
 	call _LABEL_5223_CHECKTRAP		;Run the trap check on the floor.
 	call _LABEL_369E_NME_N_TRAP			;If this is commented out, then the screen scrolling won't be performed.
 ++:	;Stop.
@@ -2006,7 +2012,11 @@ _LABEL_BE0_:
 	ret
 
 _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets get into this one...
+
+
 	call _LABEL_BB7_CLR_SCREEN	
+;changed 06!24/24
+;	JP +
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld de, _RAM_D000_IN_RAM_SPRITETABLE + 1
 	ld bc, $01FF	;512 BYTES, so both tables are cleared at the same time.
@@ -2051,7 +2061,7 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 		;This is $700 in size.
 
 	;This so far is just clearing the RAM's part, where the level data goes.
-
++:	;changed 06!24/24
 	ld a, (_RAM_DE52_ROOM_NR)		;So, the room nr. works like a pointer in this case,
 	ld hl, _DATA_1343_LVL_POINTERS - 2	;This is needed, so the levels are in order.
 			;
@@ -2257,7 +2267,7 @@ _LABEL_D89_:
 	ld a, (_RAM_DE59_LEFT_DEBUG_NR)
 	ld (hl), a
 	inc a
-	cp $B4
+	cp $B4	;180?
 	jp nz, +
 	ld hl, _RAM_D200_INRAM_TILEMAP
 	jr _LABEL_DF6_
@@ -2302,15 +2312,18 @@ _LABEL_D89_:
 	ld (_RAM_FFFF_), a
 	ld bc, (_RAM_DE2A_)
 	add hl, bc
-	ld bc, $0020
+	ld bc, $0020					;How many bytes to load for a tile. If this is less than 32, tiles are get garbled
 	di
-	call _LABEL_48C_LOAD_VDP_DATA
+	call _LABEL_48C_LOAD_VDP_DATA	;This loads the second set of tiles into VRAM.
+	;nop
+	;nop
+	;nop
 	ei
 	pop bc
 	pop hl
 	ld a, (_RAM_DE31_METATILE_BANK)
 	ld (_RAM_FFFF_), a
-_LABEL_DF6_:
+_LABEL_DF6_:	;This part seems to loads the data into RAM.
 	ld e, (hl)
 	ex af, af'
 	ld h, a
@@ -2319,16 +2332,21 @@ _LABEL_DF6_:
 	ld l, c
 	ld d, b
 	srl d
-	res 0, d
-	set 3, d
+	res 0, d	;This part controls some parts of the tilemap, that uses the first part of the tiles. If this is disabled, some parts will use the wrong tile parts.
+	;nop
+	;nop
+	set 3, d	;At first glance this does nothing. Maybe another tilemap attribute or something.
 	push hl
 	ld hl, $010C
 	add hl, de
 	ex de, hl
-	pop hl
+	pop hl		;At the start of level loading, HL is $C000 As per the graphics comments of mine, the screen
+	;memory start at the beginning of RAM, see that part.
+	;Still, this type of data storage is not really ideal or logical, but whatever worked back then
+	;is good.
 	ld (hl), e
-	inc h
-	ld (hl), d
+	inc h		;Now this is C100
+	ld (hl), d;	<----This part, this three instructions will load stuff into RAM.
 	pop hl
 	pop bc
 	dec b
@@ -3561,7 +3579,8 @@ _DATA_1743_:
 ; 87th entry of Pointer Table from 1343 (indexed by _RAM_DE52_ROOM_NR)
 ; Data from 174D to 2ACB (4991 bytes)
 _DATA_174D_:
-	.db $10 $05 $57 $17 $00 $00 $00 $00 $00 $00 $00 $01 $02 $03 $0D $17
+.db $10 $05 $57 $17 $00 $00 $00 $00 $00 $00
+	.db $00 $01 $02 $03 $0D $17
 	.db $00 $2D $37 $00 $00 $01 $07 $29 $33 $00 $31 $34 $00 $01 $05 $00
 	.db $04 $07 $00 $03 $05 $0B $0D $13 $15 $1B $1D $00 $06 $0A $00 $3D
 	.db $43 $00 $35 $3B $3D $43 $00 $35 $3B $5D $63 $00 $1D $23 $00 $1D
@@ -3875,7 +3894,7 @@ _DATA_174D_:
 	.db $2F $30 $31 $32 $09 $09 $09 $09 $33 $34 $10 $35 $36 $37 $38 $39
 	.db $38 $3A $09 $09 $09 $09 $09
 	
-
+.org $2ACC
 ; Data from 2ACC to 2BF1 (294 bytes)
 _DATA_2ACC_:	;No idea what this is, but used with the level loading. The last stage when you exit from a menu glitches out.
 .dsb 15, $00
