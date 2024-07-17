@@ -401,7 +401,7 @@ _RAM_DE5A_ db
 _RAM_DE5B_COMBAT_MARK dw	;If this is not zero, we are in combat, and able to attack.
 _RAM_DE5D_ db
 _RAM_DE5E_FLOORFALLXCOORD dw
-_RAM_DE60_ dw				;This one looks like some pointer in where the next door will take you.
+_RAM_DE60_ dw				;This one looks like some pointer in where the next door will take you, but the format is not yet known.
 _RAM_DE62_ db
 _RAM_DE63_ db
 _RAM_DE64_ dw
@@ -1273,7 +1273,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	;relocated to bank 31.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
 	;relocated
-	;call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
+	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	;relocated
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;We clear the SAT table stored in RAM. Since we'll use this later, this small clearing does not affect much.
 	ld ix, _RAM_D900_CHARA_COORD
@@ -5704,9 +5704,9 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	jp z, _LABEL_3938_	;Jump here, if the player is just doing nothing\standing still.
 
 	;We are not standing still. A is the player action still.
-	ld e, a
-	add a, a
-	ld e, a
+	ld e, a			;player action is now in e. kinda pointless we'll overwrite it
+	add a, a		;roll it 
+	ld e, a			;we overwrite e again.
 	ld d, $00
 	add hl, de
 	ld a, (hl)
@@ -5717,16 +5717,18 @@ _LABEL_3786_FLOORCHECK:	;Runs every frame of course. This seems to be the part t
 	ld a, e
 	ld (_RAM_DE6E_PLYR_JUMPORSTAND), a
 	inc hl
-	ld a, (ix+11)
+	ld a, (ix+11)		;this is the animation frame.
 	cp e
-	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE		;This seems to be like to check if we can damage the player or not. If this is NZ, then the player and the enemy also gets damaged, kinda like some reflection.
+	call z, _LABEL_53F6_ENEMY_PLAYER_DAMAGE		;This seems to be like to check if we can damage the player or not. 
+	;If this is NZ, then the player and the enemy also gets damaged, kinda like some reflection.
+	;the game reads from some arrays, that I have already marked who belongs to, but i don't know what does it change, maybe later.
 	add a, a
 	ld e, a
 	ld d, $00
 	add hl, de
 	ld a, (hl)
 	inc a
-	jp nz, _LABEL_3887_
+	jp nz, _LABEL_3887_		;we won't move if this is z
 _LABEL_37C8_:
 	ld a, (ix+10)		;Get the player action again.
 	cp $04
@@ -6344,17 +6346,18 @@ _LABEL_3C43_:
 	ld (ix+11), $00
 	jp _LABEL_3786_FLOORCHECK
 
-_LABEL_3C54_:
+_LABEL_3C54_:	;this runs on every room change, and if this is ret, the change does not get done, ad the char does not turn either.
+	;ret
 	ld hl, (_RAM_D900_CHARA_COORD)	;Hm, we get the player character's coordinate.
 	call _LABEL_7AE7_RSHIFTHL		;We shift aroung some things.
 	ld c, l
 	ld hl, (_RAM_DE60_)
 -:
 	ld e, l
-	ld d, h
+	ld d, h		;move hl to de
 	ld a, (hl)
 	and a
-	jr z, +++
+	jr z, +++	;this gets hit, if there's no door, it just returns.
 	dec a
 	cp c
 	jr nc, ++
@@ -6382,7 +6385,7 @@ _LABEL_3C54_:
 	add hl, de
 	jr -
 
-+++:
++++:	;no door to go through\do nothing
 	xor a
 	ret
 
