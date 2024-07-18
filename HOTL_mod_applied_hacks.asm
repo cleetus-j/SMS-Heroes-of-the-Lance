@@ -444,8 +444,8 @@ _RAM_DEA5_ dw
 _RAM_DEA7_ dw
 _RAM_DEA9_ dw
 _RAM_DEAB_ dw
-_RAM_DEAD_ dw
-_RAM_DEAF_ db
+_RAM_DEAD_CHARA_ANIM dw			;THIS IS SOME POINTER, USED FOR ANIMATIONS
+_RAM_DEAF_SPRITE_OFFSET db		;when the game changes tilesets, this is used for some data loading. changing this will corrupt sprites
 .ende
 
 .enum $DEB3 export
@@ -1271,9 +1271,10 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld (_RAM_FFFF_),a
 	call _LABEL_7D42_LOAD_PLYRSTAT	;Load player stats of course, I mapped some things at the data part.
 	;relocated to bank 31.
-	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
+	;call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
+	;disabled, so the ram parts connected to it are free.
 	;relocated
-	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
+	;call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	;relocated
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;We clear the SAT table stored in RAM. Since we'll use this later, this small clearing does not affect much.
 	ld ix, _RAM_D900_CHARA_COORD
@@ -1308,7 +1309,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld (_RAM_DE9E_), a
 	ld a, (_RAM_DE97_)
 	and a
-	;changed 06/24/24
+	;changed 06/24/24	no music to annoy me during debug
 	jp +
 	jr nz, +
 	ld a, $18
@@ -1395,7 +1396,8 @@ _LABEL_757_GAME_MAIN:	;THIS SEEMS LIKE THE INGAME MAIN LOOP. LIKE AN INNER ONE.
 ++:
 	ld (_RAM_DE9C_PLYR_BLOCK), a
 +++:
-	call _LABEL_717C_CYCLE_DEAD2ALIVECHARS
+	;call _LABEL_717C_CYCLE_DEAD2ALIVECHARS
+	;disabled on 07/18/2024
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 	and a
 	jr z, +
@@ -1592,9 +1594,10 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	sbc hl, de
 	jr c, +
 	ld c, $01
-	call _LABEL_5689_HITDETECT
+	;call _LABEL_5689_HITDETECT
 	ld c, $08
-	call _LABEL_57CC_DAMAGE_OTHERS
+	;call _LABEL_57CC_DAMAGE_OTHERS
+	;disabled 07/18/2024
 +:				;RAM VAL IS $01, BUT DOES NOTHING NOTICEABLE.
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02			
@@ -1673,7 +1676,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	ld a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the first companion from the list.
 	inc a					;Increment the value, aka get the next Companion value.
 	ld (_RAM_D909_FIRST_COMPANION), a	;Put this to the first companion value.
-	call _LABEL_2DE2_			;This seems to draw and\or animate the character. If this is commented out, the character is not updated while moving. So it may control animation. If the whole function is just a ret, then no sprites are drawn\updated.
+	call _LABEL_2DE2_SHOWSPR			;This seems to draw and\or animate the character. If this is commented out, the character is not updated while moving. So it may control animation. If the whole function is just a ret, then no sprites are drawn\updated.
 	ld hl, _DATA_314_			;These data statements should mean something, but not for now.
 	ld (_RAM_DEB9_ANIM_POINTER), hl		;Load this address into HL.
 	call _LABEL_A95_UPDATE_SCREEN
@@ -1718,7 +1721,8 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	call z, _LABEL_374B_AB_DEBUG_BUTTON	;If the player can move, call that routine with the debug parts.
 	;changed 06/24/24
 	;call _LABEL_53A3_FLOORCOLLISION		;Run the floor collision check.
-	call _LABEL_5223_CHECKTRAP		;Run the trap check on the floor.
+	;call _LABEL_5223_CHECKTRAP		;Run the trap check on the floor.
+	;changed 07/18/2024
 	call _LABEL_369E_NME_N_TRAP			;If this is commented out, then the screen scrolling won't be performed.
 ++:	;Stop.
 	call _LABEL_31DF_FINEMOTION	;If this is commented out, then the character fine movement is disabled, and movements become very chunky.
@@ -2162,7 +2166,8 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 	push de			;Okay, this is nice! Push DE
 	pop ix			;And now, it's in IX!
 	ld a, (_RAM_DE52_ROOM_NR)
-	cp $04;$28
+	cp $28	;40
+	;CHANGHED 07/18/2024
 	jr z, +		;Jump if this is not room 40. IIRC this is the final dragon room. nz
 	ld a, (_RAM_DEF4_FALLING_STONES)
 	cp $02
@@ -2485,7 +2490,7 @@ _LABEL_E17_:
 	dec c
 	jr nz, -
 	call _LABEL_5887_
-	call _LABEL_2DE2_
+	call _LABEL_2DE2_SHOWSPR
 	ld b, $40
 	di
 	call _LABEL_2EB1_SETVRAM_ADDR_THENLOAD
@@ -2493,7 +2498,7 @@ _LABEL_E17_:
 	di
 	ld b, $40
 	call _LABEL_2EB1_SETVRAM_ADDR_THENLOAD
-	call _LABEL_2DE2_
+	call _LABEL_2DE2_SHOWSPR
 	call _LABEL_2C1A_FRAMESET_COPY
 	call _LABEL_2C54_CHARA_ANIM
 	call _LABEL_59B_MAIN
@@ -2687,6 +2692,7 @@ _LABEL_1032_:
 	ret
 
 _LABEL_106D_:
+	;RET
 	ld a, $02
 	ld (_RAM_DE4F_), a
 	ld hl, (_RAM_DE36_)
@@ -3132,7 +3138,10 @@ _DATA_1331_:
 
 ; Pointer Table from 1343 to 13F0 (87 entries, indexed by _RAM_DE52_ROOM_NR)
 _DATA_1343_LVL_POINTERS:
-.dw _DATA_13F1_ _DATA_13FB_ _DATA_1405_ _DATA_140F_ _DATA_1419_ _DATA_1423_ _DATA_142D_ _DATA_1437_
+;these are the addresses of the level pointers. at the end of the data, there are a few bytes
+;of stuff that I don't know what's what.
+.dw _DATA_13F1_ 
+.DW _DATA_13FB_ _DATA_1405_ _DATA_140F_ _DATA_1419_ _DATA_1423_ _DATA_142D_ _DATA_1437_
 .dw _DATA_1441_ _DATA_144B_ _DATA_1455_ _DATA_145F_ _DATA_1469_ _DATA_1473_ _DATA_147D_ _DATA_1487_
 .dw _DATA_1491_ _DATA_149B_ _DATA_14A5_ _DATA_14AF_ _DATA_14B9_ _DATA_14C3_ _DATA_14CD_ _DATA_14D7_
 .dw _DATA_14E1_ _DATA_14EB_ _DATA_14F5_ _DATA_14FF_ _DATA_1509_ _DATA_1513_ _DATA_151D_ _DATA_1527_
@@ -3143,6 +3152,7 @@ _DATA_1343_LVL_POINTERS:
 .dw _DATA_1671_ _DATA_167B_ _DATA_1685_ _DATA_168F_ _DATA_1699_ _DATA_16A3_ _DATA_16AD_ _DATA_16B7_
 .dw _DATA_16C1_ _DATA_16CB_ _DATA_16D5_ _DATA_16DF_ _DATA_16E9_ _DATA_16F3_ _DATA_16FD_ _DATA_1707_
 .dw _DATA_1711_ _DATA_171B_ _DATA_1725_ _DATA_172F_ _DATA_1739_ _DATA_1743_ _DATA_174D_
+;.DW 
 
 ; 1st entry of Pointer Table from 1343 (indexed by _RAM_DE52_ROOM_NR)
 ; Data from 13F1 to 13FA (10 bytes)
@@ -3578,12 +3588,15 @@ _DATA_1743_:
 
 ; 87th entry of Pointer Table from 1343 (indexed by _RAM_DE52_ROOM_NR)
 ; Data from 174D to 2ACB (4991 bytes)
-_DATA_174D_:
+_DATA_174D_:	;this is th last valid room entry, the fall down screen.
 .db $10 $05 $57 $17 $00 $00 $00 $00 $00 $00
-	.db $00 $01 $02 $03 $0D $17
-	.db $00 $2D $37 $00 $00 $01 $07 $29 $33 $00 $31 $34 $00 $01 $05 $00
-	.db $04 $07 $00 $03 $05 $0B $0D $13 $15 $1B $1D $00 $06 $0A $00 $3D
-	.db $43 $00 $35 $3B $3D $43 $00 $35 $3B $5D $63 $00 $1D $23 $00 $1D
+_DATA_1757__
+.db $00 $01 $02 $03 $0D $17 $00 $2D $37 $00 
+.db $00 $01 $07 $29 $33 $00 $31 $34 $00 $01 
+.db $05 $00 $04 $07 $00 $03 $05 $0B $0D $13 
+.db $15 $1B $1D $00 $06 $0A $00 $3D $43 $00 
+.db $35 $3B $3D $43 $00 $35 $3B $5D $63 $00 
+.db $1D $23 $00 $1D
 	.db $23 $35 $3B $3D $43 $55 $5B $00 $35 $3B $3D $43 $4D $53 $55 $5B
 	.db $5D $63 $00 $55 $5B $5D $63 $65 $6B $6D $73 $00 $05 $0B $0D $13
 	.db $5D $63 $65 $6B $6D $73 $00 $05 $0B $25 $2B $2D $33 $00 $05 $0B
@@ -3608,7 +3621,26 @@ _DATA_174D_:
 	.db $00 $05 $0B $15 $1B $1D $23 $25 $2B $45 $4B $4D $53 $6D $73 $00
 	.db $05 $0B $0D $13 $15 $1B $1D $23 $25 $2B $45 $4B $4D $53 $6D $73
 	.db $00 $05 $0B $15 $1B $25 $2B $45 $4B $4D $53 $6D $73 $00 $05 $06
-	.db $01 $04 $16 $05 $06 $02 $04 $16 $1D $1E $01 $05 $19 $1D $1E $02
+;this looks like the beginning of the doorways, where they are and things like that.	
+_DATA_190D_:
+	.db $01 $04 $16 $01 $02	;this is the north exit in room 1
+	
+	
+	.db $02 $04 $16 $1D $1E ;south exit of room 1 in the beginning.
+	.db $01 $05 $19 $1D $1E 
+	.db $02
+	;05
+	;it seems these values are five bytes in size
+	;the first one is the compass type, what would light up on the HUD, but also could mean where the player
+	;takes a route.
+	;second is the room that you'll go into from this door
+	;third is the colunm number where the player would warp in that room
+	;fourth is in which metatile the door starts
+	;fifth is where it ends
+	;it's not clear yet, why the first room is in the middle of this damn array
+	;the previous data does not seem to be used anywhere, at least not level loading, and 
+	;does not seem to contain good door data. at least this way, i could determine 
+	;which rooms are used or not.
 	.db $05 $13 $35 $36 $03 $06 $19 $49 $4A $01 $07 $13 $49 $4A $02 $07
 	.db $12 $00 $01 $02 $02 $04 $2D $19 $1A $02 $05 $2E $49 $4A $01 $07
 	.db $23 $49 $4A $02 $07 $22 $00 $01 $02 $01 $04 $02 $18 $1C $01 $05
@@ -3964,7 +3996,7 @@ _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinat
 ;		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
 ;		ret
 ;_LABEL_2C50_:	;Not used.
-;		call _LABEL_2DE2_ ;This is still a long one... But since this is not used, i'll get there eventually.
+;		call _LABEL_2DE2_SHOWSPR ;This is still a long one... But since this is not used, i'll get there eventually.
 ;		ret
 .org $2c54
 _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF THE CODE.
@@ -3973,16 +4005,16 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 	ld (_RAM_DEAB_), hl
 	ld de, $0080	;128 bytes.
 	add hl, de
-	ld (_RAM_DEAD_), hl
+	ld (_RAM_DEAD_CHARA_ANIM), hl
 	ld a, (_RAM_DEB5_FRAMESET)	;Original frameset value.
 	xor $40
-	ld (_RAM_DEAF_), a		;"inverted", the other frameset value.
+	ld (_RAM_DEAF_SPRITE_OFFSET), a		;"inverted", the other frameset value.
 	ld ix, _RAM_DA50_NME_COORD_ARRAY2
 	ld b, $0C	;12
 -:
 	push ix
 	push bc
-	ld a, (_RAM_DEAF_)
+	ld a, (_RAM_DEAF_SPRITE_OFFSET)
 	and $3F
 	ld c, a
 	ld a, (ix+12)
@@ -4067,8 +4099,8 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 	ld b, (ix+12)
 	exx
 	ld hl, (_RAM_DEAB_)
-	ld de, (_RAM_DEAD_)
-	ld a, (_RAM_DEAF_)
+	ld de, (_RAM_DEAD_CHARA_ANIM)
+	ld a, (_RAM_DEAF_SPRITE_OFFSET)
 	ld c, a
 	exx
 	ld a, (_RAM_DEB6_PLYR_FLIP)
@@ -4141,9 +4173,9 @@ _LABEL_2D21_:
 	exx
 	ld (hl), $D0
 	ld (_RAM_DEAB_), hl
-	ld (_RAM_DEAD_), de
+	ld (_RAM_DEAD_CHARA_ANIM), de
 	ld a, c
-	ld (_RAM_DEAF_), a
+	ld (_RAM_DEAF_SPRITE_OFFSET), a
 	exx
 	ret
 
@@ -4222,14 +4254,14 @@ _LABEL_2D92_:
 	exx
 	ld (hl), $D0
 	ld (_RAM_DEAB_), hl
-	ld (_RAM_DEAD_), de
+	ld (_RAM_DEAD_CHARA_ANIM), de
 	ld a, c
-	ld (_RAM_DEAF_), a
+	ld (_RAM_DEAF_SPRITE_OFFSET), a
 	exx
 	ret
 
-_LABEL_2DE2_:
-	
+_LABEL_2DE2_SHOWSPR:
+	;RET
 	ld hl, (_RAM_DEB3_SPRITE_SET_ADDR)
 	ld de, $0020
 	ld bc, $0004
@@ -5908,10 +5940,55 @@ _LABEL_3908_:
 	ret
 
 _LABEL_3938_:	;IX is D900
-	ld (ix+7), $00
+	ld (ix+7), $00	;Dd907
 	ld a, (_RAM_DE90_GAMEPAD)
-	ld (_RAM_DE93_), a
-	call _LABEL_3C89_
+	ld (_RAM_DE93_), a		;save this pad val.
+	;call _LABEL_3C89_
+	;relocated,changed at 07/18/2024
+_LABEL_3C89_:
+	ld a, (_RAM_DE90_GAMEPAD)
+	ld e, a
+	and $0A
+	srl a
+	xor e
+	and $05
+	ld d, a
+	add a, a
+	or d
+	or $F0
+	ld d, a
+	ld a, e
+	and d
+	ld e, a
+	ld d, e
+	ld a, (ix+4)
+	and a
+	jr z, +
+	ld a, e
+	and $03
+	ld e, a
+	srl e
+	add a, a
+	and $02
+	or e
+	ld e, a
+	ld a, d
+	and $FC
+	or e
+	ld e, a
++:
+	push hl
+	ld hl, _DATA_3CC4_
+	ld a, e
+	and $0F
+	add a, l
+	ld l, a
+	ld a, h
+	adc a, $00
+	ld h, a
+	ld e, (hl)
+	pop hl
+	;ret
 	ld a, (_RAM_DE91_)
 _LABEL_3948_:
 	bit 4, a
@@ -6360,7 +6437,7 @@ _LABEL_3C54_:	;this runs on every room change, and if this is ret, the change do
 	jr z, +++	;this gets hit, if there's no door, it just returns.
 	dec a
 	cp c
-	jr nc, ++
+	jr nc, ++	;jumps to other rooms, but it's not looking good.
 	inc hl
 	ld a, (hl)
 	cp c
@@ -6370,12 +6447,12 @@ _LABEL_3C54_:	;this runs on every room change, and if this is ret, the change do
 	jr z, +
 	ld a, (_RAM_DE71_)
 	and a
-	jr z, ++
+	jr nz, ++	;i see no difference
 +:
 	ld a, (hl)
 	and b
 	cp b
-	jr nz, ++
+	jr nz, ++	;inverts where the player should look in order to change rooms
 	ld a, $01
 	and a
 	ret
@@ -6389,51 +6466,51 @@ _LABEL_3C54_:	;this runs on every room change, and if this is ret, the change do
 	xor a
 	ret
 
-_LABEL_3C89_:
-	ld a, (_RAM_DE90_GAMEPAD)
-	ld e, a
-	and $0A
-	srl a
-	xor e
-	and $05
-	ld d, a
-	add a, a
-	or d
-	or $F0
-	ld d, a
-	ld a, e
-	and d
-	ld e, a
-	ld d, e
-	ld a, (ix+4)
-	and a
-	jr z, +
-	ld a, e
-	and $03
-	ld e, a
-	srl e
-	add a, a
-	and $02
-	or e
-	ld e, a
-	ld a, d
-	and $FC
-	or e
-	ld e, a
-+:
-	push hl
-	ld hl, _DATA_3CC4_
-	ld a, e
-	and $0F
-	add a, l
-	ld l, a
-	ld a, h
-	adc a, $00
-	ld h, a
-	ld e, (hl)
-	pop hl
-	ret
-
+;_LABEL_3C89_:
+;	ld a, (_RAM_DE90_GAMEPAD)
+;	ld e, a
+;	and $0A
+;	srl a
+;	xor e
+;	and $05
+;	ld d, a
+;	add a, a
+;	or d
+;	or $F0
+;	ld d, a
+;	ld a, e
+;	and d
+;	ld e, a
+;	ld d, e
+;	ld a, (ix+4)
+;	and a
+;	jr z, +
+;	ld a, e
+;	and $03
+;	ld e, a
+;	srl e
+;	add a, a
+;	and $02
+;	or e
+;	ld e, a
+;	ld a, d
+;	and $FC
+;	or e
+;	ld e, a
+;+:
+;	push hl
+;	ld hl, _DATA_3CC4_
+;	ld a, e
+;	and $0F
+;	add a, l
+;	ld l, a
+;	ld a, h
+;	adc a, $00
+;	ld h, a
+;	ld e, (hl)
+;	pop hl
+;	ret
+.org $3CC4
 ; Data from 3CC4 to 3CCE (11 bytes)
 _DATA_3CC4_:
 .db $00 $03 $07 $00 $05 $04 $06 $00 $01 $02 $08
@@ -11069,7 +11146,7 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 +++:
 	ld a, $04
 	ld (_RAM_FFFF_), a
-	ld a, (_RAM_DE53_COMPASS)
+	ld a, (_RAM_DE53_COMPASS)	;get the compass type, this is not where the the compass is showing we could go.
 	add a, a
 	add a, a
 	add a, a
