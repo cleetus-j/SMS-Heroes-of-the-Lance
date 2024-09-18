@@ -483,6 +483,16 @@ _RAM_DEF1_STR_POTION db	;This is the strength potion's remaining power. It incre
 _RAM_DEF2_HOLD_PLYR db			;Will prevent the player from moving.
 _RAM_DEF3_ENEMY_MOV_ENA db		;Does the same thing for any enemy on the screen.
 _RAM_DEF4_FALLING_STONES db		;Set this to $02, and stones will fall on your head constantly, like after you defeat the final boss.
+frame db
+seconds db
+minutes db
+hours db
+days db
+lastbank	db
+.ende
+.enum $DF00
+menu_arrow dsb 4	;This is a small array, to store the arrow used for the menu.
+arrow_pos	db		;As the name implies.
 .ende
 ;.emptyfill $FF
 .enum $FFFF export
@@ -517,21 +527,9 @@ _LABEL_0_:
 	ld (hl), l
 	ld bc, $1EFF	;7936 bytes
 	ldir	;Clear RAM.
-	;ld l, $FC
-	;ld a, $80
-	;ld (hl), a
-	;inc l
-	;xor a
-	;ld (hl), a
-	;inc l
-	;inc a
-	;ld (hl), a
-	;inc l
-	;inc a
-	;ld (hl), a	;From DEFC: 80 00 01 02
-
 ;This is not really needed now or before.	
 	ei
+	;jp pictest
 	jp _LABEL_200_ENTRY	;Jump to program start.
 ;.dsb 13,$00
 ; Data from 2B to 37 (13 bytes)
@@ -558,9 +556,6 @@ _LABEL_38_:
 	pop af
 	ei
 	reti
-
-
-
 .org $0064	;With the ORG, this above is not needed, we can use that space for something later.
 _LABEL_64_:
 	dec a
@@ -599,7 +594,8 @@ _LABEL_66_:
 	ld (_RAM_FFFF_), a	;DO A BANKSWITCH.
 	dec a			;DOES ABSOLUTELY NOTHING.
 	ld (_RAM_DE26_), a	;MUSIC BANK -1? DOES NOT REALLY DO MUCH, THE RAM VALUE IS ONLY USED AROUND THIS CODE.
-	call _LABEL_62645_SOUND_ENGINE	;CALL THE SOUND ENGINE TO UPDATE.
+	;call _LABEL_62645_SOUND_ENGINE	;CALL THE SOUND ENGINE TO UPDATE.
+	;The sound engine will be ripped out, and it's not really good, the tunes are lame, and the PsgLib is a much better choice.
 	pop af			;GET BACK THE LAST BANK
 	ld (_RAM_FFFF_), a	;AND SWITCH BACK.
 	ret
@@ -634,20 +630,19 @@ _DATA_AB_:
 .org $0200
 _LABEL_200_ENTRY:	;Entry for the program, but nothing as a main loop or anything.
 	ld sp, $DFF0
-	;call _LABEL_7E9A_REGION_CHKSETUP	;This region check is not really needed, since the game is only released in PAL regions, no NTSC compatibility needed.
-	;I think i'll keep the code where they are at the moment, before I have to rearrange stuff again.
-	;disabled.
-	jp _LABEL_697_GAME_ENTRY;+	;Disable intro, and jump to game.
-ld a, $18
-ld (_RAM_FFFF_), a	;lOAD BANK 24.
-call _LABEL_623E8_PREP_MUS_BANK
+
+;jp _LABEL_697_GAME_ENTRY;+	;Disable intro, and jump to game.
+;ld a, $18
+;ld (_RAM_FFFF_), a	;lOAD BANK 24.
+;call _LABEL_623E8_PREP_MUS_BANK
 ;ei
-ld a, $18
-ld (_RAM_FFFF_), a	
-ld a, $01			;SET NR. OF MUSIC.
-ld c, a
-call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
-+:	;This was not here: 06/24/24
+;ld a, $18
+;ld (_RAM_FFFF_), a	
+;ld a, $01			;SET NR. OF MUSIC.
+;ld c, a
+;call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
+;disabled at 24.09.08, the sound engine would be ripped out.
+;This was not here: 06/24/24
 _LABEL_206_ENTRY_AFTERCHECK:
 	di
 	ld hl, _RAM_DE29_METATILE_TILE_LOAD
@@ -660,29 +655,22 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	di
 	ld hl, _DATA_468_VDP_INIT_DATA
 	call _LABEL_61F_WRITE_VDP_REG	;DO SOME VDP HOUSEKEEPING AGAIN.
+	ei
 	call _LABEL_63B_CLEAR_SAT	;CLEAR SAT.
-	;ld a, (_RAM_DE97_)
-	;nop
-	;nop
-	;nop
-	;;and a
-	;nop
-	;;jr nz, +
-	;nop
-	;nop
-	;ld a, $18
-	;ld (_RAM_FFFF_), a	;lOAD BANK 24.
-	;call _LABEL_623E8_PREP_MUS_BANK
-	;ei
-	;ld a, $18
-	;ld (_RAM_FFFF_), a	
-	;ld a, $01			;SET NR. OF MUSIC.
-	;ld c, a
-	;call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
-;+:
+	ld a, (_RAM_DE97_)
+;	ld a, $18
+;	ld (_RAM_FFFF_), a	;lOAD BANK 24.
+;	call _LABEL_623E8_PREP_MUS_BANK
+;	ei
+;	ld a, $18
+;	ld (_RAM_FFFF_), a	
+;	ld a, $01			;SET NR. OF MUSIC.
+;	ld c, a
+;	call _LABEL_6242B_SET_MUS	;SET AND PLAYS MUSIC.
 	;The above is relocated, so the titlescreen music will play through its entirety. I needed some padding here and there, since other offsets are not fixed that are in later editions of this hack. The original code interrupts the music, and restarts it, when the game demo ends, preventing the music to play all the way.
 	;Of course, the NOPs will be removed later.
-	ei
+	;ei
+	;24.09.08 music preparation will be removed, as the snd engine will be changed.
 	xor a
 	ld (_RAM_DE97_), a
 	ld hl, _DATA_AB_		;FIRST 32 BYTES ARE AN ALL BLACK PALETTE.
@@ -690,42 +678,34 @@ _LABEL_206_ENTRY_AFTERCHECK:
 	xor a
 	ld (_RAM_DE9F_TIMER), a
 	ld (_RAM_DE9E_), a
-	ld bc, $0001
+	call pictest
+	;The line interrupts are disabled for the image and tilemap unpacks!
+	;jp _LABEL_697_GAME_ENTRY;+	;Disable intro, and jump to game.
+	;disabled 24.09.06
+;	ld bc, $0001
+;
+;
+;;The region check for the legal screen is now disabled.
+;	push bc
+;	ld hl, $3800
+;	call _LABEL_334C_DECOMPRESS_ART	;WRITE SCREEN MAP.
+;	pop bc
+;	ld a, c
+;	ld hl, $0000
+;	call _LABEL_334C_DECOMPRESS_ART	;WRITE TILES.
+;	ld hl, _DATA_3C8_	;LEGAL SCREEN PALETTE.
+;	call _LABEL_4CF_LOAD2PALS	;LOAD SAID PALETTE.
+;	xor a
+;	ld (_RAM_C000_RAM_START), a;($C000), a 
+;	ld (_RAM_C001_),a;($C001), a
+;call pictest
 
-	;Console region check.
-;	ld a, (_RAM_DE23_CONSOLE_REGION)
-;	and a
-;	jr z, +	;JUMP TO + IF THE CONSOLE IS PAL.
-;	ld bc, $1415	;NTSC LEGAL SCREEN DATA OFFSET.
-;+:
-;	ld a, b	
-	;nop
-	;nop
-	;nop
-	;nop
-	;nop
-	;nop
-	;nop
-	;nop
-	;nop
-	;nop	
-
-;The region check for the legal screen is now disabled.
-	push bc
-	ld hl, $3800
-	call _LABEL_334C_DECOMPRESS_ART	;WRITE SCREEN MAP.
-	pop bc
-	ld a, c
-	ld hl, $0000
-	call _LABEL_334C_DECOMPRESS_ART	;WRITE TILES.
-	ld hl, _DATA_3C8_	;LEGAL SCREEN PALETTE.
-	call _LABEL_4CF_LOAD2PALS	;LOAD SAID PALETTE.
-	xor a
-	ld (_RAM_C000_RAM_START), a;($C000), a 
-	ld (_RAM_C001_),a;($C001), a
-.org $275
+;.org $275
 _LABEL_275_:
+	;ld hl, _DATA_468_VDP_INIT_DATA
+	;call _LABEL_61F_WRITE_VDP_REG	;DO SOME VDP HOUSEKEEPING AGAIN.	
 	ld bc, $01F4		;SET UP A TIMER.
+
 -:
 	push bc
 	call _LABEL_59B_MAIN	;THIS IS THE MAIN LOOP HERE.
@@ -741,52 +721,59 @@ _LABEL_275_:
 	or c
 	jr Nz, -			;JUMP IF TIMER IS EXPIRED. (SWITCH SCREENS IN THE INTRO, AND GO TO DEMO THEN.)
 	;IF THIS IS Z, PICTURES WILL SHOW FOR A VERY LITTLE TIME, AS THE PROGRAM THINKS THE TIMER IS EXPIRED ALREADY.
+
+
 	call _LABEL_4F9_PALETTE_FADEOUT	;FADE OUT SCREEN.
 	ld a, ($C001)
 	inc a
 	and $03
 	ld ($C001), a
 	jp z, _LABEL_2ED_GAME_DEMO	;IF WE HAVE SEEN ALL SCREENS, COMMENCE TO GAME DEMO.
-	;IF SET TO NZ, THE GAME DEMO STARTS AFTER THE FIRST LEGAL SCREEN.
-	ld a, ($C000)
-	inc a
-	and $01
-	ld ($C000), A
-	jr z, +	;CHANGE THIS TO NZ, AND THE SECOND SCREEEN WILL STAY ON, UNTIL THE DEMO COMMENCES.
-	ld a, $16
-	ld hl, $3800
-	call _LABEL_334C_DECOMPRESS_ART	;TILEMAP
-	ld a, $17
-	ld hl, $0000
-	call _LABEL_334C_DECOMPRESS_ART	;TILES
-	ld hl, _DATA_3C8_
-	jr ++
-
-+:	;THIS IS THE HEROES OF THE LANCE SCREEEN WITH THE DRAGON.
-	ld a, $03
-	ld hl, $0000
-	call _LABEL_334C_DECOMPRESS_ART
-	ld a, $02
-	ld hl, $3800
-	call _LABEL_334C_DECOMPRESS_ART
-	ld hl, _DATA_3B8_
+	;todo: analyze the game's demo inputs, and later on write a better one.
+	;disabled 24.09.06
+	;;IF SET TO NZ, THE GAME DEMO STARTS AFTER THE FIRST LEGAL SCREEN.
+	;ld a, ($C000)
+	;inc a
+	;and $01
+	;ld ($C000), A
+	;jr z, +	;CHANGE THIS TO NZ, AND THE SECOND SCREEEN WILL STAY ON, UNTIL THE DEMO COMMENCES.
+	;ld a, $16
+	;ld hl, $3800
+	;call _LABEL_334C_DECOMPRESS_ART	;TILEMAP
+	;ld a, $17
+	;ld hl, $0000
+	;call _LABEL_334C_DECOMPRESS_ART	;TILES
+	;ld hl, _DATA_3C8_
+	;jr ++
+;
++:	;;THIS IS THE HEROES OF THE LANCE SCREEEN WITH THE DRAGON.
+	;ld a, $03
+	;ld hl, $0000
+	;call _LABEL_334C_DECOMPRESS_ART
+	;ld a, $02
+	;ld hl, $3800
+	;call _LABEL_334C_DECOMPRESS_ART
+	;ld hl, _DATA_3B8_
 ++:
-	call _LABEL_4CF_LOAD2PALS
-	jp _LABEL_275_
+	;call _LABEL_4CF_LOAD2PALS	;this can be also changed, depending on how the new pictures will be entered into the game.
+	jp _LABEL_275_	;jump back to the beginning, and wait for any user input
 
 _LABEL_2D7_GAME_INIT:	;THIS IS WHEN YOU START A NORMAL GAME.
 	pop bc
 	call _LABEL_4F9_PALETTE_FADEOUT	;FADE SCREEN OUT.
-	ld a, $18
-	ld (_RAM_FFFF_), a	;SELECT BANK 24.
-	ld a, $FF
-	ld c, $02
-	call _LABEL_6242B_SET_MUS	;SELECT STAGE MUSIC
+;	ld a, $18
+;	ld (_RAM_FFFF_), a	;SELECT BANK 24.
+;	ld a, $FF
+;	ld c, $02
+;	call _LABEL_6242B_SET_MUS	;SELECT STAGE MUSIC
 	;call _LABEL_3504_CHAR_BIOS		;SHOW THE CHAR. BIOS. This at the moment is not really needed, i'll remove it.
+	;this would be repurposed for some kind of storytelling, with pictures and everything.
+	;disabled at 24.09.08 to cater for the new sound engine.
 	jp _LABEL_697_GAME_ENTRY			;GO TO GAME.
 
 _LABEL_2ED_GAME_DEMO:	;DISABLES PLAYER INPUT, LOADS SIMULATED ONES, AND STARTS THE GAME.
 ;YOU CAN HIJACK THIS, AND PLAY IT AS A REAL GAME, THERE IS NO DIFFERENCE.
+	
 	ld a, $01
 	ld (_RAM_DE97_), a	;IF THIS IS CHANGED TO ZERO, YOU CAN JUST PLAY THE GAME, AND THAT'S IT.
 	DEC a
@@ -795,19 +782,20 @@ _LABEL_2ED_GAME_DEMO:	;DISABLES PLAYER INPUT, LOADS SIMULATED ONES, AND STARTS T
 	ld (_RAM_DE98_), hl	;LOAD DEMO INPUTS
 	jp _LABEL_697_GAME_ENTRY		;COMMENCE INTO THE GAME
 
-_LABEL_2FF_PREPNPLAYSFX:	;If this is returned early, then there will bw no sound effects in the game.
-	push bc			;We save bc for later.
-	ld c, a
-	ld a, (_RAM_FFFF_)	;Save the last bank into a.
-	push af			;Push this also to the stack.
-	ld a, $18		;This is the music\sound bank.
-	ld (_RAM_FFFF_), a	;Then select this bank too.
-	ld a, c			;This might be the sound number?
-	call _LABEL_6248C_PLAYSFX
-	pop af			;Get back the last bank number.
-	ld (_RAM_FFFF_), a	;And switch back.
-	pop bc			;Restore this older value.
-	ret
+;_LABEL_2FF_PREPNPLAYSFX:	;If this is returned early, then there will bw no sound effects in the game.
+;	push bc			;We save bc for later.
+;	ld c, a
+;	ld a, (_RAM_FFFF_)	;Save the last bank into a.
+;	push af			;Push this also to the stack.
+;	ld a, $18		;This is the music\sound bank.
+;	ld (_RAM_FFFF_), a	;Then select this bank too.
+;	ld a, c			;This might be the sound number?
+;	call _LABEL_6248C_PLAYSFX
+;	pop af			;Get back the last bank number.
+;	ld (_RAM_FFFF_), a	;And switch back.
+;	pop bc			;Restore this older value.
+;	ret
+;disabled at 24.09.08	,sound effects will not be played this way, as stated many times in the source.
 .org $314
 ; Data from 314 to 334 (33 bytes)		;This is connected with some animations, but not sure what this is yet.
 _DATA_314_:
@@ -845,28 +833,29 @@ _DATA_3B8_:
 ; Data from 3C8 to 3D7 (16 bytes)
 _DATA_3C8_:
 .db $00 $3F $2A $15 $1F $0F $0B $07 $06 $02 $01 $2F $03 $33 $33 $33
-
-;; Data from 3D8 to 467 (144 bytes)
-;_DATA_3D8_CHAR_PALS:
-;.dsb 15, $00
-;.db $3F $00 $15 $2A $3F $04 $19 $25 $10 $2B $17 $03 $01 $06 $1B $2F
-;.db $3F $00 $15 $2A $01 $06 $1B $2F $10 $24 $39 $3E $11 $05 $1A $2F
-;.db $3F $00 $01 $16 $2B $02 $07 $0B $06 $1B $2F $3F $2A $15 $10 $25
-;.db $3A $00 $10 $24 $39 $3E $03 $02 $01 $06 $1B $2F $16 $2B $15 $2A
-;.db $3F $00 $05 $1A $2F $01 $06 $1B $2F $2A $15 $10 $25 $3A $16 $2B
-;.db $3F $00 $05 $1A $2F $10 $24 $39 $3E $00 $01 $06 $1B $2F $15 $2A
-;.db $3F $00 $04 $19 $2E $1F $0B $17 $07 $02 $01 $06 $1B $2F $15 $2A
-;.db $3F $00 $14 $29 $3E $10 $25 $3A $05 $1A $01 $06 $0B $2F $15 $2A
-;.db $3F
-;The character screens are disabled.
+;-----------------------------------------------------
+resetclock:	;there will be in ingame clock for this.
+	xor a
+	ld hl,frame
+	ld (hl),a
+	inc hl
+	ld (hl),a	;second
+	inc hl
+	ld (hl),a
+	inc hl
+	ld (hl),a	;minutes
+	inc hl
+	ld (hl),a	;hours
+			
+ret
 .org $468
 ; Data from 468 to 472 (11 bytes)
 _DATA_468_VDP_INIT_DATA:
 .db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F
-
 ; Data from 473 to 48B (25 bytes)
 _DATA_473_VDP_CONF_DATA:		;This is also sent ot the VDP.
-.db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F $3E $10 $F3 $D3 $BF
+.db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F 
+.db $3E $10 $F3 $D3 $BF
 .db $3E $C0 $D3 $BF $78 $D3 $BE $FB $C9
 
 _LABEL_48C_LOAD_VDP_DATA:
@@ -882,28 +871,6 @@ _LABEL_48C_LOAD_VDP_DATA:
 	jr nz, -
 	ret
 
-;--:	
-;		call _LABEL_4BD_VDP_OUTSETUP
-;-:	
-;		in a, (Port_VDPData)
-;		ld (de), a
-;		inc de
-;		dec bc
-;		ld a, b
-;		or c
-;		jr nz, -
-;		ret
-;	
-;_LABEL_4A7_DUMPVRAM_TOROM:	;Reading from VRAM, into ROM? I suspect during development, the last bank was RAM and not ROM.
-;		di
-;		ld a, $1F	;Bank 31.
-;		ld (_RAM_FFFF_), a
-;		ld de, $8000	;This is the beginning of Slot 2 ROM page.
-;		ld bc, $4000	;16k of data.
-;		ld hl, $0000
-;		call --
-;-:	
-;		jr -
 .org $4BB
 _LABEL_4BB_VDP_RAM_WRITESETUP:	;VDP RAM WRITE
 	set 6, h
@@ -915,16 +882,6 @@ _LABEL_4BD_VDP_OUTSETUP:		;This is used to do general VDP tasks, nor just write.
 	res 6, h
 	ret
 
-; Data from 4C6 to 4CE (9 bytes)
-;.dsb 9, $00
-;.db $11 $C4 $DE $01 $20 $00 $ED $B0 $C9
-
-;_LABEL_4C6_:	
-;		ld   de, _RAM_DEC4_PALETTE_LOAD_POINTER
-;		ld   bc, $0020
-;		ldir
-;		ret
-;These above are not used, or referenced anywhere.
 .org $04CF
 _LABEL_4CF_LOAD2PALS:
 	xor a
@@ -942,19 +899,6 @@ _LABEL_4CF_LOAD2PALS:
 	inc de
 	djnz -
 	ret
-
-;_LABEL_4E7_:	;This is not used by the code. Some VDP data loading. 
-;;The indexing part is a bit strange, especially with the +0. Maybe this is some other error in the disassembly.	
-;		ld a, c
-;		out (Port_VDPAddress), a
-;		ld a, (ix+0)
-;		ld a, $C0
-;		out (Port_VDPAddress), a
-;		ld a, (ix+0)
-;		ld a, b
-;		out (Port_VDPData), a
-;		ei
-;		ret
 
 .org $04F9
 _LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette details into the VDP. As it can be seen, this is a fadeout routine as well.
@@ -987,40 +931,6 @@ _LABEL_4F9_PALETTE_FADEOUT: ;Used many times by the game to load pallette detail
 	pop bc
 	djnz -
 	ret
-;I can't relocate this for now, as there's no space at where the code is called. I won't give up though.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .org $0552	;We have to keep things where they are supposed to be .
 _LABEL_552_CHECK_AB_BUTTONS:
 	ld a, $FF
@@ -1074,7 +984,7 @@ _LABEL_59B_MAIN:
 	ld a, (_RAM_DE9D_TIMER)
 	and a
 	jr z, -
-	call _LABEL_5F4_RESET
+	;call _LABEL_5F4_RESET
 	ld a, (_RAM_DE97_)
 	and a
 	jr z, +
@@ -1088,15 +998,16 @@ _LABEL_59B_MAIN:
 	ld a, (_RAM_DE9E_)
 	and b
 	ret z
-	ld a, ($DE46)
+	ld a, (_RAM_DE46_SCROLLBG);($DE46)
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
-	ld a, (_RAM_DE25_MUSIC_COUNTER)
-	ld d, a
-	ld a, $01
-	ld (_RAM_DE25_MUSIC_COUNTER), a
-	call _LABEL_612_MUTE_PSG
+;	ld a, (_RAM_DE25_MUSIC_COUNTER)
+;	ld d, a
+;	ld a, $01
+;	ld (_RAM_DE25_MUSIC_COUNTER), a
+;	call _LABEL_612_MUTE_PSG
+;disabled at 24.09.08
 	xor a
 	ld (_RAM_DE9D_TIMER), a
 -:
@@ -1107,37 +1018,9 @@ _LABEL_59B_MAIN:
 	ld b, a
 	ld c, $08
 	call _LABEL_62D_WRITE_VDP_REG
-	;ret
-	call _LABEL_5F4_RESET
-;Since the reset is not enables anymore, this routine will be empty for now.
-; Data from 5E8 to 5F3 (12 bytes)
-;.dsb 12, $00	;This is what it gets disassembled to, but does not seem to be valid, since the jump is a bit far for it, and at the moment, I don't know where it would jump either.
-;		ld   a, (_RAM_DE9E_)
-;		and  a
-;		jr   nz, --
-;		ld   a, d
-;		ld   (_RAM_DE25_MUSIC_COUNTER), a
-;		jr   _LABEL_59B_MAIN
-;.db $3A $9E $DE $A7 $20 $E4 $7A $32 $25 $DE $18 $A7
-.org $5f4
-_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. 
-;The SMS2 doesn't, and neither the MD--->SMS adapter.
 	ret
-;	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
-;	and $10			;MASK OUT ALL OTHER BUTTONS.
-;	ld c, a
-;	ld a, (_RAM_DE22_RESET)
-;	sub c
-;	ret z			;If the button is not pressed, then we should just return.
-;	ld a, c
-;	ld (_RAM_DE22_RESET), a
-;	bit 4, a
-;	ret nz
-;	xor a
-;	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
-;	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
-;	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
-;	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
+	;call _LABEL_5F4_RESET
+
 ;The devs thought about this, I think they programmed this on an SMS1, otherwise they would not bother with this small feature.
 _LABEL_612_MUTE_PSG:
 	ld hl, _DATA_61B_MUTEPSG
@@ -1244,14 +1127,16 @@ _LABEL_652_LOAD_NEW_SCRN:	;When you go through a door\archway\level, this will l
 	pop hl
 	ret
 	;nop	;This was not here.
+;This piece of code might be not needed later on, as we will decompress stuff into RAM directly. Maybe this will control that.
 _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
+	;jp pictest
+	call ClearVRAM
 	di
 	ld hl, $3C00	;0011 1100 0000 0000	;Set the SAT as the destination address.
 	call _LABEL_4BB_VDP_RAM_WRITESETUP		;Setup a write.
 	ld bc, $0100				;256 bytes.
-	ld de, $00BF				;191
--:
-	ld a, e ;1011 1111
+	ld de, $00FF;$00BF				;191
+-:;	ld a, e ;1011 1111
 	out (Port_VDPData), a
 	neg
 	neg
@@ -1260,13 +1145,11 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	dec bc
 	ld a, b
 	or c
-	jr nz, -	;DO SOME VDP SETUP
+	jr nz, -	;DO SOME VDP SETUP 
 	ei
+	
 	ld a,$01
 	ld (_RAM_DE52_ROOM_NR), a	;SET THE STARTING ROOM.
-
-;MESS HERE.
-	;A is not needed to be saved.
 	ld a,31
 	ld (_RAM_FFFF_),a
 	call _LABEL_7D42_LOAD_PLYRSTAT	;Load player stats of course, I mapped some things at the data part.
@@ -1274,7 +1157,7 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	call _LABEL_79E7_SPAWN_ITEMTRAP	;TRAPS, ITEMS ARE NOT LOADED. THE GAME IS POSSIBLY UNWINNABLE THIS WAY, SINCE THE DISKS COULD NOT SPAWN EITHER.
 	;disabled, so the ram parts connected to it are free.
 	;relocated
-	;call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
+	call _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG	;DISABLING THIS WILL NOT DRAW THE USUAL HUD, BUT ENABLES SOME DEBUG HUD. A ATTACKS, AND B ADVANCES YOU TO THE NEXT "ROOM". CHARS CAN STILL DIE. CHAR MENU IS DISABLED.
 	;relocated
 	call _LABEL_2BF2_CLEAR_INRAMSAT	;We clear the SAT table stored in RAM. Since we'll use this later, this small clearing does not affect much.
 	ld ix, _RAM_D900_CHARA_COORD
@@ -1294,14 +1177,8 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld hl, $0000
 	ld (_RAM_DE34_SCRN_SCROLL), hl		
 	ld (_RAM_DE36_), hl	;Reset the maximum stage length.
-	xor a
-	ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
--:
-	ld (hl), a
-	inc hl
-	inc a
-	cp $08	
-	jr nz, -		;Resetting the list of the heroes.
+;'TODO:'The def. character should be Caramon. Here, it was a hero roundup code here, which was removed at 24.09.15
+
 	call _LABEL_59B_MAIN
 	ld a, $08	
 	ld (_RAM_DE9F_TIMER), a
@@ -1310,30 +1187,35 @@ _LABEL_697_GAME_ENTRY:	;THE ACTUAL GAME STARTS HERE.
 	ld a, (_RAM_DE97_)
 	and a
 	;changed 06/24/24	no music to annoy me during debug
-	jp +
+	;jp +
 	jr nz, +
-	ld a, $18
-	ld (_RAM_FFFF_), a
-	ld a, $02
-	ld c, $01
-	call _LABEL_6242B_SET_MUS	;SELECT MUSIC BANK, MUSIC AND START IT.
+;	ld a, $18
+;	ld (_RAM_FFFF_), a
+;	ld a, $02
+;	ld c, $01
+;	call _LABEL_6242B_SET_MUS	;SELECT MUSIC BANK, MUSIC AND START IT.
+;	disabled at 24.09.08 to cater for the new sound engine.
 +:
 	call _LABEL_6F06_HUD		;DRAW THE HUD. Uses bankswitching, so this is not a low hanging fruit as the previous ones.
+	;TODO:	The HUD code should be examined, and reprogrammed.
 _LABEL_726_LEVEL_WARP_LOAD:		;Since we will load a level, this will be needed.
-	push af
-	ld a,(_RAM_FFFF_)
-	ld (_RAM_DE23_CONSOLE_REGION),a
-	ld a,31
-	ld (_RAM_FFFF_),a
-	;call _LABEL_5819_MARKDEAD_PERMADEAD		
-	ld a,(_RAM_DE23_CONSOLE_REGION)
-	ld (_RAM_FFFF_),a
-	pop af
+;	push af
+;	ld a,(_RAM_FFFF_)
+;	ld (_RAM_DE23_CONSOLE_REGION),a
+;	ld a,31
+;	ld (_RAM_FFFF_),a
+;	;call _LABEL_5819_MARKDEAD_PERMADEAD		
+;	ld a,(_RAM_DE23_CONSOLE_REGION)
+;	ld (_RAM_FFFF_),a
+;	pop af
+;temporarily disabled at 24.09.08, as other characters are not used anymore. still, let's wait until the other parts of the code is done.
 	;this is also relocated
 	;When the game warps to another section, it checks for dead characters. If you have not resurrected them, they will be marked as permanently dead. 
 	;Since at the moment we start the game, this will have no effect.
 	call _LABEL_59B_MAIN
-	;Call _LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES. I will relocate the data part later, since it would save more than half a Kb.
+	Call LABEL_721C_INIT_NME	;THIS PART WILL INIT THE ENEMIES. The data that is related to this has been relocated to the last bank. No speed penalties so far.
+	ld a,(lastbank)
+	ld (_RAM_FFFF_),a	;24.09.08 modified.
 	call _LABEL_7971_INIT_TRAPS	
 	ld a, (_RAM_DE55_WATERFALL)	;See if the loaded new screen will be a waterfall\healing for the party.
 	and $01
@@ -1543,11 +1425,12 @@ _LABEL_8B9_GAME_OVER:	;THIS GETS CALLED, WHEN ALL CHARS ARE DEAD\PERMADEAD.
 	ld hl, $0000
 	ld (_RAM_DE74_PT_FOR_CMBT), hl	;SET NO POINTS FOR COMBAT. HOW RUDE.
 	ld (_RAM_DE76_CR_DMGLINK), a	;DISABLE THE DAMAGE LINK BETWEEN RAISTLIN AND CARAMON.
-	ld a, $18			
-	ld (_RAM_FFFF_), a		;SET BANK 24. (MUSIC)
-	ld a, $03			;SET THE GAME OVER MUSIC.
-	ld c, $01
-	call _LABEL_6242B_SET_MUS	;PLAY THE GAME OVER TUNE.
+;	ld a, $18			
+;	ld (_RAM_FFFF_), a		;SET BANK 24. (MUSIC)
+;	ld a, $03			;SET THE GAME OVER MUSIC.
+;	ld c, $01
+;	call _LABEL_6242B_SET_MUS	;PLAY THE GAME OVER TUNE.
+;disabled on 24.09.08, not need for the music on the game over screen.
 	ld hl, $3808			;TILEMAP ON THE SCREEN. IF YOU OPEN A TILEMAP MONITOR IN AN EMULATOR, YOU CAN SEE THIS VALUE DIRECTLY CORRELATES WITH THE TILE\TEXT POSITION ON THE SCREEN LATER.
 	ld de, _DATA_AEF2_MISSION_FAILEDTXT		;THIS IS A BLOCK OF TEXT AND OTHER DATA. BASICALLY THE CODE SETS UP THIS REGISTER TO POINT TO THE 'YOU'VE FAILED' MESSAGE.
 --:	;CHANGED!
@@ -1572,11 +1455,12 @@ _LABEL_8B9_GAME_OVER:	;THIS GETS CALLED, WHEN ALL CHARS ARE DEAD\PERMADEAD.
 _LABEL_906_GOOD_END: ;Ending screen.
    di              ; Disable interrupts		1byte
    call _LABEL_6B42_DRW_SOLID_CLR_SCRN;$6B42      ; Call subroutine at address $6B42 3
-   ld a, $18       ; This is the music bank. 2
-   ld (_RAM_FFFF_), a   ; Store value of A into memory address $FF00 3
-   ld a, $04           ; Decrement value in register A 1
-   ld c, $01       ; Load value $01 into register C 2
-   call _LABEL_6242B_SET_MUS 
+;   ld a, $18       ; This is the music bank. 2
+;   ld (_RAM_FFFF_), a   ; Store value of A into memory address $FF00 3
+;   ld a, $04           ; Decrement value in register A 1
+;   ld c, $01       ; Load value $01 into register C 2
+;   call _LABEL_6242B_SET_MUS 
+;disabled at 24.09.08 pin here the new game over music
    ld hl, $3808    ; This is a tilemap part. 3
    ld de, $AF25    ; Load value $AF25 into register pair DE 3
    ld a, $01       ; Load value $01 into register A 2
@@ -1594,7 +1478,7 @@ _LABEL_924_UPDATE_GAME_SCRN:
 	sbc hl, de
 	jr c, +
 	ld c, $01
-	;call _LABEL_5689_HITDETECT
+	call _LABEL_5689_HITDETECT
 	ld c, $08
 	;call _LABEL_57CC_DAMAGE_OTHERS
 	;disabled 07/18/2024
@@ -2020,7 +1904,10 @@ _LABEL_C43_LEVEL_LOAD:	;OH SWEET JESUS... yeah this is level calculation, lets g
 
 	call _LABEL_BB7_CLR_SCREEN	
 ;changed 06!24/24
-;	JP +
+;This part will be rewritten if possible. The game stores the rooms in a very compact way, but there's no need to use these
+;in the new program. It clears some RAM, then starts a convoluted process of extracting level data from ROM.
+;A normal memory dump will be performed in the new loading method. Other details will be loaded after that. New stages will also
+;use the new loading code.
 	ld hl, _RAM_D000_IN_RAM_SPRITETABLE
 	ld de, _RAM_D000_IN_RAM_SPRITETABLE + 1
 	ld bc, $01FF	;512 BYTES, so both tables are cleared at the same time.
@@ -2320,9 +2207,6 @@ _LABEL_D89_:
 	ld bc, $0020					;How many bytes to load for a tile. If this is less than 32, tiles are get garbled
 	di
 	call _LABEL_48C_LOAD_VDP_DATA	;This loads the second set of tiles into VRAM.
-	;nop
-	;nop
-	;nop
 	ei
 	pop bc
 	pop hl
@@ -2338,8 +2222,6 @@ _LABEL_DF6_:	;This part seems to loads the data into RAM.
 	ld d, b
 	srl d
 	res 0, d	;This part controls some parts of the tilemap, that uses the first part of the tiles. If this is disabled, some parts will use the wrong tile parts.
-	;nop
-	;nop
 	set 3, d	;At first glance this does nothing. Maybe another tilemap attribute or something.
 	push hl
 	ld hl, $010C
@@ -2384,21 +2266,6 @@ _LABEL_E17_:
 	pop bc
 	dec b
 	jp nz, _LABEL_D29_
-	;jr +
-
-; Data from E3A to E40 (7 bytes)
-;.db $E1 $C1 $E1 $D1 $C1 $D1 $C1
-;_LABEL_E3A_:	;We save registers again. 
-;The game does not jump here on my disassy code. This is somehow connected with the chests in the game.
-;Instead of removing this piece of not used code, they made a jump... Brilliant.
-;		pop hl
-;		pop bc
-;		pop hl
-;		pop de
-;		pop bc
-;		pop de
-;		pop bc
-;+:			;But the code jump here often, after a room change.
 	ld a, $08
 	ld (_RAM_FFFF_), a	;Get bank 8.
 	ld hl, (_DATA_20078_)	;Get the very first data from this address.
@@ -2602,7 +2469,7 @@ _LABEL_F50_:;Tilemap loading happens here, and somehow the tiles are adjusted. V
 	ld (hl), $FF
 	ld (_RAM_DE38_), hl
 	ret
-
+;Some parts of this code should remain, as I don't intend to reinvent the wheel.
 _LABEL_FCB_SCRL_RIGHT:	;THIS IS THE SCROLL RIGHT PART.
 	ld a, $01
 	ld (_RAM_DE4E_SCROLL_DIR), a	
@@ -2845,7 +2712,7 @@ _LABEL_111A_:
 	dec b
 	jp nz, _LABEL_111A_
 	ret
-
+.org $116F
 _LABEL_116F_:	;We come here from the column calculations and other shenanigans, and from a quick look, this should draw\send data to the VDP. During normal scrolling or gameplay, this is not executed as I could see.
 	push bc
 	ld a, l
@@ -2906,189 +2773,189 @@ _LABEL_116F_:	;We come here from the column calculations and other shenanigans, 
 	jp nz, _LABEL_116F_
 	ret
 
-;_LABEL_11C5_:	;This does not seem to be executed either. Some drawing routines, and scrolling, yet the game does not jump here. However, after redirecting the code here, it seems this works just as well as the used one. I wonder what happened that this is not used.
-;		ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
-;		ld (_RAM_FFFF_), a
-;		ld a, (_RAM_DE4F_)
-;		cp $02
-;		jp z, ++
-;		ld hl, (_RAM_DE2F_)
-;		ld de, (_RAM_DE50_COLUMN_DRW_NR)
-;		add hl, de
-;		ld a, h
-;		add a, $0D
-;		ld h, a
-;		ld a, (_RAM_DE3B_)
-;		ld b, $C4
-;		and a
-;		jr z, +
-;		ld b, $C0
-;		inc h
-;+:	
-;		push hl
-;		ld hl, (_RAM_DE4C_)
-;		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
-;		add hl, de
-;		ld de, $06C0
-;		add hl, de
-;		pop de
-;		ld a, h
-;		cp $3F
-;		jp c, +++
-;		sub $07
-;		ld h, a
-;		jp +++
-;	
-;++:	
-;		ld hl, (_RAM_DE2F_)
-;		ld de, (_RAM_DE50_COLUMN_DRW_NR)
-;		add hl, de
-;		ld a, (_RAM_DE3B_)
-;		ld b, $C0
-;		and a
-;		jr z, 2
-;		ld b, $C4
-;		push hl
-;		ld hl, (_RAM_DE4C_)
-;		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
-;		add hl, de
-;		pop de
-;		jp +++
-;	
-;+++:	
-;		ld a, b
-;		ld (_RAM_DE6A_), a
-;		add a, $02
-;		ld (_RAM_DE6B_), a
-;		ld a, l
-;		out (Port_VDPAddress), a
-;		nop
-;		nop
-;		ld a, h
-;		set 6, a
-;		out (Port_VDPAddress), a
-;		ld b, $10
-;		ld a, (_RAM_DE3A_COLUMN_00_01)
-;		and a
-;		jp nz, _LABEL_128F_
-;_LABEL_123F_:	
-;		push bc
-;		ld a, (de)
-;		ld c, a
-;		ld a, (_RAM_DE6A_)
-;		ld b, a
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		ld a, (_RAM_DE6A_)
-;		ld b, a
-;		inc b
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		inc l
-;		inc l
-;		ld a, l
-;		and $3F
-;		jr nz, +
-;		ld a, l
-;		sub $40
-;		ld l, a
-;		out (Port_VDPAddress), a
-;		nop
-;		nop
-;		ld a, h
-;		set 6, a
-;		out (Port_VDPAddress), a
-;+:	
-;		ld a, (_RAM_DE6B_)
-;		ld b, a
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		ld a, (_RAM_DE6B_)
-;		ld b, a
-;		inc b
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		inc l
-;		inc l
-;		ld a, l
-;		and $3F
-;		jr nz, +
-;		ld a, l
-;		sub $40
-;		ld l, a
-;		out (Port_VDPAddress), a
-;		nop
-;		nop
-;		ld a, h
-;		set 6, a
-;		out (Port_VDPAddress), a
-;+:	
-;		inc de
-;		pop bc
-;		dec b
-;		jp nz, _LABEL_123F_
-;		ret
-;	
-;_LABEL_128F_:	;This is connected to the unused routine, so this is also probably never executed either. Looks like some drawing routine.
-;	ret
-;		push bc
-;		ld a, (de)
-;		inc de
-;		ld c, a
-;		ld a, (_RAM_DE6B_)
-;		ld b, a
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		ld a, (_RAM_DE6B_)
-;		ld b, a
-;		inc b
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		ld a, (de)
-;		ld c, a
-;		inc l
-;		inc l
-;		ld a, l
-;		and $3F
-;		jr nz, +
-;		ld a, l
-;		sub $40
-;		ld l, a
-;		out (Port_VDPAddress), a
-;		nop
-;		nop
-;		ld a, h
-;		set 6, a
-;		out (Port_VDPAddress), a
-;+:	
-;		ld a, (_RAM_DE6A_)
-;		ld b, a
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		ld a, (_RAM_DE6A_)
-;		ld b, a
-;		inc b
-;		ld a, (bc)
-;		out (Port_VDPData), a
-;		inc l
-;		inc l
-;		ld a, l
-;		and $3F
-;		jr nz, +
-;		ld a, l
-;		sub $40
-;		ld l, a
-;		out (Port_VDPAddress), a
-;		nop
-;		nop
-;		ld a, h
-;		set 6, a
-;		out (Port_VDPAddress), a
-;+:	
-;		pop bc
-;		dec b
-;		jp nz, _LABEL_128F_
-;		ret
+_LABEL_11C5_:	;This does not seem to be executed either. Some drawing routines, and scrolling, yet the game does not jump here. However, after redirecting the code here, it seems this works just as well as the used one. I wonder what happened that this is not used.
+		ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
+		ld (_RAM_FFFF_), a
+		ld a, (_RAM_DE4F_)
+		cp $02
+		jp z, ++
+		ld hl, (_RAM_DE2F_)
+		ld de, (_RAM_DE50_COLUMN_DRW_NR)
+		add hl, de
+		ld a, h
+		add a, $0D
+		ld h, a
+		ld a, (_RAM_DE3B_)
+		ld b, $C4
+		and a
+		jr z, +
+		ld b, $C0
+		inc h
++:	
+		push hl
+		ld hl, (_RAM_DE4C_)
+		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
+		add hl, de
+		ld de, $06C0
+		add hl, de
+		pop de
+		ld a, h
+		cp $3F
+		jp c, +++
+		sub $07
+		ld h, a
+		jp +++
+	
+++:	
+		ld hl, (_RAM_DE2F_)
+		ld de, (_RAM_DE50_COLUMN_DRW_NR)
+		add hl, de
+		ld a, (_RAM_DE3B_)
+		ld b, $C0
+		and a
+		jr z, 2
+		ld b, $C4
+		push hl
+		ld hl, (_RAM_DE4C_)
+		ld de, (_RAM_DE4A_COLUMN_NR_SCROLL)
+		add hl, de
+		pop de
+		jp +++
+	
++++:	
+		ld a, b
+		ld (_RAM_DE6A_), a
+		add a, $02
+		ld (_RAM_DE6B_), a
+		ld a, l
+		out (Port_VDPAddress), a
+		nop
+		nop
+		ld a, h
+		set 6, a
+		out (Port_VDPAddress), a
+		ld b, $10
+		ld a, (_RAM_DE3A_COLUMN_00_01)
+		and a
+		jp nz, _LABEL_128F_
+_LABEL_123F_:	
+		push bc
+		ld a, (de)
+		ld c, a
+		ld a, (_RAM_DE6A_)
+		ld b, a
+		ld a, (bc)
+		out (Port_VDPData), a
+		ld a, (_RAM_DE6A_)
+		ld b, a
+		inc b
+		ld a, (bc)
+		out (Port_VDPData), a
+		inc l
+		inc l
+		ld a, l
+		and $3F
+		jr nz, +
+		ld a, l
+		sub $40
+		ld l, a
+		out (Port_VDPAddress), a
+		nop
+		nop
+		ld a, h
+		set 6, a
+		out (Port_VDPAddress), a
++:	
+		ld a, (_RAM_DE6B_)
+		ld b, a
+		ld a, (bc)
+		out (Port_VDPData), a
+		ld a, (_RAM_DE6B_)
+		ld b, a
+		inc b
+		ld a, (bc)
+		out (Port_VDPData), a
+		inc l
+		inc l
+		ld a, l
+		and $3F
+		jr nz, +
+		ld a, l
+		sub $40
+		ld l, a
+		out (Port_VDPAddress), a
+		nop
+		nop
+		ld a, h
+		set 6, a
+		out (Port_VDPAddress), a
++:	
+		inc de
+		pop bc
+		dec b
+		jp nz, _LABEL_123F_
+		ret
+	
+_LABEL_128F_:	;This is connected to the unused routine, so this is also probably never executed either. Looks like some drawing routine.
+	;ret
+		push bc
+		ld a, (de)
+		inc de
+		ld c, a
+		ld a, (_RAM_DE6B_)
+		ld b, a
+		ld a, (bc)
+		out (Port_VDPData), a
+		ld a, (_RAM_DE6B_)
+		ld b, a
+		inc b
+		ld a, (bc)
+		out (Port_VDPData), a
+		ld a, (de)
+		ld c, a
+		inc l
+		inc l
+		ld a, l
+		and $3F
+		jr nz, +
+		ld a, l
+		sub $40
+		ld l, a
+		out (Port_VDPAddress), a
+		nop
+		nop
+		ld a, h
+		set 6, a
+		out (Port_VDPAddress), a
++:	
+		ld a, (_RAM_DE6A_)
+		ld b, a
+		ld a, (bc)
+		out (Port_VDPData), a
+		ld a, (_RAM_DE6A_)
+		ld b, a
+		inc b
+		ld a, (bc)
+		out (Port_VDPData), a
+		inc l
+		inc l
+		ld a, l
+		and $3F
+		jr nz, +
+		ld a, l
+		sub $40
+		ld l, a
+		out (Port_VDPAddress), a
+		nop
+		nop
+		ld a, h
+		set 6, a
+		out (Port_VDPAddress), a
++:	
+		pop bc
+		dec b
+		jp nz, _LABEL_128F_
+		ret
 ;Disabled at may 30 13:37
 
 .org $12E1
@@ -3956,23 +3823,6 @@ _DATA_2ACC_:	;No idea what this is, but used with the level loading. The last st
 .db $00 $01 $01 $01 $01 $01 $01 $09 $03 $03 $00 $0A $01 $01 $01 $01
 .db $01 $09 $03 $03
 
-;_LABEL_2BF2_CLEAR_INRAMSAT:	;SEEMS TO DO HOUSEKEEPING OF THE INRAM SAT VALUES. THERE ARE TWO TABLES. IF THIS IS DISABLED, I CAN'T SEE ANY MAJOR DIFFERENCE. PROBABLY HERE TO BE SAFE, OR THERE IS A BUG ALONG THE WAY THAT THIS FIXES.
-;	xor a
-;	ld (_RAM_DEB5_FRAMESET), a
-;	ld hl, _RAM_D400_IN_RAM_SPRITETABLE
-;	ld de, _RAM_D400_IN_RAM_SPRITETABLE + 1
-;	ld bc, $00FF
-;	ld (hl), $D0	;THIS SEEMS LIKE THE INRAM SAT TABLE.
-;	ldir
-;	ld hl, $0000
-;	ld (_RAM_DE42_), hl
-;	ld hl, _RAM_D900_CHARA_COORD
-;	ld de, _RAM_D900_CHARA_COORD + 1
-;	ld bc, $014F
-;	ld (hl), $00
-;	ldir
-;	call _LABEL_2C1A_FRAMESET_COPY
-;	ret
 .org $2C1A
 _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinates and other things for the second frame, for the smoother but slower animation.
 	ld a, (_RAM_DEB5_FRAMESET)	;It seems, this checks if we are in the first, or second set of frames.
@@ -3994,15 +3844,15 @@ _LABEL_2C1A_FRAMESET_COPY:	;Depending on the value of $DEB5, it copies coordinat
 	ret
 
 
-;_LABEL_2C46_:	;This does not seem to be used.	
-;		xor a
-;		ld (_RAM_DEB5_FRAMESET), a	;Set it to the first frameset.
-;		ld a, $D0			;This marks the end of sprite drawing. If the VDP gets this on the sprite list, it stops drawing them, and won't look any further.
-;		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
-;		ret
-;_LABEL_2C50_:	;Not used.
-;		call _LABEL_2DE2_SHOWSPR ;This is still a long one... But since this is not used, i'll get there eventually.
-;		ret
+_LABEL_2C46_:	;This does not seem to be used.	
+		xor a
+		ld (_RAM_DEB5_FRAMESET), a	;Set it to the first frameset.
+		ld a, $D0			;This marks the end of sprite drawing. If the VDP gets this on the sprite list, it stops drawing them, and won't look any further.
+		ld (_RAM_D400_IN_RAM_SPRITETABLE), a
+		ret
+_LABEL_2C50_:	;Not used.
+		call _LABEL_2DE2_SHOWSPR ;This is still a long one... But since this is not used, i'll get there eventually.
+		ret
 .org $2c54
 _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF THE CODE.
 	ld hl, (_RAM_DEA9_)	;OKAY, THIS AGAIN.
@@ -4054,7 +3904,7 @@ _LABEL_2C54_CHARA_ANIM:	;FINE CHARACTER MOVEMENT IS CONTROLLED BY THIS PART OF T
 ;		ret z
 ;		dec d
 ;		ret
-;removed may 30
+;removed may 24.09.08
 +++:
 	ld l, (ix+16)
 	ld h, (ix+17)
@@ -4199,9 +4049,9 @@ _LABEL_2D7E_:
 	jr +++
 
 ; Data from 2D92 to 2D93 (2 bytes)	CHANGED
-;.db $18 $13
+;.db $18 $13	;disabled on 24.09.08
 
-	
+.org $2D92	
 _LABEL_2D92_:	
 	jr   ++++
 
@@ -5097,102 +4947,102 @@ _LABEL_333D_:
 	xor l
 	ld l, a
 	jr -
-
-_LABEL_334C_DECOMPRESS_ART:	;$14 OR $01 AT FIRST. 0001 0100 OR 0000 0001
-	push af
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	pop af
-	ld l, a
-	ld a, $19		;SELECT BANK 25.
-	ld (_RAM_FFFF_), a	;BANKSWITCH.
-	ld h, $00
-	add hl, hl	;0010
-	add hl, hl	;0100
-	add hl, hl	;0000 1000	WE ROLL SOME BYTES IN L.
-	ld de, _DATA_64000_COMP_GFX
-	add hl, de	;64008
-	ld de, _RAM_D120_ART_DECOMP
-	ld bc, $0008
-	ldir		;COPY EIGHT BYTES TO RAM.
-	ld ix, _RAM_D120_ART_DECOMP	;LOAD IT INTO THE INDEX REG.
-	ld h, (ix+0)		;$80
-	ld l, (ix+1)		;$C0	SET UP A SOURCE ADDRESS. HL IS $80C0.
-	ld b, (ix+2)		;$02
-	ld c, (ix+3)		;$1D	SET UP THE BYTE AMOUNT.	BC IS $021D.
-	dec bc			;$1C
-	ld e, $20		;021C
-	ld iy, _RAM_D100_IN_RAM_SPRITETABLE
-	ld a, (ix+6)	;$D126
-	add a, $19	;We calculate the correct bank to switch to.
-	ld (_RAM_FFFF_), a
-	cp $20
-	jp nc, _LABEL_3503_JUST_RET
-	ld a, (hl)
-	ld (_RAM_DEE4_DECOMP), a
-	inc hl
-	dec bc
-	ld a, (ix+7)
-	cp $02
-	jp z, _LABEL_34DA_
-	cp $03
-	jp z, _LABEL_341D_
-	and a
-	jp nz, _LABEL_33A6_DECOMPRESS
-	jp _LABEL_3498_
-
-_LABEL_33A6_DECOMPRESS:
-;If this is commented out from running, the intro's pictures are not showing properly, and the game's collision detection would break.
+;disabled 24.09.08
+;_LABEL_334C_DECOMPRESS_ART:	;$14 OR $01 AT FIRST. 0001 0100 OR 0000 0001
+;	push af
+;	call _LABEL_4BB_VDP_RAM_WRITESETUP
+;	pop af
+;	ld l, a
+;	ld a, $19		;SELECT BANK 25.
+;	ld (_RAM_FFFF_), a	;BANKSWITCH.
+;	ld h, $00
+;	add hl, hl	;0010
+;	add hl, hl	;0100
+;	add hl, hl	;0000 1000	WE ROLL SOME BYTES IN L.
+;	ld de, _DATA_64000_COMP_GFX
+;	add hl, de	;64008
+;	ld de, _RAM_D120_ART_DECOMP
+;	ld bc, $0008
+;	ldir		;COPY EIGHT BYTES TO RAM.
+;	ld ix, _RAM_D120_ART_DECOMP	;LOAD IT INTO THE INDEX REG.
+;	ld h, (ix+0)		;$80
+;	ld l, (ix+1)		;$C0	SET UP A SOURCE ADDRESS. HL IS $80C0.
+;	ld b, (ix+2)		;$02
+;	ld c, (ix+3)		;$1D	SET UP THE BYTE AMOUNT.	BC IS $021D.
+;	dec bc			;$1C
+;	ld e, $20		;021C
+;	ld iy, _RAM_D100_IN_RAM_SPRITETABLE
+;	ld a, (ix+6)	;$D126
+;	add a, $19	;We calculate the correct bank to switch to.
+;	ld (_RAM_FFFF_), a
+;	cp $20
+;	jp nc, _LABEL_3503_JUST_RET
+;	ld a, (hl)
+;	ld (_RAM_DEE4_DECOMP), a
+;	inc hl
+;	dec bc
+;	ld a, (ix+7)
+;	cp $02
+;	jp z, _LABEL_34DA_
+;	cp $03
+;	jp z, _LABEL_341D_
+;	and a
+;	jp nz, _LABEL_33A6_DECOMPRESS
+;	jp _LABEL_3498_
 ;
-	ld d, (hl)
-	inc hl
-	dec bc
-	ld a, (_RAM_DEE4_DECOMP)
-	cp d
-	jr z, +
-	ld (iy+0), d
-	inc iy
-	dec e
-	call z, _LABEL_33F6_
----:
-	ld a, b
-	inc a
-	jr nz, _LABEL_33A6_DECOMPRESS
-	ld b, (ix+4)
-	ld c, (ix+5)
-	ld a, b
-	or c
-	ret z
-	dec bc
-	ld a, (ix+6)
-	add a, $19
-	inc a
-	ld (_RAM_FFFF_), a
-	ld (ix+4), $00
-	ld (ix+5), $00
-	ld hl, $8000
-	jp _LABEL_33A6_DECOMPRESS
-
---:
-	inc hl
-	dec bc
-	inc hl
-	dec bc
-	jr ---
-
-+:
-	inc hl
-	ld d, (hl)
-	inc d
-	dec hl
--:
-	dec d
-	jr z, --
-	ld a, (hl)
-	ld (iy+0), a
-	inc iy
-	dec e
-	call z, _LABEL_33F6_
-	jr -
+;_LABEL_33A6_DECOMPRESS:
+;;If this is commented out from running, the intro's pictures are not showing properly, and the game's collision detection would break.
+;;
+;	ld d, (hl)
+;	inc hl
+;	dec bc
+;	ld a, (_RAM_DEE4_DECOMP)
+;	cp d
+;	jr z, +
+;	ld (iy+0), d
+;	inc iy
+;	dec e
+;	call z, _LABEL_33F6_
+;---:
+;	ld a, b
+;	inc a
+;	jr nz, _LABEL_33A6_DECOMPRESS
+;	ld b, (ix+4)
+;	ld c, (ix+5)
+;	ld a, b
+;	or c
+;	ret z
+;	dec bc
+;	ld a, (ix+6)
+;	add a, $19
+;	inc a
+;	ld (_RAM_FFFF_), a
+;	ld (ix+4), $00
+;	ld (ix+5), $00
+;	ld hl, $8000
+;	jp _LABEL_33A6_DECOMPRESS
+;
+;--:
+;	inc hl
+;	dec bc
+;	inc hl
+;	dec bc
+;	jr ---
+;
+;+:
+;	inc hl
+;	ld d, (hl)
+;	inc d
+;	dec hl
+;-:
+;	dec d
+;	jr z, --
+;	ld a, (hl)
+;	ld (iy+0), a
+;	inc iy
+;	dec e
+;	call z, _LABEL_33F6_
+;	jr -
 
 _LABEL_33F6_:
 	ld iy, _RAM_D100_IN_RAM_SPRITETABLE
@@ -5431,7 +5281,7 @@ _LABEL_3503_JUST_RET:
 ;	jp z, _LABEL_3520_CHAR_SHOW
 ;_LABEL_3581_JUSTRET:
 ;	ret
-
+.org $3582
 _LABEL_3582_DRAW_NUMBERS_DEBUG:
 	ex de, hl
 	ld hl, _RAM_DE66_
@@ -5584,11 +5434,11 @@ _DATA_3645_:
 .db $04 $4E $05 $4F $06 $50 $FF
 
 ;; Data from 366C to 369D (50 bytes)DISABLED
-;_DATA_366C_CHAR_DATA:
-;.db $05 $04 $E8 $03 $DB $A0 $07 $06 $F8 $03 $2C $A5 $09 $08 $08 $04
-;.db $A1 $A1 $0B $0A $18 $04 $46 $A3 $0D $0C $28 $04 $00 $A0 $0F $0E
-;.db $38 $04 $21 $A6 $11 $10 $48 $04 $3A $A4 $13 $12 $58 $04 $76 $A2
-;.db $00 $00
+_DATA_366C_CHAR_DATA:
+.db $05 $04 $E8 $03 $DB $A0 $07 $06 $F8 $03 $2C $A5 $09 $08 $08 $04
+.db $A1 $A1 $0B $0A $18 $04 $46 $A3 $0D $0C $28 $04 $00 $A0 $0F $0E
+.db $38 $04 $21 $A6 $11 $10 $48 $04 $3A $A4 $13 $12 $58 $04 $76 $A2
+.db $00 $00
 .org $369E
 _LABEL_369E_NME_N_TRAP:	;Some enemy thingy here.
 	call _LABEL_7565_TRAP_INIT	;Well, this one simply won't let the traps work, so maybe it's not that simple as I thought. It handles trap types, and things like that.
@@ -5701,7 +5551,8 @@ _LABEL_374B_AB_DEBUG_BUTTON:				;Checks for button 2, and either opens the menu 
 	ld (_RAM_DE94_GAMEPAD), a
 	ld (_RAM_DE90_GAMEPAD), a	;Clear joypad values.
 +:
-	ld ix, _RAM_D900_CHARA_COORD
+	;This is some not really necessary stuff, the menu can be entered now while the character is still moving.
+	ld ix, _RAM_D900_CHARA_COORD	;Save our coordinate in IX.
 	ld a, (_RAM_DE95_GAMEPAD)
 	and a
 	jr z, _LABEL_3786_FLOORCHECK		;Sooo, this means, get into the options menu if we've pressed the B button on the controller.
@@ -6027,12 +5878,14 @@ _LABEL_3953_:
 	ret
 
 ++:
-	ld hl, (_RAM_DE5B_COMBAT_MARK)
-	ld a, h
-	or l
-	jr z, +
-	ld a, $01
-	ld (_RAM_DE5D_), a
+;changed 24.09.04
+	;ld hl, (_RAM_DE5B_COMBAT_MARK)
+	;ld a, h
+	;or l
+	;jr z, +
+	;ld a, $01
+	;ld (_RAM_DE5D_), a
+;.org $3988
 _LABEL_3988_APPLYDAMAGE:	;When you attack, this runs.
 	ld hl, _DATA_3B5C_
 	jp _LABEL_3953_
@@ -6744,8 +6597,9 @@ _LABEL_3DFD_ENDBOSS:
 ; 5th entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3E59_HOLLOW_SOLDIER:
 ;Hollow soldiers have that annoying sound when they just existing. This is that part.
-	ld a, $02
-	call _LABEL_2FF_PREPNPLAYSFX
+	;ld a, $02
+	;call _LABEL_2FF_PREPNPLAYSFX
+	;disabled 24.09.08 this was a sound effect!
 ; 1st entry of Jump Table from 3DE7 (indexed by _RAM_D941_)
 _LABEL_3E5E_NORMAL_ENEMY:
 ;The basic theory here is that once the enemy is on screen, it tries to close in on you and attack until you're dead.
@@ -6999,10 +6853,10 @@ _LABEL_3F7E_:
 	cp $02
 	jp z, _LABEL_3F18_
 	ret
-
+.org $4020
 ; Data from 4020 to 4EC3 (3748 bytes)
 .incbin "HOTL_mod_DATA_4020_.inc"	;If this is commented out, then the characters won't move, so this is used.
-.org $4EC4
+
 ; Data from 4EC4 to 4F22 (95 bytes)
 _DATA_4EC4_:
 .db $10 $10 $2D $18 $0A $12 $1D $2A $1E $0B $15 $1A $2A $1D $0B $10
@@ -7310,8 +7164,9 @@ _LABEL_5321_UPWARD_MGC_TRAP: ;Handles the upward going projectiles, that are har
 	ld d, $EC
 	ld l, $00
 	call _LABEL_3AAF_DRAWPROJECTILE	;After everything is set, launch the proj.
-	ld a, $03
-	call _LABEL_2FF_PREPNPLAYSFX	;Play that annoying sound.
+	;ld a, $03
+	;call _LABEL_2FF_PREPNPLAYSFX	;Play that annoying sound.
+	;disabled 24.09.08 this is a sound effect!
 +:
 	pop ix
 	jp _LABEL_539C_INC_TRAP_ARRAY_ADDR
@@ -7543,8 +7398,9 @@ _LABEL_5442_ENEMY_PLAYER_DAMAGE:
 	add a, c
 	ld c, a
 	call _LABEL_54ED_		;If this is commented out, the calculated damage is not applied, and your slashes become useless.
-	ld a, $01	;This is the sound effect number, that we the Player will use when we attack. If you really want, you can get this into a variable, and control the sound effect that way, but this is my two cents.
-	call _LABEL_2FF_PREPNPLAYSFX
+	;ld a, $01	;This is the sound effect number, that we the Player will use when we attack. If you really want, you can get this into a variable, and control the sound effect that way, but this is my two cents.
+	;call _LABEL_2FF_PREPNPLAYSFX
+	;disabled 24.09.08 This is a sound effect!
 	pop bc
 	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
@@ -7748,10 +7604,11 @@ _LABEL_5573_ENEMY_ACTION:
 +:
 	srl c
 ++:
-	call _LABEL_57CC_DAMAGE_OTHERS		;The game is kind enough to damage others in your party as well.
+	;call _LABEL_57CC_DAMAGE_OTHERS		;The game is kind enough to damage others in your party as well.
 	call _LABEL_5689_HITDETECT
-	ld a, $01
-	call _LABEL_2FF_PREPNPLAYSFX
+	;ld a, $01
+	;call _LABEL_2FF_PREPNPLAYSFX
+	;disabled 24.09.08 This is a sound effect!
 	jp _LABEL_5442_ENEMY_PLAYER_DAMAGE
 
 _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCULATION. RET'D, AND YOU WILL BE INVINCIBLE.
@@ -7767,7 +7624,10 @@ _LABEL_5689_HITDETECT:						;THIS IS THE HIT DETECTION PART, OR THE DAMAGE CALCU
 +:
 	push hl
 	ld de, (_RAM_D900_CHARA_COORD)
-	call _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE
+	;call _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE
+	nop
+	nop
+	nop
 	ld l, c
 	ld h, b
 	call _LABEL_7AED_
@@ -7967,47 +7827,48 @@ _LABEL_579F_GOLDMOON_PROT_HP_CHECK:
 	call _LABEL_5BA7_RIVERWIND_PROT_SCRN
 	ret
 
-_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. 
-;This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, 
-;but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. 
-;If this is disabled, no other parties are damaged by the first companion's damage received.
-
-	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
-	ld a, c
-	srl a			;4
-	srl a			;2
-	srl a			;Divide by 2 three times. 1
-	ld c, a			;c-->1
-	srl a			;1/2=0
-	add a, c		;0+1=1
-	jr z, ++		;The jump is not taken.
-	ld c, a			;Put this 1 to c.
-	push de
-	push hl
-	push ix			;Save registers.
-	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
-	ld b, $03		;Three of them
--:
-	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
-	call _LABEL_6573_CALC_DMG
-	ld de, _RAM_DBB5_GOLDMOON_HP
-	add hl, de
-	ld a, (hl)
-	sub c
-	jr c, +
-	jr z, +
-	ld (hl), a
-+:
-	inc ix
-	djnz -
-	pop ix
-	pop hl
-	pop de
-++:
-	pop bc
-	ret
-
+;_LABEL_57CC_DAMAGE_OTHERS: ;Well, my eyes did not deceived me. So the game has by default a mechanism that when Caramon is used, the game hurts Raistlin as well. 
+;;This is also documented, so that's all good. However, I saw that the game sometimes also punishes the first four characters, by damaging them as well, 
+;;but not as harshly. I thought this is a bug from the Raistlin code, but no, this is that part. 
+;;If this is disabled, no other parties are damaged by the first companion's damage received.
+;
+;	push bc			;So at first, C comes with an 8 into this. Maybe character count, maybe else.
+;	ld a, c
+;	srl a			;4
+;	srl a			;2
+;	srl a			;Divide by 2 three times. 1
+;	ld c, a			;c-->1
+;	srl a			;1/2=0
+;	add a, c		;0+1=1
+;	jr z, ++		;The jump is not taken.
+;	ld c, a			;Put this 1 to c.
+;	push de
+;	push hl
+;	push ix			;Save registers.
+;	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Get the first address of the characters.
+;	ld b, $03		;Three of them
+;-:
+;	ld a, (ix+1)		;This looks like the second character. Since the first is getting damaged anyway, there is no need to do it again.
+;	call _LABEL_6573_CALC_DMG
+;	ld de, _RAM_DBB5_GOLDMOON_HP
+;	add hl, de
+;	ld a, (hl)
+;	sub c
+;	jr c, +
+;	jr z, +
+;	ld (hl), a
+;+:
+;	inc ix
+;	djnz -
+;	pop ix
+;	pop hl
+;	pop de
+;++:
+;	pop bc
+;	ret
+;disabled at 24.09.08 since no other chars will be in the game, this is not needed.
 ; Data from 5800 to 5818 (25 bytes)
+.org $5800
 _DATA_5800_:
 .dsb 16, $00
 .db $01 $05 $02 $03 $03 $04 $04 $05 $05
@@ -8119,29 +7980,29 @@ _LABEL_5887_:
 
 
 
-_LABEL_58A1_FINALSTRIKE:	;Everybody dies.	
-		ld a, ( _RAM_DEBC_INRAM_HUD_PORTRAITS)
-		cp $03					;We check if the character leading the party is Raistlin.
-		jr z, +					;Jump if that's the case. This might be the 'Final Strike' spell.
-		ld de, _DATA_AADB_RAISTLIN_NOT_PTY_LEADER			;Raistlin is not the party leader. This is the text for reminding the player.
-		jp _LABEL_658E_PLOT_FLSCRN_MSG					;We have the text, then we draw a nice screen for it.
-	
-+:		;We continue with the "everyone dies" scenario.
-		xor a
-		ld (_RAM_DEE6_), a
-		xor a
-		ld (_RAM_DEE7_), a	;Don't know what these do atm.
-		ld a, $01
-		ld ( _RAM_DEF2_HOLD_PLYR), a	;Prevent the player from moving.
-		ld b, $08			;Go through all party members.
-		ld hl, _RAM_DBB4_GOLDMOON_MAXHP	;I guess Goldmoon's max HP is first. This is done to prevent players resurrect the party. Since you can't heal someone who's got zero maximum health.
-		ld de, $0027	;Hm, this should be the "space" between characters. Why, I don't know.
--:	
-		ld (hl), $00
-		inc hl
-		ld (hl), $00
-		add hl, de	;Add the "space" between addresses.
-		djnz -		;Load zero heatlh into every slot, basically killing everyone.
+_LABEL_58A1_FINALSTRIKE:	;Everybody dies.	;Spell disabled at 24.09.08. This is absolutely not needed. Has no purpose at all.
+;		ld a, ( _RAM_DEBC_INRAM_HUD_PORTRAITS)
+;		cp $03					;We check if the character leading the party is Raistlin.
+;		jr z, +					;Jump if that's the case. This might be the 'Final Strike' spell.
+;		ld de, _DATA_AADB_RAISTLIN_NOT_PTY_LEADER			;Raistlin is not the party leader. This is the text for reminding the player.
+;		jp _LABEL_658E_PLOT_FLSCRN_MSG					;We have the text, then we draw a nice screen for it.
+;	
+;+:		;We continue with the "everyone dies" scenario.
+;		xor a
+;		ld (_RAM_DEE6_), a
+;		xor a
+;		ld (_RAM_DEE7_), a	;Don't know what these do atm.
+;		ld a, $01
+;		ld ( _RAM_DEF2_HOLD_PLYR), a	;Prevent the player from moving.
+;		ld b, $08			;Go through all party members.
+;		ld hl, _RAM_DBB4_GOLDMOON_MAXHP	;I guess Goldmoon's max HP is first. This is done to prevent players resurrect the party. Since you can't heal someone who's got zero maximum health.
+;		ld de, $0027	;Hm, this should be the "space" between characters. Why, I don't know.
+;-:	
+;		ld (hl), $00
+;		inc hl
+;		ld (hl), $00
+;		add hl, de	;Add the "space" between addresses.
+;		djnz -		;Load zero heatlh into every slot, basically killing everyone.
 		jp _LABEL_6053_WAIT4BUTTN	;Go back to the game menu.
 	
 _LABEL_58CE_FINDTRAPS:	
@@ -8205,7 +8066,7 @@ _LABEL_5937_DRAGON_BREATH_SPELL:	;This is the 'Deflect Dragon Breath' spell.
 		ld a, $0A		;Spell cost.
 		call _LABEL_59DE_DEPLETE_GMSTAFF	;Subtract (or try to) spell cost from the overall staff charge.
 		jp c, _LABEL_5ADA_BL_STF_NOPWR		;Jump there and tell the player the staff does not have enough charge to perform the spell.
-		ld a, $3F				;This is the time for the spell duration. 63 seconds.
+		ld a, $3F				;This is the time for the spell duration. 63 second.
 		ld (_RAM_DEF0_DEFLECT_DRGN_BREATH), a	
 		jp _LABEL_6053_WAIT4BUTTN
 ;These are Raistlin's spells.
@@ -8247,7 +8108,7 @@ _LABEL_595F_MAGICMISSILESPELL:
 		jp _LABEL_6053_WAIT4BUTTN
 	
 
-
+;These checks should be disabled later. Since the staff of magius will be removed as well, and the spells rearranged.
 _LABEL_597A_CHECK_MAGIUS_STF_POWER:
 	call _LABEL_59CE_DEPLETE_MAGIUS_STF
 	jp c, _LABEL_5AD5_MAGIUS_STF_NOPWR
@@ -8310,7 +8171,7 @@ _LABEL_59CE_DEPLETE_MAGIUS_STF:	;IF THIS RET BELOW IS THERE, THE GAME WILL THINK
 	ret c
 	ld (_RAM_DEEC_RAIST_STFFCHRG), hl
 	ret
-
+;todo: disable at the end.
 _LABEL_59DE_DEPLETE_GMSTAFF:			;This really looks like when you use the Blue Crystal Staff, this will subtrack the needed mana from the overall charge.
 	ld hl, (_RAM_DEEA_GMOON_STAFF_CHRG)	;Get the charge of the staff.
 	push de					;This should be the "mana" amount, that the given spell costs.
@@ -8364,7 +8225,8 @@ _LABEL_59F5_CURE_LIGHT_WOUNDS:
 		ei
 		jp  _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_5A2B_RESURRECT:	
+_LABEL_5A2B_RESURRECT:	;this is also not needed, as no other characters will be there to resurrect.
+;todo: diasable later.
 		ld a, $05					;Mana cost.
 		call  _LABEL_59DE_DEPLETE_GMSTAFF		;Check for mana.
 		jp c,  _LABEL_5ADA_BL_STF_NOPWR			;Jump if mana is not enough.
@@ -8408,7 +8270,7 @@ _LABEL_5A2B_RESURRECT:
 		ld (hl), $00
 		inc hl
 		ld (hl), $00
-		call _LABEL_717C_CYCLE_DEAD2ALIVECHARS	;Cycle the now alive char to the end of the HUD player array, aka show the resurrected last on the screen's Companion list.
+		;call _LABEL_717C_CYCLE_DEAD2ALIVECHARS	;Cycle the now alive char to the end of the HUD player array, aka show the resurrected last on the screen's Companion list.
 		di
 		call _LABEL_6F3B__UPD_HUD		;Show the updated HUD.
 		ei
@@ -8439,39 +8301,40 @@ _LABEL_5A83_HEALING:
 		ret	;This looks easy, but I can't wrap my head around this at the moment, but it works.
 	
 _LABEL_5AA2_SELECT_PLAYER_CLERICAL:	;This works for any spell, where you have to select a Companion for healing\resurrection.
-		xor a
-		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
-		ld de, $01A2
-		ld ix, _RAM_C700_SELECTED_HERO_TILES
-		di
-		push de
-		push ix
-	;.dsb 3,$00
-		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
-		pop ix
-		pop de
-		ei
--:	
-		push de
-		push ix
-		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
-		ld b, $0C
-		call _LABEL_5E58_DELAYBYB
-		pop ix
-		pop de
-		ld a, (_RAM_DE94_GAMEPAD)
-		and a
-		jr z, -
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		di
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
-		ei
+;todo, this has to be repogrammed later, as we are not selecting anything anymore.
+		;xor a
+		;ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
+		;ld de, $01A2
+		;ld ix, _RAM_C700_SELECTED_HERO_TILES
+		;di
+		;push de
+		;push ix
+	;.ds;b 3,$00
+		;call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
+		;pop ix
+		;pop de
+		;ei
+-:	;
+		;push de
+		;push ix
+		;call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
+		;ld b, $0C
+		;call _LABEL_5E58_DELAYBYB
+		;pop ix
+		;pop de
+		;ld a, (_RAM_DE94_GAMEPAD)
+		;and a
+		;jr z, -
+		;ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+		;di
+		;call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+		;ei
 		ret
-
+;todo:remove later. the below as well.
 _LABEL_5AD5_MAGIUS_STF_NOPWR:
 	ld de, _DATA_5B2E_MG_STF_NOPWR_TXT	;"The Staff of Magius has no power at present" text.
 	jr +
-
+;
 _LABEL_5ADA_BL_STF_NOPWR:
 	;Load the text, prepare the screen, then wait for the button press. When that happens, load back the level.
 	ld de, _DATA_5B05_BL_STF_NOPWR_TXT	;"The Blue staff has no power at present" text.
@@ -8512,7 +8375,7 @@ _DATA_5B2E_MG_STF_NOPWR_TXT:	;'The Staff if Magius has no power at present.'
 .db $54 $68 $65 $20 $73 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61 $67
 .db $69 $75 $73 $0D $0D $68 $61 $73 $20 $6E $6F $20 $70 $6F $77 $65
 .db $72 $20 $61 $74 $0D $0D $70 $72 $65 $73 $65 $6E $74 $FF		;The first set of bytes are there for the text, the rest is the below code.
-
+;todo: rewrite these, and remove the magius related stuff.
 _LABEL_5B5C_DETECTMAGICSPELL:	
 		ld a, $01
 		ld c, $DF
@@ -8577,6 +8440,7 @@ _LABEL_5BA7_RIVERWIND_PROT_SCRN:	;This should be the screen that tells you River
 	call _LABEL_6B42_DRW_SOLID_CLR_SCRN	;These are used in most screens that the game shows you. The above call includes this one already, not sure what other purpose it might serve. 
 	pop de
 	ld hl, $3908
+;todo: rewrite these texts, as most of these will not happen in the game after changing.
 _LABEL_5BB5_WATERFALL_NOFXCONT:
 	call _LABEL_35A6_RANDOM
 ---:
@@ -8626,7 +8490,7 @@ _LABEL_5BBE_CHECKWTRFALL:	;This seems to check the waterfall, and apply healing 
 ++:		;We go here, if the party will not get their refill. Rude.
 	ld hl, $3908	;Set up the same screen address.
 	jr _LABEL_5BB5_WATERFALL_NOFXCONT
-
+;todo: rewrite this not as a waterfall, but something else, like a temple, shrine or something like that. multiple effects may also applied with some random effect.
 _LABEL_5C07_:
 	call _LABEL_5C0C_PREPSCRN_4_MSG
 	jr _LABEL_5C65_ENTER_INGAME_MENU
@@ -8645,9 +8509,11 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	xor a
 	ld (_RAM_DE9F_TIMER), a	;RESET THIS TIMER. IF THIS IS COMMENTED OUT, THE SCREEN WILL GLITCH OUT.
 	ld (_RAM_DE9E_), a	;DOES NOTHING YET.
-	call _LABEL_59B_MAIN	;IT EVEN WORKS WITHOUT THIS ONE.
+	;call _LABEL_59B_MAIN	;IT EVEN WORKS WITHOUT THIS ONE.
 	call _LABEL_63B_CLEAR_SAT	;EVEN THIS ONE CAN YOU COMMENT OUT.
-	call _LABEL_BB7_CLR_SCREEN	;THIS DOES SOME TILEMAP THINGS, I'LL CHECK THIS NOW.
+	call menu_sprite
+	;call _LABEL_BB7_CLR_SCREEN	;THIS DOES SOME TILEMAP THINGS, I'LL CHECK THIS NOW.
+	;disabled on 24.09.17
 	ld hl, $2960
 	di
 	call _LABEL_4BB_VDP_RAM_WRITESETUP
@@ -8663,7 +8529,7 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	xor a
 	ld (_RAM_C04E_ACTIVE_MENUITEM),a;(_RAM_C04F_LAST_ENTERED_MENU), a
 	ld a, $1F
-	ld (_RAM_FFFF_), a
+	ld (_RAM_FFFF_), a		;The fonts are in the last bank.
 	ld b, $60
 	ld hl, $2180
 	ld de, _DATA_7C000_CHAR_BIO_TEXT
@@ -8672,8 +8538,10 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	ld hl, $010C
 	ld (_RAM_DE62_), hl
 	ret
-
+;todo:	the screen color, and other things are not really nice, i mean that color is definetly not something good to look at.
 _LABEL_5C65_ENTER_INGAME_MENU:	;This is the entry point for the ingame menu, at least the draw part for now.
+;This has to be reprogrammed extensively, as there's a bug somewhere which prevents text to be drawn properly. Many menus
+;are simply not needed anymore.
 	ld hl, $3888	;This is a screen coordinate.
 	ld de, _DATA_A871_MENUTXT
 	call _LABEL_35A6_RANDOM
@@ -8817,151 +8685,153 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 
 
 _LABEL_5D43_HERO_SELECT_MENU:	
-		xor a
-		ld (_RAM_C04F_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
-		call _LABEL_6046_WAIT4GAMEPAD		;Wait for a button press.
-		call _LABEL_6B42_DRW_SOLID_CLR_SCRN	;Draw a solid color screen.
-		ld hl, $38C8				;This is a screen position in VRAM, we'll draw the text below there.
-		ld de, _DATA_A74A_COMPANION_STATS_TEXT	;Grab the text address.
-		call _LABEL_35A6_RANDOM			;Randomize things. I should look at this again probably.
-		xor a
-		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a	;This seems to be the hero selection on said screen. Not the hero the number represents, but the position on the list.
-		ld ix, _RAM_C700_SELECTED_HERO_TILES			;This is a 17 bytes long array of tiles, we'll get the current hero's tiles.
-		ld de, $01A2
-		push de
-		push ix
-		di
-		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT		;Draw a rectangle over it.
-		ei
-		pop ix
-		pop de
-		call _LABEL_6B6D_DRAW_HERODETAILS			;This draws the current hero's details.
-_LABEL_5D6F_SELECT_HERO_LOOP:	
-		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
-		ld a, (_RAM_DE90_GAMEPAD)
-		bit 5, a
-		jr z, +
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		di
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
-		ei
-		jp _LABEL_6053_WAIT4BUTTN
-	
-+:	
-		call _LABEL_6B6D_DRAW_HERODETAILS			;Draws the next selected hero's details.
-		ld b, $0C						;Sooo, we tell the program how many times the next will loop. It has just a main looper inside.
-		call _LABEL_5E58_DELAYBYB					;Well, this little thing here actually inserts some wait states by looping with main. Without this, the hero selection would be a little too fast. If this is here, we have some delay, and time to grasp the speed of selecting a leading hero. I've not seen a delay this way, but works well.
-		ld a, (_RAM_DE94_GAMEPAD)
-		and a
-		jr z, _LABEL_5D6F_SELECT_HERO_LOOP					;Loop back, if we have not pressed any gamepad buttons.
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)		;Get the first selection.
-		ld l, a							;Move it to L.
-		ld h, $00						;So, the format will be $00xx<--firstly selected companion.
-		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS			;Get the portrait array's first element.
-		add hl, bc						;Get the final address.
-		ld a, (hl)						;Get who's at that slot.
-		call _LABEL_6573_CALC_DMG
-		ld bc, _RAM_DBB5_GOLDMOON_HP				;I don't understand why Goldmoon's HP is involved...
-		add hl, bc
-		ld a, (hl)
-		and a
-		jr z, _LABEL_5D6F_SELECT_HERO_LOOP			;I suspect, we have to loop until we get to Goldmoon? She's got the number 0.
-									;The rest seems to be fairly straightforward, so I won't comment it on every line.
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		ld (_RAM_C7FE_HEROSELECT_VAR), a
-		and a
-		jr nz, +
-		ld a, (_RAM_D90A_HERO_ACTION)
-		cp $0F
-		jr nz, +
-		ld a, (_RAM_DE54_HOLD_PLYR)
-		and a
-		jr z, _LABEL_5D6F_SELECT_HERO_LOOP
-+:	
-		xor a
-		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
-		ld ix, _RAM_C720_NEW_HERO_SELECTIONTILES
-		ld de, $01AC
-		push de
-		push ix
-		di
-		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
-		ei
-		pop ix
-		pop de
-_LABEL_5DD4_OLDHERO_SELECTLOOP:	
-		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
-		ld a, (_RAM_DE90_GAMEPAD)
-		bit 5, a
-		jr z, +
-		ld a, (_RAM_C7FE_HEROSELECT_VAR)
-		ld b, a
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		cp b
-		jp z, _LABEL_5E49_FIXOLD_SELECTED
-		di
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
-		ei
-		jp _LABEL_5E49_FIXOLD_SELECTED
-	
-+:	
-		ld b, $0C
-		call _LABEL_5E58_DELAYBYB
-		ld a, (_RAM_DE94_GAMEPAD)
-		and a
-		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		ld b, a
-		ld a, (_RAM_C7FE_HEROSELECT_VAR)
-		cp b
-		jr z, _LABEL_5E49_FIXOLD_SELECTED
-		ld l, b
-		ld h, $00
-		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
-		add hl, bc
-		ld a, (hl)
-		call _LABEL_6573_CALC_DMG
-		ld bc, _RAM_DBB5_GOLDMOON_HP
-		add hl, bc
-		ld a, (hl)
-		and a
-		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		and a
-		jr nz, +
-		ld a, (_RAM_D90A_HERO_ACTION)
-		cp $0F
-		jr nz, +
-		ld a, (_RAM_DE54_HOLD_PLYR)
-		and a
-		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
-+:	
-		ld a, (_RAM_C7FE_HEROSELECT_VAR)
-		ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
-		ld c, a
-		ld b, $00
-		ld e, l
-		ld d, h
-		add hl, bc
-		ex de, hl
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		ld c, a
-		add hl, bc
-		ld c, (hl)
-		ld a, (de)
-		ld (hl), a
-		ld a, c
-		ld (de), a
-		call _LABEL_6F3B__UPD_HUD
-		jp _LABEL_6053_WAIT4BUTTN
-	
-_LABEL_5E49_FIXOLD_SELECTED:	;Here, we get the older not selected heroes, and fix the picture it used.
-		ld a, (_RAM_C7FE_HEROSELECT_VAR)
-		ld ix, _RAM_C700_SELECTED_HERO_TILES
-		di
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
-		ei
-		jp _LABEL_6053_WAIT4BUTTN
+ret
+;disabled 24.09.06
+;		xor a
+;		ld (_RAM_C04F_LAST_ENTERED_MENU), a	;Okay, clear the last entered menu item.
+;		call _LABEL_6046_WAIT4GAMEPAD		;Wait for a button press.
+;		call _LABEL_6B42_DRW_SOLID_CLR_SCRN	;Draw a solid color screen.
+;		ld hl, $38C8				;This is a screen position in VRAM, we'll draw the text below there.
+;		ld de, _DATA_A74A_COMPANION_STATS_TEXT	;Grab the text address.
+;		call _LABEL_35A6_RANDOM			;Randomize things. I should look at this again probably.
+;		xor a
+;		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a	;This seems to be the hero selection on said screen. Not the hero the number represents, but the position on the list.
+;		ld ix, _RAM_C700_SELECTED_HERO_TILES			;This is a 17 bytes long array of tiles, we'll get the current hero's tiles.
+;		ld de, $01A2
+;		push de
+;		push ix
+;		di
+;		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT		;Draw a rectangle over it.
+;		ei
+;		pop ix
+;		pop de
+;		call _LABEL_6B6D_DRAW_HERODETAILS			;This draws the current hero's details.
+;_LABEL_5D6F_SELECT_HERO_LOOP:	
+;		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
+;		ld a, (_RAM_DE90_GAMEPAD)
+;		bit 5, a
+;		jr z, +
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		di
+;		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+;		ei
+;		jp _LABEL_6053_WAIT4BUTTN
+;	
+;+:	
+;		call _LABEL_6B6D_DRAW_HERODETAILS			;Draws the next selected hero's details.
+;		ld b, $0C						;Sooo, we tell the program how many times the next will loop. It has just a main looper inside.
+;		call _LABEL_5E58_DELAYBYB					;Well, this little thing here actually inserts some wait states by looping with main. Without this, the hero selection would be a little too fast. If this is here, we have some delay, and time to grasp the speed of selecting a leading hero. I've not seen a delay this way, but works well.
+;		ld a, (_RAM_DE94_GAMEPAD)
+;		and a
+;		jr z, _LABEL_5D6F_SELECT_HERO_LOOP					;Loop back, if we have not pressed any gamepad buttons.
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)		;Get the first selection.
+;		ld l, a							;Move it to L.
+;		ld h, $00						;So, the format will be $00xx<--firstly selected companion.
+;		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS			;Get the portrait array's first element.
+;		add hl, bc						;Get the final address.
+;		ld a, (hl)						;Get who's at that slot.
+;		call _LABEL_6573_CALC_DMG
+;		ld bc, _RAM_DBB5_GOLDMOON_HP				;I don't understand why Goldmoon's HP is involved...
+;		add hl, bc
+;		ld a, (hl)
+;		and a
+;		jr z, _LABEL_5D6F_SELECT_HERO_LOOP			;I suspect, we have to loop until we get to Goldmoon? She's got the number 0.
+;									;The rest seems to be fairly straightforward, so I won't comment it on every line.
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		ld (_RAM_C7FE_HEROSELECT_VAR), a
+;		and a
+;		jr nz, +
+;		ld a, (_RAM_D90A_HERO_ACTION)
+;		cp $0F
+;		jr nz, +
+;		ld a, (_RAM_DE54_HOLD_PLYR)
+;		and a
+;		jr z, _LABEL_5D6F_SELECT_HERO_LOOP
+;+:	
+;		xor a
+;		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
+;		ld ix, _RAM_C720_NEW_HERO_SELECTIONTILES
+;		ld de, $01AC
+;		push de
+;		push ix
+;		di
+;		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
+;		ei
+;		pop ix
+;		pop de
+;_LABEL_5DD4_OLDHERO_SELECTLOOP:	
+;		call _LABEL_5E64_MOVE_CHARSELECT_CURSOR
+;		ld a, (_RAM_DE90_GAMEPAD)
+;		bit 5, a
+;		jr z, +
+;		ld a, (_RAM_C7FE_HEROSELECT_VAR)
+;		ld b, a
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		cp b
+;		jp z, _LABEL_5E49_FIXOLD_SELECTED
+;		di
+;		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+;		ei
+;		jp _LABEL_5E49_FIXOLD_SELECTED
+;	
+;+:	
+;		ld b, $0C
+;		call _LABEL_5E58_DELAYBYB
+;		ld a, (_RAM_DE94_GAMEPAD)
+;		and a
+;		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		ld b, a
+;		ld a, (_RAM_C7FE_HEROSELECT_VAR)
+;		cp b
+;		jr z, _LABEL_5E49_FIXOLD_SELECTED
+;		ld l, b
+;		ld h, $00
+;		ld bc, _RAM_DEBC_INRAM_HUD_PORTRAITS
+;		add hl, bc
+;		ld a, (hl)
+;		call _LABEL_6573_CALC_DMG
+;		ld bc, _RAM_DBB5_GOLDMOON_HP
+;		add hl, bc
+;		ld a, (hl)
+;		and a
+;		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		and a
+;		jr nz, +
+;		ld a, (_RAM_D90A_HERO_ACTION)
+;		cp $0F
+;		jr nz, +
+;		ld a, (_RAM_DE54_HOLD_PLYR)
+;		and a
+;		jr z, _LABEL_5DD4_OLDHERO_SELECTLOOP
+;+:	
+;		ld a, (_RAM_C7FE_HEROSELECT_VAR)
+;		ld hl, _RAM_DEBC_INRAM_HUD_PORTRAITS
+;		ld c, a
+;		ld b, $00
+;		ld e, l
+;		ld d, h
+;		add hl, bc
+;		ex de, hl
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		ld c, a
+;		add hl, bc
+;		ld c, (hl)
+;		ld a, (de)
+;		ld (hl), a
+;		ld a, c
+;		ld (de), a
+;		call _LABEL_6F3B__UPD_HUD
+;		jp _LABEL_6053_WAIT4BUTTN
+;	
+;_LABEL_5E49_FIXOLD_SELECTED:	;Here, we get the older not selected heroes, and fix the picture it used.
+;		ld a, (_RAM_C7FE_HEROSELECT_VAR)
+;		ld ix, _RAM_C700_SELECTED_HERO_TILES
+;		di
+;		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+;		ei
+;		jp _LABEL_6053_WAIT4BUTTN
 	
 
 _LABEL_5E58_DELAYBYB:
@@ -8974,218 +8844,223 @@ _LABEL_5E58_DELAYBYB:
 	pop bc
 	djnz _LABEL_5E58_DELAYBYB
 	ret
-_LABEL_5E64_MOVE_CHARSELECT_CURSOR:	
-		push de
-		call _LABEL_59B_MAIN
-		call _LABEL_552_CHECK_AB_BUTTONS
-		pop de
-		ld a, (_RAM_DE90_GAMEPAD)
-		bit 5, a		;Check for Button 2 on the first gamepad.
-		ret nz			;Return if it was pressed. Button 2 is used to cancel actions.
-		and $1F	;0001 1111
-		jp z, _LABEL_5E64_MOVE_CHARSELECT_CURSOR	;Loop, if no button was pressed at all.
-		bit 4, a
-		ret nz			;Return if button 1 is pressed. This all seems to be a bit strange to me..
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		di
-		push ix
-		push de
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
-		pop de
-		pop ix
-		ei
-		ld a, (_RAM_DE90_GAMEPAD)
-		ld b, a
-		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
-		bit 3, b
-		jr z, +			;Check for the right button.
-		sub $04
-+:	
-		bit 2, b
-		jr z, +			;Check for the left button.
-		add a, $04
-+:	
-		bit 1, b
-		jr z, +			;Check for the down button.
-		ld c, a
-		and $04
-		ld l, a
-		ld a, c
-		dec a
-		and $03
-		or l
-+:	
-		bit 0, b
-		jr z, +			;Check for the up button.
-		ld c, a
-		and $04
-		ld l, a
-		ld a, c
-		inc a
-		and $03
-		or l
-+:	
-		and $07
-		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
-		push de
-		push ix
-		di
-		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT	;We have the coordinated and everything, so let's move the selecting rectangle.
-		ei
-		pop ix
-		pop de
-		ret
+_LABEL_5E64_MOVE_CHARSELECT_CURSOR:
+;disabled 24.09.06
+ret
+;		push de
+;		call _LABEL_59B_MAIN
+;		call _LABEL_552_CHECK_AB_BUTTONS
+;		pop de
+;		ld a, (_RAM_DE90_GAMEPAD)
+;		bit 5, a		;Check for Button 2 on the first gamepad.
+;		ret nz			;Return if it was pressed. Button 2 is used to cancel actions.
+;		and $1F	;0001 1111
+;		jp z, _LABEL_5E64_MOVE_CHARSELECT_CURSOR	;Loop, if no button was pressed at all.
+;		bit 4, a
+;		ret nz			;Return if button 1 is pressed. This all seems to be a bit strange to me..
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		di
+;		push ix
+;		push de
+;		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+;		pop de
+;		pop ix
+;		ei
+;		ld a, (_RAM_DE90_GAMEPAD)
+;		ld b, a
+;		ld a, (_RAM_C7FF_FIRST_SELECTED_COMPANION)
+;		bit 3, b
+;		jr z, +			;Check for the right button.
+;		sub $04
+;+:	
+;		bit 2, b
+;		jr z, +			;Check for the left button.
+;		add a, $04
+;+:	
+;		bit 1, b
+;		jr z, +			;Check for the down button.
+;		ld c, a
+;		and $04
+;		ld l, a
+;		ld a, c
+;		dec a
+;		and $03
+;		or l
+;+:	
+;		bit 0, b
+;		jr z, +			;Check for the up button.
+;		ld c, a
+;		and $04
+;		ld l, a
+;		ld a, c
+;		inc a
+;		and $03
+;		or l
+;+:	
+;		and $07
+;		ld (_RAM_C7FF_FIRST_SELECTED_COMPANION), a
+;		push de
+;		push ix
+;		di
+;		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT	;We have the coordinated and everything, so let's move the selecting rectangle.
+;		ei
+;		pop ix
+;		pop de
+;		ret
+	;below disabled on 24.09.08
+;_LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC:		;This makes sure, that the older, not selected portraits are drawn properly. If this is commented out, the last selected hero will be drawn to the next box, still selected. It is a bit difficult to name these properly, and still know what the function is about.
+;;This is not needed anymore, as well as the below.
+;		ld hl, _DATA_706B_HUD_PORTRAITS
+;		add a, a
+;		add a, l
+;		ld l, a
+;		ld a, h
+;		adc a, $00
+;		ld h, a
+;		ld a, (hl)
+;		inc hl
+;		ld h, (hl)
+;		ld l, a
+;		inc hl
+;		inc hl
+;		ld de, $0040
+;		call +
+;		call +
+;+:	
+;		di
+;		call _LABEL_4BB_VDP_RAM_WRITESETUP
+;		ei
+;		ld b, $06
+;-:	
+;		ld a, (ix+0)
+;		out (Port_VDPData), a
+;		inc ix
+;		djnz -
+;		add hl, de
+;		ret
 	
-_LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC:		;This makes sure, that the older, not selected portraits are drawn properly. If this is commented out, the last selected hero will be drawn to the next box, still selected. It is a bit difficult to name these properly, and still know what the function is about.
-		ld hl, _DATA_706B_HUD_PORTRAITS
-		add a, a
-		add a, l
-		ld l, a
-		ld a, h
-		adc a, $00
-		ld h, a
-		ld a, (hl)
-		inc hl
-		ld h, (hl)
-		ld l, a
-		inc hl
-		inc hl
-		ld de, $0040
-		call +
-		call +
-+:	
-		di
-		call _LABEL_4BB_VDP_RAM_WRITESETUP
-		ei
-		ld b, $06
--:	
-		ld a, (ix+0)
-		out (Port_VDPData), a
-		inc ix
-		djnz -
-		add hl, de
-		ret
+;_LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines them with that white rectangle, that is used for player selection. The original portraits are also in VRAM.
+;	ret;removed on 2024.09.06
+;	;This is not needed, as there will be no extra characters to play as.
+;		ld hl, _DATA_706B_HUD_PORTRAITS
+;		add a, a
+;		add a, l
+;		ld l, a
+;		ld a, h
+;		adc a, $00
+;		ld h, a
+;		ld a, (hl)
+;		inc hl
+;		ld h, (hl)
+;		ld l, a
+;		inc hl
+;		inc hl
+;		ld b, $03
+;		ld iy,_DATA_5F98_RECTANGLE1BITTILE	;This is the 1-bit tile for the rectangle that would be drawn around the player portraits when you select it. Like a cursor.
+;-:	
+;		push hl
+;		call +
+;		pop hl
+;		ld a, l
+;		add a, $40
+;		ld l, a
+;		ld a, h
+;		adc a, $00
+;		ld h, a
+;		djnz -
+;		ret
+;	
+;+:	
+;		call +
+;		call +
+;+:	
+;		push bc
+;		push de
+;		push hl
+;		call _LABEL_4BD_VDP_OUTSETUP
+;		in a, (Port_VDPData)
+;		ld (ix+0), a
+;		in a, (Port_VDPData)
+;		ld (ix+1), a
+;		di
+;		call _LABEL_4BB_VDP_RAM_WRITESETUP
+;		ei
+;		ld a, e
+;		out (Port_VDPData), a
+;		ld a, (ix+1)
+;		and $FE
+;		or d
+;		out (Port_VDPData), a
+;		ld l, (ix+0)
+;		ld a, (ix+1)
+;		and $01
+;		ld h, a
+;		add hl, hl
+;		add hl, hl
+;		add hl, hl
+;		add hl, hl
+;		add hl, hl
+;		call _LABEL_4BD_VDP_OUTSETUP
+;		inc ix
+;		inc ix
+;		ld b, $20
+;		ld hl, _RAM_C800_1ST_METATILE_ROW
+;-:	
+;		in a, (Port_VDPData)
+;		ld (hl), a
+;		inc hl
+;		djnz -
+;		ex de, hl
+;		add hl, hl
+;		add hl, hl
+;		add hl, hl
+;		add hl, hl
+;		add hl, hl
+;		di
+;		call _LABEL_4BB_VDP_RAM_WRITESETUP
+;		ei
+;		ld de, _RAM_C800_1ST_METATILE_ROW
+;		ld b, $08
+;-:	
+;		ld a, (de)
+;		or (iy+0)
+;		inc de
+;		out (Port_VDPData), a
+;		ld a, (de)
+;		or (iy+0)
+;		inc de
+;		out (Port_VDPData), a
+;		ld a, (de)
+;		ld c, a
+;		xor (iy+0)
+;		and c
+;		inc de
+;		out (Port_VDPData), a
+;		ld a, (de)
+;		ld c, a
+;		xor (iy+0)
+;		and c
+;		inc de
+;		out (Port_VDPData), a
+;		inc iy
+;		djnz -
+;		pop hl
+;		pop de
+;		pop bc
+;		inc de
+;		inc hl
+;		inc hl
+;		ret
 	
-_LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT:	;Gets the player portraits, and combines them with that white rectangle, that is used for player selection. The original portraits are also in VRAM.
-		ld hl, _DATA_706B_HUD_PORTRAITS
-		add a, a
-		add a, l
-		ld l, a
-		ld a, h
-		adc a, $00
-		ld h, a
-		ld a, (hl)
-		inc hl
-		ld h, (hl)
-		ld l, a
-		inc hl
-		inc hl
-		ld b, $03
-		ld iy,_DATA_5F98_RECTANGLE1BITTILE	;This is the 1-bit tile for the rectangle that would be drawn around the player portraits when you select it. Like a cursor.
--:	
-		push hl
-		call +
-		pop hl
-		ld a, l
-		add a, $40
-		ld l, a
-		ld a, h
-		adc a, $00
-		ld h, a
-		djnz -
-		ret
-	
-+:	
-		call +
-		call +
-+:	
-		push bc
-		push de
-		push hl
-		call _LABEL_4BD_VDP_OUTSETUP
-		in a, (Port_VDPData)
-		ld (ix+0), a
-		in a, (Port_VDPData)
-		ld (ix+1), a
-		di
-		call _LABEL_4BB_VDP_RAM_WRITESETUP
-		ei
-		ld a, e
-		out (Port_VDPData), a
-		ld a, (ix+1)
-		and $FE
-		or d
-		out (Port_VDPData), a
-		ld l, (ix+0)
-		ld a, (ix+1)
-		and $01
-		ld h, a
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		call _LABEL_4BD_VDP_OUTSETUP
-		inc ix
-		inc ix
-		ld b, $20
-		ld hl, _RAM_C800_1ST_METATILE_ROW
--:	
-		in a, (Port_VDPData)
-		ld (hl), a
-		inc hl
-		djnz -
-		ex de, hl
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		add hl, hl
-		di
-		call _LABEL_4BB_VDP_RAM_WRITESETUP
-		ei
-		ld de, _RAM_C800_1ST_METATILE_ROW
-		ld b, $08
--:	
-		ld a, (de)
-		or (iy+0)
-		inc de
-		out (Port_VDPData), a
-		ld a, (de)
-		or (iy+0)
-		inc de
-		out (Port_VDPData), a
-		ld a, (de)
-		ld c, a
-		xor (iy+0)
-		and c
-		inc de
-		out (Port_VDPData), a
-		ld a, (de)
-		ld c, a
-		xor (iy+0)
-		and c
-		inc de
-		out (Port_VDPData), a
-		inc iy
-		djnz -
-		pop hl
-		pop de
-		pop bc
-		inc de
-		inc hl
-		inc hl
-		ret
-	
-; Data from 5F98 to 5FDF (72 bytes)	
-_DATA_5F98_RECTANGLE1BITTILE:	
-;The below is a piece of graphics, the white rectangle that is shown around a selected hero.
-	.db $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00
-	.db $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $C0
-	.db $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $03 $03
-	.db $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00 $FF
-	.db $03 $03 $03 $03 $03 $03 $03 $FF
-	
+;; Data from 5F98 to 5FDF (72 bytes)	
+;_DATA_5F98_RECTANGLE1BITTILE:	
+;;The below is a piece of graphics, the white rectangle that is shown around a selected hero.
+;	.db $FF $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00
+;	.db $FF $03 $03 $03 $03 $03 $03 $03 $C0 $C0 $C0 $C0 $C0 $C0 $C0 $C0
+;	.db $00 $00 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $03 $03
+;	.db $C0 $C0 $C0 $C0 $C0 $C0 $C0 $FF $00 $00 $00 $00 $00 $00 $00 $FF
+;	.db $03 $03 $03 $03 $03 $03 $03 $FF
+.org $5FE0	
 ; 1st entry of Jump Table from 6CD5 (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _LABEL_5FE0_SPELLIST_JUMPS:	;Based on what we've selected, we'll go to the appropriate spell's code. This is used for both the Magical and Clerical stuff too.
 		call _LABEL_6046_WAIT4GAMEPAD		;Get the gamepad's values.
@@ -9202,44 +9077,45 @@ _LABEL_5FE0_SPELLIST_JUMPS:	;Based on what we've selected, we'll go to the appro
 		dec a
 		jp z, _LABEL_59EE_CURE_CRITICAL_WOUNDS
 		jp _LABEL_5937_DRAGON_BREATH_SPELL
-	
+	;This has to be the reduced Staff powers open to someone not Goldmoon. The above will be disabled, since no other characters will be available.
 +:	
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		and a
-		jp z, _LABEL_59F5_CURE_LIGHT_WOUNDS
+		jp z, _LABEL_59F5_CURE_LIGHT_WOUNDS	;This is not really necessary. The critical wounds spell is the same.
+		;
 		dec a
-		jp z, _LABEL_5926_PROTECTION_FROM_EVIL
+		jp z, _LABEL_5926_PROTECTION_FROM_EVIL	;This will stay as is. It can be thought of as a 'Mana Shield' or something.
 		dec a
-		jp z, _LABEL_58CE_FINDTRAPS
+		jp z, _LABEL_58CE_FINDTRAPS				;This is good, as is.
 		dec a
-		jp z, _LABEL_59A9_HOLDPERSONSPELL
+		jp z, _LABEL_59A9_HOLDPERSONSPELL		;Also can stay.
 		dec a
-		jp z, _LABEL_59A3_SPIRITHAMMERSPELL
+		jp z, _LABEL_59A3_SPIRITHAMMERSPELL		;This is good, but I would include some system, that only affects undead enemies, and does not damage others.
 		dec a
-		jp z, _LABEL_5920_PRAYER_SPELL
+		jp z, _LABEL_5920_PRAYER_SPELL			;It says party protection. This can go.
 		dec a
-		jp z, _LABEL_59EE_CURE_CRITICAL_WOUNDS
+		jp z, _LABEL_59EE_CURE_CRITICAL_WOUNDS	;This will stay, but i'll reprogram it to use more randomness, and later on implement some level system to adjust mana costs.
 		dec a
-		jp z, _LABEL_5A2B_RESURRECT
-		jp _LABEL_5937_DRAGON_BREATH_SPELL
+		jp z, _LABEL_5A2B_RESURRECT				;The code can stay, but this may be used to give some live system.
+		jp _LABEL_5937_DRAGON_BREATH_SPELL		;This is okay, but maybe as a potion as well.
 	
 ++:	
 		ld a, ( _RAM_C040_SELECTED_MENUITEMINRAM_PAL)
 		and a
-		jp z, _LABEL_5947_CHARMSPELL
+		jp z, _LABEL_5947_CHARMSPELL			;I have not seen this working, I would like to remove this.
 		dec a
-		jp z, _LABEL_5959_SLEEPSPELL
+		jp z, _LABEL_5959_SLEEPSPELL			;Very similar to the hold spell, almost does the same thing.
 		dec a
-		jp z, _LABEL_595F_MAGICMISSILESPELL
+		jp z, _LABEL_595F_MAGICMISSILESPELL		;This can stay as a Firebolt or something.
 		dec a
-		jp z, _LABEL_5953_WEBSPELL
+		jp z, _LABEL_5953_WEBSPELL				;There's sleep, charm, hold, so there's no need for this. Some enemies have extra graphics for this, but those will be unused, for sure.
 		dec a
-		jp z, _LABEL_5B5C_DETECTMAGICSPELL
+		jp z, _LABEL_5B5C_DETECTMAGICSPELL		;Useful, it can stay.
 		dec a
-		jp z, _LABEL_5B62_DETECTINVISIBLESPELL
+		jp z, _LABEL_5B62_DETECTINVISIBLESPELL	;This is also good.
 		dec a
-		jp z, _LABEL_58A1_FINALSTRIKE
-		jp _LABEL_594D_BURNINGHANDSSPELL
+		jp z, _LABEL_58A1_FINALSTRIKE			;Absolutely useless, an automatic game over, but maybe useful for something later on.
+		jp _LABEL_594D_BURNINGHANDSSPELL		;Another projectile spell, can be removed.
 		;Finally, all spells are mapped now. Sadly, nothing hidden.
 _LABEL_6046_WAIT4GAMEPAD:
 -:
@@ -9304,7 +9180,7 @@ _LABEL_605C_MAGICUSERSPELLMENU:
 		jr -
 	
 ; 5th entry of Jump Table from 6CAF (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
-_LABEL_60B0_:	
+_LABEL_60B0_CLERICAL_SP_MENU:	
 		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
 		ld e, $04
 		ld d, $00
@@ -9348,7 +9224,7 @@ _LABEL_60B0_:
 		ld (_RAM_C04E_ACTIVE_MENUITEM), a
 		jp _LABEL_6A41_ENTERMENU
 	
-_LABEL_6106_:	
+_LABEL_6106_DROP_MENU:	
 		ld hl, _DATA_678C_DROPMENU_TXT
 		ld de, $6678
 		ld a, $06
@@ -9356,14 +9232,14 @@ _LABEL_6106_:
 		jp +
 	
 ; 7th entry of Jump Table from 6CAF (indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
-_LABEL_6114_:	
+_LABEL_6114_USE_MENU:	
 		ld hl, _DATA_67A8_USEMENU_TXT
 		ld de, $6467
 		ld a, $03
 		ld (_RAM_C04F_LAST_ENTERED_MENU), a
 		jp +
 	
-_LABEL_6122_:	;TODO
+_LABEL_6122_GIVE_MENU:	;TODO:	this should be removed, since there will be nobody to give stuff to.
 		ld hl, _DATA_679A_GIVEMENU_TXT
 		ld de, $66C2
 		ld a, $05
@@ -9482,6 +9358,9 @@ _LABEL_61CB_:
 	
 
 _LABEL_61FA_DRAW_SCORESCREEN:	;THIS IS THE CODE THAT DRAWS THE SCORE\GAME OVER\WIN SCREEN. I GUESS THERE IS ANOTHER PART WHERE THE TITLE PART(THE SCORE, GAME OVER OF WIN TEXT IS CHANGED, SINCE THE ENDING IS BASICALLY JUST THIS SCREEN WITH A DIFFERENT HEADER.)
+;This can be repurposed for something else as well.The game would not really use this, and some of this info would be on
+;the character screen, now that i'll remove a few things not used.
+;Some parts of the code tells how to print scores, experience among other things.
 	ld b, $0A	;THERE ARE TEN MONSTER TYPES. CHANGING THIS NUMBER WILL LIMIT HOW MANY NUMBERS ARE DRAWN.
 	ld ix, _RAM_DE7A_KILLCOUNT_ARRAY	;GET THE ARRAY.
 	ld iy, _DATA_6E7F_SCORE_PALETTE		;THIS IS THE PALETTE FOR THE SCREEN.
@@ -9583,59 +9462,10 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 	or b
 	jr z, _LABEL_62B1_SCOREMENU_CONT_LOOP			;IF WE HAVE NOT PRESSED EITHER, THEN LOOP BACK.
 	ret
+	;This can be used for something else for sure.
 
-; Data from 62C2 to 6572 (689 bytes)	;This is not yet used even in the newer source file.
-;.db $C3 $C2 $62 $CD $46 $60 $CD $42 $6B $21 $7E $67 $FD $21 $00 $C1
-;.db $11 $00 $00 $DD $21 $00 $C3 $01 $00 $00 $3E $04 $32 $4F $C0 $CD
-;.db $1D $6A $11 $C8 $38 $DD $21 $00 $C3 $D5 $DD $E5 $06 $96 $0E $00
-;.db $2A $00 $D9 $11 $08 $00 $A7 $ED $52 $5D $54 $DD $21 $00 $D6 $30
-;.db $03 $11 $01 $00 $CB $3A $CB $1B $CB $3A $CB $1B $CB $3A $CB $1B
-;.db $CB $3A $CB $1B $3A $52 $DE $DD $BE $01 $20 $5C $DD $7E $04 $E6
-;.db $E0 $20 $55 $DD $7E $00 $A7 $28 $4F $FE $40 $30 $4B $DD $7E $02
-;.db $93 $38 $45 $FE $03 $30 $41 $3E $96 $90 $08 $79 $D9 $DD $E5 $D1
-;.db $26 $C4 $6F $08 $77 $62 $6B $DD $7E $00 $DD $E1 $D1 $D5 $E5 $4F
-;.db $21 $09 $68 $7E $23 $3C $20 $FB $0D $20 $F8 $01 $B6 $63 $CD $1D
-;.db $6A $E1 $D1 $7B $C6 $40 $5F $3E $00 $8A $57 $D5 $DD $E5 $E5 $DD
-;.db $E1 $D9 $0C $79 $FE $0B $28 $09 $D9 $11 $05 $00 $DD $19 $D9 $10
-;.db $93 $DD $E1 $D1 $79 $A7 $20 $17 $DD $21 $00 $C3 $21 $B5 $67 $01
-;.db $00 $00 $11 $00 $00 $CD $1D $6A $DD $21 $00 $C3 $11 $48 $3A $01
-;.db $53 $60 $21 $DB $67 $CD $1D $6A $11 $00 $C1 $06 $0C $FD $21 $00
-;.db $C3 $C3 $41 $6A $CD $60 $6B $06 $08 $7E $A7 $28 $10 $23 $23 $10
-;.db $F8 $11 $81 $A9 $06 $11 $FD $21 $F3 $6C $C3 $41 $6A $E5 $3A $40
-;.db $C0 $26 $C4 $6F $7E $11 $00 $D6 $6F $26 $00 $4F $44 $29 $29 $09
-;.db $19 $D1 $7E $FE $37 $CA $46 $64 $FE $02 $20 $1C $3A $BC $DE $FE
-;.db $03 $28 $68 $3A $BC $DE $CD $73 $65 $11 $B5 $DB $19 $7E $11 $83
-;.db $AB $3D $CA $32 $64 $77 $18 $28 $FE $01 $20 $3F $3A $BC $DE $A7
-;.db $28 $39 $FE $06 $28 $35 $FE $01 $28 $31 $FE $02 $28 $2D $3A $BC
-;.db $DE $CD $73 $65 $11 $B5 $DB $19 $7E $11 $BD $AB $3D $28 $01 $77
-;.db $D5 $CD $42 $6B $D1 $21 $08 $39 $CD $A6 $35 $CD $3B $6F $CD $B1
-;.db $62 $C3 $53 $60 $ED $7B $27 $DE $C3 $06 $09 $7E $36 $00 $12 $13
-;.db $01 $04 $00 $09 $7E $E6 $1F $12 $C3 $53 $60 $36 $00 $3E $02 $32
-;.db $29 $DC $C3 $53 $60 $3A $40 $C0 $87 $F6 $80 $26 $C3 $6F $7E $23
-;.db $66 $6F $4E $79 $FE $02 $CA $25 $66 $FE $03 $CA $CD $65 $FE $28
-;.db $CA $CD $65 $FE $0B $CA $FD $65 $FE $09 $CA $0C $66 $FE $0E $CA
-;.db $36 $66 $FE $0F $CA $36 $66 $FE $10 $CA $47 $66 $FE $06 $CA $E9
-;.db $65 $FE $01 $CA $9F $65 $FE $2F $CA $3D $65 $FE $30 $28 $7A $FE
-;.db $38 $28 $76 $FE $31 $CA $81 $65 $FE $32 $CA $45 $65 $FE $33 $28
-;.db $41 $FE $34 $28 $44 $FE $35 $28 $44 $FE $2D $DA $FC $64 $FE $37
-;.db $D2 $FC $64 $3A $BC $DE $FE $03 $20 $1A $79 $06 $02 $FE $2D $20
-;.db $02 $06 $05 $78 $32 $E6 $DE $3E $FF $32 $E7 $DE $36 $00 $11 $D1
-;.db $AE $C3 $8E $65 $11 $B7 $AA $C3 $8E $65 $3E $04 $CD $FF $02 $C3
-;.db $53 $60 $0E $02 $11 $37 $A9 $18 $09 $0E $01 $18 $02 $0E $04 $11
-;.db $53 $A9 $36 $00 $3A $BC $DE $CD $73 $65 $79 $01 $C0 $DB $09 $4E
-;.db $81 $01 $07 $00 $09 $77 $C3 $8E $65 $36 $00 $3E $05 $CD $52 $06
-;.db $C6 $02 $32 $F1 $DE $11 $22 $A9 $C3 $8E $65 $3E $08 $CD $52 $06
-;.db $3C $18 $07 $3E $07 $CD $52 $06 $C6 $04 $4F $36 $00 $3A $BC $DE
-;.db $CD $73 $65 $11 $B4 $DB $19 $11 $F9 $A8 $46 $23 $7E $81 $77 $B8
-;.db $38 $01 $70 $D5 $CD $3B $6F $D1 $C3 $8E $65 $EB $CD $73 $65 $EB
-;.db $C9
-
-
-
--:	
-		jp   -
-	
-_LABEL_62C5_:	
+;	disabled 24.09.08	
+_LABEL_62C5_:	;This is some take map drawing? It sure looks like it.
 		call _LABEL_6046_WAIT4GAMEPAD
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		ld   hl, _DATA_677E_TAKEMENU_TXT
@@ -9670,7 +9500,7 @@ _LABEL_62C5_:
 		rr   e
 		srl  d
 		rr   e
-_LABEL_6316_:	
+_LABEL_6316_:	;This is some trap thing, but I don't know what.
 		ld   a, (_RAM_DE52_ROOM_NR)
 		cp   (ix+1)
 		jr   nz, _LABEL_637A_
@@ -9733,7 +9563,7 @@ _LABEL_6316_:
 		ld   a, c
 		cp   $0B
 		jr   z, +
-_LABEL_637A_:	;This is the take menu.
+_LABEL_637A_:	;This is the take menu. The rest should be self explanatory.
 		exx
 		ld   de, $0005
 		add  ix, de
@@ -9761,20 +9591,20 @@ _LABEL_637A_:	;This is the take menu.
 		ld   iy, $C300
 		jp   _LABEL_6A41_ENTERMENU
 	
-_LABEL_63B6_:	
+_LABEL_63B6_:	;This seems to list your items.
 		call _LABEL_6B60_ITEM_MENUS_ENTRY
-		ld   b, $08
+		ld   b, $08		;There's eight items you can carry.
 -:	
 		ld   a, (hl)
 		and  a
-		jr   z, +
+		jr   z, +		;If the item is zero (empty), then exit from the loop.
 		inc  hl
 		inc  hl
-		djnz -
+		djnz -			;Loop for all items.
 		ld   de, _DATA_A981_TAKEMENU_TXT
 		ld   b, $11
 		ld   iy, $6CF3
-		jp   _LABEL_6A41_ENTERMENU
+		jp   _LABEL_6A41_ENTERMENU		;Print the Take Menu text.
 	
 +:	
 		push hl
@@ -9792,14 +9622,14 @@ _LABEL_63B6_:
 		add  hl, bc
 		add  hl, de
 		pop  de
-		ld   a, (hl)
-		cp   $37
-		jp   z, _LABEL_6446_
-		cp   $02
-		jr   nz, +
-		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
-		cp   $03
-		jr   z, _LABEL_645D_
+		ld   a, (hl)		;This is the item that you've picked up.
+		cp   $37			;Is it the Disks of Mishakal?
+		jp   z, _LABEL_6446_DoM_picked_win	;If yes, you won!
+		cp   $02			;Is it the Staff of Magius?
+		jr   nz, +			;Jump if it's not.
+		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)	;Get the char we are playing.
+		cp   $03			;Is it Raistlin?
+		jr   z, _LABEL_645D_STF_MAGIUS_PICKUP	;Jump, if yes.
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		call _LABEL_6573_CALC_DMG
 		ld   de, _RAM_DBB5_GOLDMOON_HP
@@ -9807,22 +9637,22 @@ _LABEL_63B6_:
 		ld   a, (hl)
 		ld   de, _DATA_AB83_MAGIUS_HANDBURN_TXT
 		dec  a
-		jp   z, ++
+		jp   z, ++			;If we are not Raistlin, just burn the player who tries to pick up or use the Staff.
 		ld   (hl), a
 		jr   ++
 	
 +:	
 		cp   $01
-		jr   nz, _LABEL_644D_
+		jr   nz, _LABEL_644D__BL_STF_PICKUP_OK
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		and  a
-		jr   z, _LABEL_644D_
+		jr   z, _LABEL_644D__BL_STF_PICKUP_OK	;If Goldmoon uses this.
 		cp   $06
-		jr   z, _LABEL_644D_
+		jr   z, _LABEL_644D__BL_STF_PICKUP_OK	;If Riverwind.
 		cp   $01
-		jr   z, _LABEL_644D_
+		jr   z, _LABEL_644D__BL_STF_PICKUP_OK	;If Sturm.
 		cp   $02
-		jr   z, _LABEL_644D_
+		jr   z, _LABEL_644D__BL_STF_PICKUP_OK	;If Caramon.
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		call _LABEL_6573_CALC_DMG
 		ld   de, _RAM_DBB5_GOLDMOON_HP
@@ -9832,7 +9662,7 @@ _LABEL_63B6_:
 		dec  a
 		jr   z, ++
 		ld   (hl), a
-++:	
+++:		;This part controls the Blue Staff's damaging behaviour if someone other than the four above tries to pick it up.
 		push de
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		pop  de
@@ -9841,12 +9671,13 @@ _LABEL_63B6_:
 		call _LABEL_6F3B__UPD_HUD
 		call _LABEL_62B1_SCOREMENU_CONT_LOOP
 		jp   _LABEL_6053_WAIT4BUTTN
+		;Damage the player, and return to the game after a button press.
 	
-_LABEL_6446_:	
+_LABEL_6446_DoM_picked_win:	
 		ld   sp, ($DE27)
 		jp   _LABEL_906_GOOD_END
 	
-_LABEL_644D_:	
+_LABEL_644D__BL_STF_PICKUP_OK:	
 		ld   a, (hl)
 		ld   (hl), $00
 		ld   (de), a
@@ -9858,73 +9689,73 @@ _LABEL_644D_:
 		ld   (de), a
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_645D_:	
+_LABEL_645D_STF_MAGIUS_PICKUP:	
 		ld   (hl), $00
 		ld   a, $02
 		ld   (_RAM_DC29_), a
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_6467_:	
+_LABEL_6467_ITEMS:		;This is definetly the potions and other stuff getting their effect.
 		ld   a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
-		add  a, a
-		or   $80
+		add  a, a		;2
+		or   $80		;82
 		ld   h, $C3
-		ld   l, a
+		ld   l, a		;C382
 		ld   a, (hl)
 		inc  hl
 		ld   h, (hl)
 		ld   l, a
 		ld   c, (hl)
 		ld   a, c
-		cp   $02
-		jp   z, _LABEL_6625_
-		cp   $03
-		jp   z, _LABEL_65CD_
-		cp   $28
-		jp   z, _LABEL_65CD_
-		cp   $0B
-		jp   z, _LABEL_65FD_
-		cp   $09
-		jp   z, _LABEL_660C_
-		cp   $0E
-		jp   z, _LABEL_6636_
-		cp   $0F
-		jp   z, _LABEL_6636_
-		cp   $10
-		jp   z, _LABEL_6647_
-		cp   $06
-		jp   z, _LABEL_65E9_
-		cp   $01
-		jp   z, _LABEL_659F_
-		cp   $2F
-		jp   z, _LABEL_653D_
-		cp   $30
-		jr   z, _LABEL_652B_
-		cp   $38
-		jr   z, _LABEL_652B_
-		cp   $31
-		jp   z, _LABEL_6581_
-		cp   $32
-		jp   z, _LABEL_6545_
-		cp   $33
-		jr   z, _LABEL_6504_
-		cp   $34
-		jr   z, _LABEL_650B_
-		cp   $35
-		jr   z, _LABEL_650F_
+		cp   $02				;Staff of Magius.
+		jp   z, _LABEL_6625_STF_MAGIUS
+		cp   $03				;Bow
+		jp   z, _LABEL_65CD_BOW2
+		cp   $28				;Bow
+		jp   z, _LABEL_65CD_BOW2
+		cp   $0B				;Hand Axe
+		jp   z, _LABEL_65FD_AXE
+		cp   $09				;Spear
+		jp   z, _LABEL_660C_SPEAR
+		cp   $0E				;Green Quiver
+		jp   z, _LABEL_6636_RED_QUIVER
+		cp   $0F				;Red Quiver
+		jp   z, _LABEL_6636_RED_QUIVER
+		cp   $10				;Pouch
+		jp   z, _LABEL_6647_POUCH
+		cp   $06				;Hoopak
+		jp   z, _LABEL_65E9_HOOPAK
+		cp   $01				;Blue Crystal Staff
+		jp   z, _LABEL_659F_CRYSTAL_STAFF
+		cp   $2F				;Green Potion
+		jp   z, _LABEL_653D_HP_POTION
+		cp   $30				;Orange Potion
+		jr   z, _LABEL_652B_STRENGTH_POTION
+		cp   $38				;Brown Potion
+		jr   z, _LABEL_652B_STRENGTH_POTION
+		cp   $31				;Red Potion
+		jp   z, _LABEL_6581_MONST_SLOW
+		cp   $32				;Blue Potion
+		jp   z, _LABEL_6545_HP_POTION2
+		cp   $33				;Yellow Potion
+		jr   z, _LABEL_6504_CONFIDENCE_POTION
+		cp   $34				;Ring
+		jr   z, _LABEL_650B_NORMAL_RING
+		cp   $35				;Gem Ring.
+		jr   z, _LABEL_650F_CONFIDENCE_RING
 		cp   $2D
-		jp   c, +++
-		cp   $37
+		jp   c, +++		;Items having numbers less than 2D should play a sound effect. I have not yet heard anything since I know this game.
+		cp   $37		;Items above $37 should also make sound, only the Disks of Mishakal should not make anything.
 		jp   nc, +++
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		cp   $03
-		jr   nz, ++
-		ld   a, c
+		jr   nz, ++		;Check if the character is Raistlin. If not, then jump and tell the player, this can be only used by Raistlin.
+		ld   a, c		;C still holds the item we tried to check bfore.
 		ld   b, $02
-		cp   $2D
+		cp   $2D		;Check if this is a scroll item.
 		jr   nz, +
 		ld   b, $05
-+:	
++:						;We are Raistlin, and we can use this item.
 		ld   a, b
 		ld   (_RAM_DEE6_), a
 		ld   a, $FF
@@ -9933,25 +9764,26 @@ _LABEL_6467_:
 		ld   de, _DATA_AED1_RAIST_PREPSPELL_TXT
 		jp   _LABEL_658E_PLOT_FLSCRN_MSG
 	
-++:	
+++:						;As we are not Raistlin, we can't use this item.
 		ld   de, _DATA_AAB7_ONLY_RAISTLIN_TXT
 		jp   _LABEL_658E_PLOT_FLSCRN_MSG
 	
 +++:	
-		ld   a, $04
-		call _LABEL_2FF_PREPNPLAYSFX
+;		ld   a, $04
+;		call _LABEL_2FF_PREPNPLAYSFX	;disabled 24.09.08 this is a sound effect! 
 		jp   _LABEL_6053_WAIT4BUTTN
-	
-_LABEL_6504_:	
+	;This above part actually controls some stuff that should be disabled later on, like certain characters can use some items, and 
+	;stuff like that, which is not good.
+_LABEL_6504_CONFIDENCE_POTION:	
 		ld   c, $02
 		ld   de, _DATA_A937_MORE_CONFIDENCE_TXT	;You feel more confident.
 		jr   ++
 	
-_LABEL_650B_:	
+_LABEL_650B_NORMAL_RING:	
 		ld   c, $01
 		jr   +
 	
-_LABEL_650F_:	
+_LABEL_650F_CONFIDENCE_RING:	
 		ld   c, $04
 +:	
 		ld   de, _DATA_A953_MORE_CONF_RING_TXT	;Your feel more confident wearing the ring.
@@ -9969,7 +9801,7 @@ _LABEL_650F_:
 		ld   (hl), a
 		jp   _LABEL_658E_PLOT_FLSCRN_MSG
 	
-_LABEL_652B_:	
+_LABEL_652B_STRENGTH_POTION:	
 		ld   (hl), $00
 		ld   a, $05
 		call _LABEL_652_LOAD_NEW_SCRN
@@ -9978,13 +9810,13 @@ _LABEL_652B_:
 		ld   de, _DATA_A922_U_FEEL_STRONGER_TXT	;You feel stronger.
 		jp   _LABEL_658E_PLOT_FLSCRN_MSG
 	
-_LABEL_653D_:	
+_LABEL_653D_HP_POTION:	
 		ld   a, $08
 		call _LABEL_652_LOAD_NEW_SCRN
 		inc  a
 		jr   +
 	
-_LABEL_6545_:	
+_LABEL_6545_HP_POTION2:	
 		ld   a, $07
 		call _LABEL_652_LOAD_NEW_SCRN
 		add  a, $04
@@ -10018,7 +9850,7 @@ _LABEL_656D_:
 		ret
 
 
-_LABEL_6573_CALC_DMG:	;This seems like the 
+_LABEL_6573_CALC_DMG:	;This seems like the damage calculation, though i'm sure there's a better way.
 	add a, a ;2X
 	add a, a	;4X
 	add a, a	;8X
@@ -10033,14 +9865,12 @@ _LABEL_6573_CALC_DMG:	;This seems like the
 	ret
 
 
-_LABEL_6581_:	
+_LABEL_6581_MONST_SLOW:	
 		ld (hl), $00
 		ld a, $01
 		ld (_RAM_DEF3_ENEMY_MOV_ENA), a
 		ld de, _DATA_A8D4_SLOW_MONST_TXT
 		jp _LABEL_658E_PLOT_FLSCRN_MSG
-	; Data from 6581 to 658D (13 bytes)
-;	.db $36 $00 $3E $01 $32 $F3 $DE $11 $D4 $A8 $C3 $8E $65
 	
 _LABEL_658E_PLOT_FLSCRN_MSG:	
 		push de
@@ -10050,42 +9880,8 @@ _LABEL_658E_PLOT_FLSCRN_MSG:
 		call _LABEL_35A6_RANDOM
 		call _LABEL_62B1_SCOREMENU_CONT_LOOP
 		jp _LABEL_6053_WAIT4BUTTN
-	;This has to be examined later, but this is valid code for sure. I have it saved somewhere else, so I can include it in the source, and analyze it.	
-	; Data from 659F to 678B (493 bytes)
-	;TODO CODE COMES HERE.
-;	.db $CD $6A $66 $1A $E6 $7F $77 $79 $12 $23 $36 $00 $6B $62 $01 $11
-;	.db $00 $A7 $ED $42 $06 $08 $7E $A7 $28 $07 $23 $23 $10 $F8 $C3 $53
-;	.db $60 $23 $36 $00 $2B $CD $5C $66 $C3 $53 $60 $C3 $52 $66 $3A $BC
-;	.db $DE $FE $04 $28 $05 $FE $06 $C2 $53 $60 $CD $6A $66 $E6 $7F $C2
-;	.db $53 $60 $1A $77 $3E $83 $12 $C3 $53 $60 $3A $BC $DE $FE $05 $C2
-;	.db $53 $60 $CD $6A $66 $E6 $7F $C2 $53 $60 $06 $06 $18 $1C $3A $BC
-;	.db $DE $FE $07 $C2 $53 $60 $CD $6A $66 $06 $0B $18 $0D $3A $BC $DE
-;	.db $FE $02 $C2 $53 $60 $CD $6A $66 $06 $09 $1A $E6 $7F $C2 $53 $60
-;	.db $77 $78 $12 $C3 $53 $60 $CD $6A $66 $1A $E6 $7F $C2 $53 $60 $3E
-;	.db $02 $12 $36 $00 $C3 $53 $60 $CD $6A $66 $1A $E6 $7F $FE $03 $28
-;	.db $12 $FE $28 $28 $0E $C3 $53 $60 $CD $6A $66 $1A $E6 $7F $FE $06
-;	.db $C2 $53 $60 $1A $E6 $7F $12 $CD $5C $66 $C3 $53 $60 $13 $1A $4E
-;	.db $77 $79 $12 $23 $13 $1A $4E $77 $79 $12 $C9 $E5 $3A $BC $DE $CD
-;	.db $73 $65 $11 $B1 $DB $19 $EB $E1 $C9 $3A $40 $C0 $87 $F6 $80 $26
-;	.db $C3 $6F $7E $23 $66 $6F $4E $36 $00 $3A $0A $D9 $FE $0F $CA $53
-;	.db $60 $21 $00 $D6 $11 $05 $00 $7E $A7 $28 $03 $19 $18 $F9 $71 $3A
-;	.db $52 $DE $23 $77 $ED $5B $00 $D9 $CB $3A $CB $1B $CB $3A $CB $1B
-;	.db $CB $3A $CB $1B $CB $3A $CB $1B $23 $73 $23 $36 $00 $23 $36 $00
-;	.db $C3 $53 $60 $3A $40 $C0 $87 $F6 $80 $26 $C3 $6F $7E $23 $66 $6F
-;	.db $E5 $AF $32 $FF $C7 $DD $21 $00 $C7 $11 $A2 $01 $D5 $DD $E5 $F3
-;	.db $CD $F1 $5E $FB $DD $E1 $D1 $CD $64 $5E $06 $0C $CD $58 $5E $3A
-;	.db $94 $DE $A7 $28 $F2 $3A $FF $C7 $4F $08 $79 $A7 $28 $73 $E1 $7E
-;	.db $E5 $21 $BC $DE $06 $00 $09 $FE $01 $7E $20 $21 $A7 $28 $1E $FE
-;	.db $06 $28 $1A $FE $01 $28 $16 $FE $02 $28 $12 $CD $42 $6B $11 $F6
-;	.db $AB $21 $08 $39 $CD $A6 $35 $CD $B1 $62 $C3 $70 $67 $CD $63 $6B
-;	.db $06 $08 $11 $15 $00 $19 $7E $A7 $ED $52 $A7 $20 $08 $CD $42 $6B
-;	.db $11 $38 $AC $18 $DC $7E $A7 $28 $1B $23 $23 $10 $F8 $08 $E1 $DD
-;	.db $21 $00 $C7 $F3 $CD $C6 $5E $FB $11 $BE $A9 $06 $11 $FD $21 $F3
-;	.db $6C $C3 $41 $6A $D1 $D5 $EB $7E $12 $36 $00 $23 $13 $7E $12 $36
-;	.db $00 $08 $E1 $DD $21 $00 $C7 $F3 $CD $C6 $5E $FB $C3 $53 $60 $20
 
-;The above produced this code. TODO
-_LABEL_659F_:	
+_LABEL_659F_CRYSTAL_STAFF:	
 		call _LABEL_666A_
 		ld   a, (de)
 		and  $7F
@@ -10119,7 +9915,7 @@ _LABEL_659F_:
 _LABEL_65CA_:	
 		jp   _LABEL_6652_
 	
-_LABEL_65CD_:	
+_LABEL_65CD_BOW2:	
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		cp   $04
 		jr   z, +
@@ -10135,7 +9931,7 @@ _LABEL_65CD_:
 		ld   (de), a
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_65E9_:	
+_LABEL_65E9_HOOPAK:	
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		cp   $05
 		jp   nz, _LABEL_6053_WAIT4BUTTN
@@ -10145,7 +9941,7 @@ _LABEL_65E9_:
 		ld   b, $06
 		jr   +
 	
-_LABEL_65FD_:	
+_LABEL_65FD_AXE:	
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		cp   $07
 		jp   nz, _LABEL_6053_WAIT4BUTTN
@@ -10153,7 +9949,7 @@ _LABEL_65FD_:
 		ld   b, $0B
 		jr   +
 	
-_LABEL_660C_:	
+_LABEL_660C_SPEAR:	
 		ld   a, (_RAM_DEBC_INRAM_HUD_PORTRAITS)
 		cp   $02
 		jp   nz, _LABEL_6053_WAIT4BUTTN
@@ -10168,7 +9964,7 @@ _LABEL_660C_:
 		ld   (de), a
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_6625_:	
+_LABEL_6625_STF_MAGIUS:	
 		call _LABEL_666A_
 		ld   a, (de)
 		and  $7F
@@ -10178,7 +9974,7 @@ _LABEL_6625_:
 		ld   (hl), $00
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_6636_:	
+_LABEL_6636_RED_QUIVER:	
 		call _LABEL_666A_
 		ld   a, (de)
 		and  $7F
@@ -10188,7 +9984,7 @@ _LABEL_6636_:
 		jr   z, _LABEL_6652_
 		jp   _LABEL_6053_WAIT4BUTTN
 	
-_LABEL_6647_:	
+_LABEL_6647_POUCH:	
 		call _LABEL_666A_
 		ld   a, (de)
 		and  $7F
@@ -10291,7 +10087,7 @@ _LABEL_66C2_STAFFPICKUP:
 		push de
 		push ix
 		di
-		call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
+		;call _LABEL_5EF1_DRAWRECT_OVERHUDPORTRAIT
 		ei
 		pop  ix
 		pop  de
@@ -10358,7 +10154,7 @@ _LABEL_6744_:
 		pop  hl
 		ld   ix, _RAM_C700_SELECTED_HERO_TILES
 		di
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+		;call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC	;24.09.08 disabled.
 		ei
 		ld   de, _DATA_A9BE_GIVEMENU_TXT_NMORE
 		ld   b, $11
@@ -10382,7 +10178,7 @@ _LABEL_6770_:
 		pop  hl
 		ld   ix, _RAM_C700_SELECTED_HERO_TILES
 		di
-		call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC
+		;call _LABEL_5EC6_FIX_NOT_SELECTED_HUDPIC	;24.09.08
 		ei
 		jp   _LABEL_6053_WAIT4BUTTN
 	
@@ -10397,7 +10193,8 @@ _DATA_678C_DROPMENU_TXT:	;Drop menu
 	
 ; Data from 679A to 67A7 (14 bytes)	
 _DATA_679A_GIVEMENU_TXT:	;Give menu	
-	.db $20 $20 $20 $47 $49 $56 $45 $20 $4D $45 $4E $55 $0D $FF
+	;.db $20 $20 $20 $47 $49 $56 $45 $20 $4D $45 $4E $55 $0D $FF
+	.dsb 14,$00
 	
 ; Data from 67A8 to 67B4 (13 bytes)	
 _DATA_67A8_USEMENU_TXT:	;Use menu.
@@ -10414,7 +10211,7 @@ _DATA_67DB_EXITMENU_TXT:	;Exit menu
 	.db $45 $78 $69 $74 $20 $6D $65 $6E $75 $0D $FF
 	
 ; Data from 67E6 to 67F5 (16 bytes)	
-_DATA_67E6_NO_RANGE_WEAPON_TXT:		;No range weapon.
+_DATA_67E6_NO_RANGE_WEAPON_TXT:		;No range weapon. This is not needed here.
 	.db $6E $6F $20 $72 $61 $6E $67 $65 $20 $57 $65 $61 $70 $6F $6E $FF
 	
 ; Data from 67F6 to 6808 (19 bytes)	
@@ -10424,7 +10221,7 @@ _DATA_67F6_DELCHARS:
 	.db $FF	;End of text separator.
 	
 ; Data from 6809 to 6A1C (532 bytes)	
-_DATA_6809_ITEM_NAMES:	
+_DATA_6809_ITEM_NAMES:		;TODO relocate this to the last bank when it's possible to save some space here as well.
 	.db $FF $42 $6C $75 $65 $20 $43 $72 $79 $73 $74 $61 $6C $20 $53 $74
 	.db $61 $66 $66 $0D $FF $53 $74 $61 $66 $66 $20 $6F $66 $20 $4D $61
 	.db $67 $69 $75 $73 $0D $FF $42 $6F $77 $0D $FF $4C $6F $6E $67 $73
@@ -10497,7 +10294,7 @@ _LABEL_6A41_ENTERMENU:		;This is executed every time we land in a new menu from 
 		pop bc
 		ld c, $97
 		ld ix, _RAM_C000_RAM_START
-		call _LABEL_6AE6_MENU_TXTDRAW
+		;call _LABEL_6AE6_MENU_TXTDRAW
 		pop iy
 		jp _LABEL_5C89_
 	
@@ -10539,6 +10336,7 @@ _LABEL_6A6C_AFTERMSG_SCR_LOADLVLBCK:	;We get here from the non-healing waterfall
 	ret
 
 _LABEL_6AAE_MNU_DELSCRN_TXTCOLOR:	;This is executed right when you press for the ingame menu. Also makes the text line white, so you know it's selected. Also runs, when you press the button, and the menu items are redrawn.
+	;ret	;disabled on 24.09.08, the menu will be reprogrammed.
 	di
 	call _LABEL_4BB_VDP_RAM_WRITESETUP
 	ei
@@ -10582,7 +10380,7 @@ _LABEL_6AAE_MNU_DELSCRN_TXTCOLOR:	;This is executed right when you press for the
 	pop bc
 	djnz ---
 	ret
-
+.org $6AE6
 _LABEL_6AE6_MENU_TXTDRAW:	;We jump here, this seems to load some things again. The menu's white text, and overall text drawing is done.
 	push bc
 	push de
@@ -10676,6 +10474,14 @@ _LABEL_6B63_:
 		ret
 	
 _LABEL_6B6D_DRAW_HERODETAILS:	;Wew this is long....But it draws the Hero select screen itself with the text, but no the details themselves. The name is also colored yellow, but not the rest of the text.
+		;Strength
+		;Dexterity
+		;Vitality
+		;Magic
+		;Armor
+		;These should be shown, but as numbers on the screen. Similarly to Diablo, mana also have to be shown on this
+		;screen, and ingame as well. How can I achieve this is another matter.
+		;Other details are not really needed here, and should not be shown.
 		push bc
 		push de
 		push hl
@@ -10815,7 +10621,8 @@ _LABEL_6B6D_DRAW_HERODETAILS:	;Wew this is long....But it draws the Hero select 
 		ret
 	
 _LABEL_6C61_DRAWHERO_SPECS:	;Draws the Hero Selection screen, specifically the details of the hero.
-		
+		;This has to be changed to show numbers, and not the bar that it has now. The selection part is also needed to be
+		;disabled.
 		push bc
 		push de
 		ld h, $00
@@ -10876,13 +10683,13 @@ _LABEL_6C61_DRAWHERO_SPECS:	;Draws the Hero Selection screen, specifically the d
 		ld de, _RAM_D100_IN_RAM_SPRITETABLE
 		call _LABEL_35A6_RANDOM
 		ret
-	
+.org $6CAD	
 _DATA_6CAD_PALETTES:	; Data from 6CAD to 6CAE (2 bytes)
 	.db $C8 $38
 	
 ; Jump Table from 6CAF to 6CBC (7 entries, indexed by  _RAM_C040_SELECTED_MENUITEMINRAM_PAL)	
 _DATA_6CAF_:	
-	.dw _LABEL_5D43_HERO_SELECT_MENU _LABEL_3908_ _LABEL_605C_MAGICUSERSPELLMENU _LABEL_3948_ _LABEL_60B0_ _LABEL_3988_APPLYDAMAGE _LABEL_6114_
+	.dw _LABEL_5D43_HERO_SELECT_MENU _LABEL_3908_ _LABEL_605C_MAGICUSERSPELLMENU _LABEL_3948_ _LABEL_60B0_CLERICAL_SP_MENU _LABEL_3988_APPLYDAMAGE _LABEL_6114_USE_MENU
 	
 	; Data from 6CBD to 6CD4 (24 bytes)
 	.db $C8 $39 $C5 $62 $08 $3A $22 $61 $48 $3A $06 $61 $88 $3A $CB $61
@@ -10909,18 +10716,21 @@ _DATA_6CF5_:	;Strange, these are not used, only the first. I wonder what else th
 	
 ; Data from 6D39 to 6DC8 (144 bytes)	
 _DATA_6D39_HERO_STAT_TXT:	;This is the text for the hero select screen, where the player stats are shown.
-	.db $20 $47 $6F $6C $64 $6D $6F $6F $6E $20 $20 $20 $20 $20 $FF $00
-	.db $20 $20 $53 $74 $75 $72 $6D $20 $20 $20 $20 $20 $20 $20 $FF $00
-	.db $20 $43 $61 $72 $61 $6D $6F $6E $20 $20 $20 $20 $20 $20 $FF $00
-	.db $20 $52 $61 $69 $73 $74 $6C $69 $6E $20 $20 $20 $20 $20 $FF $00
-	.db $20 $20 $54 $61 $6E $69 $73 $20 $20 $20 $20 $20 $20 $20 $FF $00
-	.db $54 $61 $73 $73 $6C $65 $68 $6F $66 $66 $20 $20 $20 $20 $FF $00
-	.db $52 $69 $76 $65 $72 $77 $69 $6E $64 $20 $20 $20 $20 $20 $FF $00
-	.db $20 $20 $46 $6C $69 $6E $74 $20 $20 $20 $20 $20 $20 $20 $FF $00
-	.db $44 $65 $61 $64 $20 $63 $68 $61 $72 $61 $63 $74 $65 $72 $FF $00
+	.dsb 144,$00
+	;disabled on 24,09,13 This text is not needed at the moment.
+	;.db $20 $47 $6F $6C $64 $6D $6F $6F $6E $20 $20 $20 $20 $20 $FF $00
+	;.db $20 $20 $53 $74 $75 $72 $6D $20 $20 $20 $20 $20 $20 $20 $FF $00
+	;.db $20 $43 $61 $72 $61 $6D $6F $6E $20 $20 $20 $20 $20 $20 $FF $00
+	;.db $20 $52 $61 $69 $73 $74 $6C $69 $6E $20 $20 $20 $20 $20 $FF $00
+	;.db $20 $20 $54 $61 $6E $69 $73 $20 $20 $20 $20 $20 $20 $20 $FF $00
+	;.db $54 $61 $73 $73 $6C $65 $68 $6F $66 $66 $20 $20 $20 $20 $FF $00
+	;.db $52 $69 $76 $65 $72 $77 $69 $6E $64 $20 $20 $20 $20 $20 $FF $00
+	;.db $20 $20 $46 $6C $69 $6E $74 $20 $20 $20 $20 $20 $20 $20 $FF $00
+	;.db $44 $65 $61 $64 $20 $63 $68 $61 $72 $61 $63 $74 $65 $72 $FF $00
 	
 
 _LABEL_6DC9_NME_KILLED_INCKILLCOUNT:	;The below will run, when the player is killing an enemy.
+;This can be repurposed for something else, for example it can be used to act as a base for a level system.
 	sub $09	;So, a seems to be the input for this. Subtract 9 from it. I guess this is the monster type.
 	add a, a
 	push hl
@@ -11059,55 +10869,57 @@ _LABEL_6F06_HUD:	;THIS DRAWS THE HUD.
 	ld a, (_RAM_DEBB_DEBUG)	;THIS SEEMS LIKE A DEBUG FLAG.
 	and a
 	jp z, _LABEL_7117_ENABLE_DEBUG	;IF THIS IS ZERO, ENABLE THE DEBUG PARTS, WHICH REPLACE THE HUD, AND DISABLES SOME FUNCTIONS.
-	di
-	ld a, $04
-	ld (_RAM_FFFF_), a
-	ld hl, _DATA_125C0_HUD_DATA
-	ld de, $1000
-	ld bc, $11C0
-	call _LABEL_48C_LOAD_VDP_DATA	;COMMENTING THIS OUT, THE HUD'S TILES WONT GET LOADED.
-	ld hl, _DATA_121C0_HUD_TILEMAP	;THIS IS THE HUD TILEMAP. PORTRAITS AND COMPASS DIRECTIONS ARE NOT AFFECTED.
-	ld de, $3C00
-	ld b, $00
-	ex de, hl
-	call _LABEL_4BB_VDP_RAM_WRITESETUP	;THIS WRITES TO THE APPROPRIATE PART OF THE TILEMAP, AND IT'S FOR THE HUD.
--:
-	ld a, (de)
-	out (Port_VDPData), a
-	inc de
-	ld a, (de)
-	inc de
-	or $18
-	out (Port_VDPData), a
-	djnz -
+	;di
+	;ld a, $04
+	;ld (_RAM_FFFF_), a
+	;ld hl, _DATA_125C0_HUD_DATA
+	;ld de, $1000
+	;ld bc, $11C0
+	;call _LABEL_48C_LOAD_VDP_DATA	;COMMENTING THIS OUT, THE HUD'S TILES WONT GET LOADED.
+	;ld hl, _DATA_121C0_HUD_TILEMAP	;THIS IS THE HUD TILEMAP. PORTRAITS AND COMPASS DIRECTIONS ARE NOT AFFECTED.
+	;ld de, $3C00
+	;ld b, $00
+	;ex de, hl
+	;call _LABEL_4BB_VDP_RAM_WRITESETUP	;THIS WRITES TO THE APPROPRIATE PART OF THE TILEMAP, AND IT'S FOR THE HUD.
+-:;
+	;ld a, (de)
+	;out (Port_VDPData), a
+	;inc de
+	;ld a, (de)
+	;inc de
+	;or $18
+	;out (Port_VDPData), a
+	;djnz -
 	call _LABEL_6F3B__UPD_HUD	;DRAW COMPANIONS, LIFE BARS AND SO ON.
 	ret
-
+;The hame's HUD is now disabled. 24.09.04
 _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 	ld a, (_RAM_DEBB_DEBUG)
 	and a
 	jp z, _LABEL_714D_DRAW_DEBUGHUD	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
-	ld a, $04
-	ld (_RAM_FFFF_), a
-	ld hl, (_RAM_DE5B_COMBAT_MARK)
-	ld a, h
-	or l
-	ld de, _DATA_12306_HUD_LPART	;THIS IS THE NON-COMBAT TILES ON THE COMPASS.
-	jr z, +
-	ld de, _DATA_12550_COMPASS_ON_MAP	;COMMENT IT OUT, AND THE COMBAT TEXT WONT APPEAR.
-+:
-	ld hl, $3D46
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	ld b, $04	;THIS TELLS THE PROGRAM HOW MANY TILES TO DRAW. (COMBAT TEXT)
--:
-	ld a, (de)
-	out (Port_VDPData), a
-	inc de
-	ld a, (de)
-	inc de
-	or $08
-	out (Port_VDPData), a
-	djnz -		;WRITE DATA INTO VRAM.
+	;ld a, $04
+	;ld (_RAM_FFFF_), a
+	;ld hl, (_RAM_DE5B_COMBAT_MARK)
+	;ld a, h
+	;or l
+	;ld de, _DATA_12306_HUD_LPART	;THIS IS THE NON-COMBAT TILES ON THE COMPASS.
+	;jr z, +
+	;ld de, _DATA_12550_COMPASS_ON_MAP	;COMMENT IT OUT, AND THE COMBAT TEXT WONT APPEAR.
+;+:
+;	ld hl, $3D46
+;	call _LABEL_4BB_VDP_RAM_WRITESETUP
+;	ld b, $04	;THIS TELLS THE PROGRAM HOW MANY TILES TO DRAW. (COMBAT TEXT)
+;-:
+;	ld a, (de)
+;	out (Port_VDPData), a
+;	inc de
+;	ld a, (de)
+;	inc de
+;	or $08
+;	out (Port_VDPData), a
+;	djnz -		;WRITE DATA INTO VRAM.
+;The combat tile won't even go into VRAM, which is nice. We don't need to know it at all.
+;The HUD would be rewritten to use different tiles, and show things differently.
 	ld hl, (_RAM_D900_CHARA_COORD)	;IN RAM DETAILS FOR THE PLAYER, DIRECTION AND SUCH.
 	srl h
 	rr l
@@ -11149,228 +10961,63 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 	jr -
 
 +++:
-	ld a, $04
-	ld (_RAM_FFFF_), a
-	ld a, (_RAM_DE53_COMPASS)	;get the compass type, this is not where the the compass is showing we could go.
-	add a, a
-	add a, a
-	add a, a
-	ld hl, _DATA_70F7_COMPASS_TILEMAP	;SEEMS TO BE THE TILEMAP OF THE COMPASS.
-	ld e, a
-	ld d, $00
-	add hl, de
-	ex de, hl
-	ld a, b
-	and $01
-	ld hl, $3C48			;TILEMAP COORDINATES ON SCREEN.
-	call _LABEL_70C4_DRAW_COMPASS	;DRAW COMPASS MARKER (UP)
-	xor a
-	ld hl, $3CCE
-	call _LABEL_70C4_DRAW_COMPASS	;RIGHT
-	ld a, b
-	and $02
-	ld hl, $3D88
-	call _LABEL_70C4_DRAW_COMPASS	;DOWN
-	xor a
-	ld hl, $3CC2
-	call _LABEL_70C4_DRAW_COMPASS	;LEFT
-	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
-	ld iy, _DATA_706B_HUD_PORTRAITS
-	ld b, $08	;COPY THE DEFAULT PORTRAIT ORDER FROM ROM TO RAM.
+;	ld a, $04
+;	ld (_RAM_FFFF_), a	;disabled 24.09.08 the code could be later removed, but for now, it's good to keep it as a sample code.
+;	ld a, (_RAM_DE53_COMPASS)	;get the compass type, this is not where the the compass is showing we could go.
+;	add a, a
+;	add a, a
+;	add a, a
+;	ld hl, _DATA_70F7_COMPASS_TILEMAP	;SEEMS TO BE THE TILEMAP OF THE COMPASS.
+;	ld e, a
+;	ld d, $00
+;	add hl, de
+;	ex de, hl
+;	ld a, b
+;	and $01
+	;disabled 24.09.04
+	;ld hl, $3C48			;TILEMAP COORDINATES ON SCREEN.
+	;call _LABEL_70C4_DRAW_COMPASS	;DRAW COMPASS MARKER (UP)
+	;xor a
+	;ld hl, $3CCE
+	;call _LABEL_70C4_DRAW_COMPASS	;RIGHT
+	;ld a, b
+	;and $02
+	;ld hl, $3D88
+	;call _LABEL_70C4_DRAW_COMPASS	;DOWN
+	;xor a
+	;ld hl, $3CC2
+	;call _LABEL_70C4_DRAW_COMPASS	;LEFT
+;	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
+;	ld iy, _DATA_706B_HUD_PORTRAITS
+;	ld b, $08	;COPY THE DEFAULT PORTRAIT ORDER FROM ROM TO RAM.
 	;HOW MANY COMPANIONS WE HAVE TO DRAW.
 _LABEL_6FE1_:	;DRAWING ON THE HUD, PLAYER HEALTH AND SO ON.
-	push bc
-	ld a, (ix+0)
-	add a, a
-	ld hl, _DATA_7059_CHAR_PORTRAIT_MAP
-	ld c, a
-	ld b, $00
-	add hl, bc
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	ld hl, _DATA_121C0_HUD_TILEMAP
-	add hl, de
-	ex de, hl
-	ld l, c
-	ld h, $00
-	add hl, hl
-	add hl, hl
-	ld c, l
-	ld b, h
-	add hl, hl
-	add hl, hl
-	add hl, bc
-	ld bc, _RAM_DBB5_GOLDMOON_HP	;THIS IS GOLDMOON'S HEALTH. WHY DO WE CHECK THIS? I GUESS FOR RIVERWIND, IF HE HAS TO INTERVENE.
-	add hl, bc
-	ld c, $08
-	ld a, (hl)
-	and a
-	jr nz, _COMP_DEAD_	;IF THIS IS JUST Z, THE PLAYERS PORTRAITS ARE IN GREYSCALE.(DEAD) BUT NOT DEAD THOUGH
-	ld c, $00
- _COMP_DEAD_:			;PLAYER IS DEAD, AND MARK THE PORTRAIT IN GREYSCALE.
-	push de
-	dec hl
-	ld e, (hl)
-	ld l, a
-	ld a, e
-	and a
-	jr Nz, _COMP_RLYDED_	;IF THIS IS Z, THE PLAYERS ARE -REALLY- DEAD. (NOT RESURRECTABLE.) NOT DEAD THOUGH.
-	pop de
-	ld de, (_DATA_706B_HUD_PORTRAITS - 2)
-	ld a, l
-	ld hl, $A1C0
-	add hl, de
-	ex de, hl
-	ld l, a
-	push de
- _COMP_RLYDED_:		;SHOW THE COMPANIONS AS NON-RESURRECTABLE, IF THAT'S THE CASE,
-	ld h, $00
-	add hl, hl
-	add hl, hl
-	add hl, hl
-	ld d, $00
-	add hl, de
-	dec hl
-	ld a, $FF
-	and a
--:
-	inc a
-	sbc hl, de
-	jr nc, -	;SET IT TO C, AND THE LIFE BARS ARE NOT SHOWN\ZEROED OUT.
-	sub $08
-	neg
-	add a, a
-	ld e, a
-	ld d, $00
-	ld hl, _DATA_12480_LIFEBAR_TILES
-	add hl, de
-	ex de, hl
-	ld l, (iy+0)
-	ld h, (iy+1)
-	push hl
-	call _LABEL_70A2_DRAW_LIFEBAR
-	pop hl
-	pop de
-	inc hl
-	inc hl
-	call +
-	inc iy
-	inc iy
-	inc ix
-	pop bc
-	djnz _LABEL_6FE1_
-	ret
-
-; Data from 7059 to 706A (18 bytes)
-_DATA_7059_CHAR_PORTRAIT_MAP:
-.db $00 $02 $06 $02 $0C $02 $12 $02 $18 $02 $1E $02 $24 $02 $2A $02
-.db $30 $02
-
-; Data from 706B to 707A (16 bytes)
-_DATA_706B_HUD_PORTRAITS:
-.db $56 $3C $60 $3C $6A $3C $74 $3C $16 $3D $20 $3D $2A $3D $34 $3D
-
-+:	;CHARACTER\COMPANION PORTRAITS ARE DRAWN IN LINES FROM BOTTOM TO TOP.
-	call +	;LAST LINE.
-	call +	;MIDDLE LINE
-+:	;UPPER LINE.
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	ld b, $03 ;03	;COLUMN NUMBER.
--:
-	ld a, (de)
-	inc de
-	out (Port_VDPData), a
-	ld a, (de)
-	inc de
-	or c
-	out (Port_VDPData), a
-	djnz -
-	ld a, $3A
-	add a, e
-	ld e, a
-	ld a, d
-	adc a, $00
-	ld d, a
-	ld a, $40
-	add a, l
-	ld l, a
-	ld a, h
-	adc a, $00
-	ld h, a
-	ret
-
-_LABEL_70A2_DRAW_LIFEBAR:
-	ld b, $03	;We draw four tiles, since that's how many are in a standard lifebar. This is just to draw then on the screen.
--:
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	ld a, (de)
-	inc de
-	out (Port_VDPData), a
-	ld a, $40
-	add a, l
-	ld l, a
-	ld a, h
-	adc a, $00
-	ld h, a
-	ld a, (de)
-	or $08
-	inc de
-	out (Port_VDPData), a
-	ld a, $3E
-	add a, e
-	ld e, a
-	ld a, d
-	adc a, $00
-	ld d, a
-	djnz -
-	ret
-
-_LABEL_70C4_DRAW_COMPASS:	;So, we receive the destination in HL.
-	push af
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	pop af
-	ex de, hl
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	push hl
-	ld hl, _DATA_121C0_HUD_TILEMAP
-	add hl, de
-	ex de, hl
-	pop hl
-	inc hl
-	and a
-	jr z, +
-	ld a, $40
-	add a, e
-	ld e, a
-	ld a, $00
-	adc a, d
-	ld d, a
-+:
-	ld a, (de)
-	out (Port_VDPData), a
-	inc de
-	ld a, (de)
-	or $08
-	out (Port_VDPData), a
-	neg
-	inc de
-	ld a, (de)
-	out (Port_VDPData), a
-	inc de
-	ld a, (de)
-	or $08
-	out (Port_VDPData), a
-	ex de, hl
-	ret
-
-; Data from 70F7 to 7116 (32 bytes)
-_DATA_70F7_COMPASS_TILEMAP:
-.db $80 $03 $84 $03 $88 $03 $8C $03 $84 $03 $88 $03 $8C $03 $80 $03
-.db $88 $03 $8C $03 $80 $03 $84 $03 $8C $03 $80 $03 $84 $03 $88 $03
-
+ret
+;	ld b, $03	;We draw four tiles, since that's how many are in a standard lifebar. This is just to draw then on the screen.
+;-:
+;	call _LABEL_4BB_VDP_RAM_WRITESETUP
+;	ld a, (de)
+;	inc de
+;	out (Port_VDPData), a
+;	ld a, $40
+;	add a, l
+;	ld l, a
+;	ld a, h
+;	adc a, $00
+;	ld h, a
+;	ld a, (de)
+;	or $08
+;	inc de
+;	out (Port_VDPData), a
+;	ld a, $3E
+;	add a, e
+;	ld e, a
+;	ld a, d
+;	adc a, $00
+;	ld d, a
+;	djnz -
+;	ret
+.org $7117
 _LABEL_7117_ENABLE_DEBUG:
 ;THIS WILL PRINT SOME EXTRA INFO ON THE HUD, AND DISABLE THE REST OF THE INFO YOU ARE NORMALLY GIVEN.
 ;TODO: This can be disabled\moved elsewhere, since the game will never use it, and really, aoart from debuggning, it has no use.
@@ -11397,7 +11044,7 @@ _LABEL_7117_ENABLE_DEBUG:
 	ret
 
 _LABEL_714D_DRAW_DEBUGHUD:	;If this is just a RET, then the debug HUD is not drawn. The normal hud under it is not updated, so players can still die, but you can use the warp and all that. Strangely, just above we also do something similar.
-	;	TODO: This can be actually disabled, or moved somewhere else.
+	;	Keep this for testing. Also, this HUD code is much easier to handle, so this will be the basis for the new one.
 	ld hl, (_RAM_D900_CHARA_COORD)
 	srl h
 	rr l
@@ -11419,113 +11066,7 @@ _LABEL_714D_DRAW_DEBUGHUD:	;If this is just a RET, then the debug HUD is not dra
 	call _LABEL_3582_DRAW_NUMBERS_DEBUG
 	ei
 	ret
-
-_LABEL_717C_CYCLE_DEAD2ALIVECHARS: ;This also runs every frame, and check for dead characters. As in the normal game, dead players are automatically switched to the next alive one.
-	ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS	;Load the player list used in the hud.
-	ld b, $07
---:
-	ld a, (ix+0)		;This might be a bug, since this is gonna be just IX.
-	call _LABEL_6573_CALC_DMG
-	ld de, _RAM_DBB5_GOLDMOON_HP	
-	add hl, de			;So, we use now damage as healing also? I might be also wrong on the function's task.
-	ld a, (hl)
-	and a
-	jr nz, _LABEL_71B9_INC_CHKNEXT_CHAR		;If the given char is not dead, jump ahead.
-	dec hl				;Char is dead.
-	ld a, (hl)
-	and a
-	jr z, ++
-	ld c, b
-	push ix
-	pop iy
--:
-	inc iy
-	ld a, (iy+0)
-	call _LABEL_6573_CALC_DMG
-	add hl, de
-	ld a, (hl)
-	and a
-	jr nz, +
-	dec c
-	jr nz, -
-	jp _LABEL_71B9_INC_CHKNEXT_CHAR
-
-+:
-	ld c, (iy+0)
-	ld a, (ix+0)
-	ld (iy+0), a
-	ld (ix+0), c
-_LABEL_71B9_INC_CHKNEXT_CHAR:		;The player is fine.
-	inc ix		;Increment the player array.
-	djnz --		;Loop back, and check the next in the roster, until we've checked all of them.
-	ret
-
-++:
-	dec de
-	ld c, b
-	push ix
-	pop iy
--:
-	inc iy
-	ld a, (iy+0)
-	call _LABEL_6573_CALC_DMG
-	add hl, de
-	ld a, (hl)
-	and a
-	jr nz, +
-	dec c
-	jr nz, -
-	inc de
-	jp _LABEL_71B9_INC_CHKNEXT_CHAR
-
-+:
-	ld c, (iy+0)
-	ld a, (ix+0)
-	ld (iy+0), a
-	ld (ix+0), c
-	inc de
-	jp _LABEL_71B9_INC_CHKNEXT_CHAR
-
-; Data from 71E8 to 721B (52 bytes)
-;.db $3A $C3 $DE $CD $73 $65 $11 $B4 $DB $19 $46 $23 $7E $4F $B0 $C8
-;.db $06 $07 $DD $21 $BC $DE $DD $7E $00 $CD $73 $65 $19 $7E $A7 $28
-;.db $05 $DD $23 $10 $F1 $C9 $DD $4E $00 $3A $C3 $DE $DD $77 $00 $79
-;.db $32 $C3 $DE $C9
-
-_LABEL_71E8_UNUSED:	;Does not seem to be referenced anywhere, and possibly not even used. No idea what this is.
-	;ret
-		ld a, (_RAM_DEC3_LAST_HERO)		;Getting this value..
-		call _LABEL_6573_CALC_DMG
-		ld de, _RAM_DBB4_GOLDMOON_MAXHP
-		add hl, de
-		ld b, (hl)
-		inc hl
-		ld a, (hl)
-		ld c, a
-		or b
-		ret z
-		ld b, $07
-		ld ix, _RAM_DEBC_INRAM_HUD_PORTRAITS
--:	
-		ld a, (ix+0)
-		call _LABEL_6573_CALC_DMG
-		add hl, de
-		ld a, (hl)
-		and a
-		jr z, +
-		inc ix
-		djnz -
-		ret
-	
-+:	
-		ld c, (ix+0)
-		ld a, (_RAM_DEC3_LAST_HERO)
-		ld (ix+0), a
-		ld a, c
-		ld (_RAM_DEC3_LAST_HERO), a
-		ret
-
-_LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
+LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	ld b, $05	;$05
 	ld ix, _RAM_D91C_NME_COORD_ARRAY
 	ld de, $001C	;28 bytes.
@@ -11541,9 +11082,16 @@ _LABEL_721C_INIT_NME:	;THIS SEEMS TO DO SOMETHING.
 	;This inits the enemy array.It seems there is place for five-six enemies,
 
 	ld a, (_RAM_DE52_ROOM_NR)	;GET THE ROOM NUMBER. EXAMPLE ROOM 4.
-	ld ix, _RAM_D91C_NME_COORD_ARRAY		
+	ld ix, _RAM_D91C_NME_COORD_ARRAY
+	push af		;modify 24.09.08	;save A for later retrieval.
+	ld a,(_RAM_FFFF_)
+	ld (lastbank),a	;save the last bank into ram.
+	ld a, 31
+	ld (_RAM_FFFF_),a
 	ld hl, _DATA_72D1_NME_ARRAY		
-	inc hl	
+	inc hl
+	pop af		;we are good, lets get back A.
+	
 	ld b, a	
 _LABEL_724D_NME:
 	ld de, $0006
@@ -11621,56 +11169,6 @@ _DATA_72BB_NME_HP_CALC:	;This is used for some enemy health calculation. It seem
 ;health when the stage is loaded.
 .db $02 $03 $04 $01 $06 $0C $05 $03 $06 $00 $03 $FE $03 $FE $04 $00
 .db $04 $03 $06 $00 $01 $50
-
-
-; Data from 72D1 to 7564 (660 bytes)
-_DATA_72D1_NME_ARRAY:	
-;See the RAM value where these are documented, whyt most of these bytes do, but only a few of them are inportant for modifications.
-;Basically every monster is a six byte entry.
-;I wonder if this could be relocated...
-.db $01 $01 $90 $01 $00 $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03;$05 $02 $0f $01 $0f $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03  ;.
-.db $00 $00 $08 $02 $A4 $00 $00 $00 $02 $02 $C8 $00 $00 $00 $06 $02
-.db $18 $01 $00 $00 $07 $03 $2C $01 $00 $00 $01 $03 $26 $02 $00 $00
-.db $08 $03 $B2 $02 $00 $00 $08 $04 $40 $00 $00 $00 $01 $04 $58 $02
-.db $00 $00 $07 $05 $A4 $00 $00 $00 $06 $05 $90 $01 $00 $00 $07 $06
-.db $C8 $00 $00 $00 $06 $06 $2C $01 $00 $00 $01 $07 $C2 $01 $00 $00
-.db $08 $07 $C8 $00 $00 $00 $02 $08 $B0 $00 $00 $00 $01 $09 $8C $00
-.db $00 $00 $01 $09 $BC $02 $00 $00 $08 $09 $B8 $06 $00 $00 $01 $0B
-.db $50 $00 $00 $00 $06 $0B $B8 $01 $00 $00 $0A $0C $50 $00 $00 $00
-.db $05 $0C $D0 $00 $00 $00 $09 $0C $50 $01 $00 $00 $04 $0D $34 $00
-.db $00 $00 $05 $0D $FA $00 $00 $00 $02 $0D $58 $02 $00 $00 $0A $0D
-.db $E8 $03 $00 $00 $05 $0E $64 $00 $00 $00 $0A $0E $2C $01 $00 $00
-.db $09 $0E $F4 $01 $00 $00 $03 $0E $84 $03 $00 $00 $04 $0E $4C $04
-.db $00 $00 $07 $0F $32 $00 $00 $00 $06 $0F $50 $00 $00 $00 $09 $12
-.db $A0 $00 $00 $00 $07 $12 $82 $00 $00 $00 $01 $15 $A0 $00 $00 $00
-.db $07 $16 $C0 $00 $00 $00 $0A $18 $5E $01 $00 $00 $07 $19 $38 $00
-.db $00 $00 $07 $19 $46 $00 $00 $00 $06 $19 $54 $00 $00 $00 $07 $19
-.db $60 $00 $00 $00 $09 $1A $C8 $00 $00 $00 $09 $1B $1C $02 $00 $00
-.db $03 $1C $50 $00 $00 $00 $09 $1E $20 $03 $00 $00 $09 $1E $40 $06
-.db $00 $00 $03 $23 $96 $00 $00 $00 $09 $24 $E0 $01 $00 $00 $01 $26
-.db $A0 $00 $00 $00 $02 $26 $40 $01 $00 $00 $08 $26 $E0 $01 $00 $00
-.db $0B $28 $A0 $02 $00 $00 $09 $29 $A0 $00 $00 $00 $09 $2B $40 $01
-.db $00 $00 $03 $2D $A0 $00 $00 $00 $09 $2F $20 $03 $00 $00 $01 $32
-.db $40 $01 $00 $00 $07 $33 $96 $00 $00 $00 $07 $33 $C8 $00 $00 $00
-.db $01 $34 $A0 $00 $00 $00 $07 $34 $FA $00 $00 $00 $07 $34 $5E $01
-.db $00 $00 $01 $36 $C2 $01 $00 $00 $08 $36 $04 $01 $00 $00 $05 $37
-.db $40 $01 $00 $00 $09 $37 $80 $02 $00 $00 $05 $37 $40 $06 $00 $00
-.db $09 $38 $E0 $01 $00 $00 $05 $38 $C0 $04 $00 $00 $03 $39 $40 $01
-.db $00 $00 $05 $39 $40 $04 $00 $00 $03 $39 $C0 $06 $00 $00 $09 $3A
-.db $00 $01 $00 $00 $0A $3A $20 $03 $00 $00 $04 $3A $80 $04 $00 $00
-.db $05 $3A $40 $06 $00 $00 $09 $3B $00 $01 $00 $00 $05 $3B $C0 $02
-.db $00 $00 $09 $3B $C0 $04 $00 $00 $09 $3B $DC $05 $00 $00 $03 $3B
-.db $40 $06 $00 $00 $03 $3C $40 $01 $00 $00 $04 $3D $40 $01 $00 $00
-.db $03 $3D $E0 $01 $00 $00 $09 $3D $80 $02 $00 $00 $0A $3D $20 $03
-.db $00 $00 $05 $3D $60 $04 $00 $00 $09 $3F $80 $01 $00 $00 $05 $3F
-.db $40 $04 $00 $00 $09 $40 $40 $01 $00 $00 $03 $40 $00 $04 $00 $00
-.db $05 $41 $C0 $00 $00 $00 $03 $41 $40 $05 $00 $00 $09 $44 $C0 $04
-.db $00 $00 $0A $45 $C0 $01 $00 $00 $09 $45 $C0 $02 $00 $00 $04 $45
-.db $40 $04 $00 $00 $05 $45 $C0 $05 $00 $00 $05 $48 $80 $06 $00 $00
-.db $09 $4B $80 $05 $00 $00 $09 $4C $80 $05 $00 $00 $05 $51 $00 $03
-.db $00 $00 $04 $52 $00 $06
-.dsb 14, $00
-;There is some empty space for enemies, maybe this can be used later.
 _LABEL_7565_TRAP_INIT:	;This seems to be related to the traps as well. Based on a quick look, maybe this is the projectile moving code. This runs on every frame.
 	ld b, $06
 	ld ix, _RAM_D9A8_PROJECTILE_ARRAY
@@ -12055,7 +11553,7 @@ _LABEL_7830_:	;No effect yet.
 	;ret
 	ld (ix+9), $00
 	ld a, (iy+9)
-	cp $13
+	cp $13			
 	jp z, _LABEL_76D1_
 	ld a, b
 	call _LABEL_652_LOAD_NEW_SCRN
@@ -12287,35 +11785,7 @@ _LABEL_79DB_ADJUST_TRAPADDRESS:			;Okay, the coffee kicked in, so, this checks f
 	ret z								;Exit if we hit a zero (empty stuff maybe)
 	add hl, de							;Add the offset to the destination.
 	jr -								;And then return.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-.org $7A14
+;org $7A14
 _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this goes to deallocate traps in RAM upon level switching.
 	;ret
 	push af
@@ -12340,7 +11810,8 @@ _LABEL_7A14_DEALLOCATE_TRAPS:	;Based on the code, this goes to deallocate traps 
 
 _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used are not removed at the end of their fall, and remain at ground level, but at least they don't damage the player.
 	;Some stuff also tells me that this also does change the dead players to permadead as well upon exiting a level.
-	;Later Jimmy: Yes it does.
+
+	;Later Jimmy: Yes it does. This is definetly needed.
 	ld (ix+9), $00
 	ld a, (ix+24)
 	cp $0B
@@ -12392,7 +11863,7 @@ _LABEL_7A33_REM_USED_TRAPS: ;If this is just a RET, then the traps that are used
 +:
 	push hl
 	push bc
-	call _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE	;This is where the game will put the dead characters as permanently deceased.
+	;call _LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE	;This is where the game will put the dead characters as permanently deceased.
 	dec a
 	ld l, a
 	ld h, $00
@@ -12483,28 +11954,7 @@ _LABEL_7AED_:
 	rr e
 	ret
 
-_LABEL_7AFE_PLYR_DEAD_PUT_TOMBSTONE: ;This runs when a character dies. 
-;If the companion does die, and this is just a RET, then there is no tombstone put on the stage.
-	
-	ld a, (_RAM_DE52_ROOM_NR)	;Sample: 01 as level
-	add a, a	;2
-	ld hl, _DATA_1343_LVL_POINTERS - 2	;Get the level pointers-2 bytes. I think there is a label there for that too.
-	ld c, a		;c is 2.
-	ld b, $00	;BC is $0002
-	add hl, bc	;We go back to that level pointer.
-	ld c, (hl)	;$13f1 
-	inc hl
-	ld h, (hl)
-	ld l, c
-	ld a, (hl)
-	ld bc, $0004
-	add hl, bc
-	ld c, (hl)
-	inc hl
-	ld b, (hl)
-	ret
-
-.org $7D0B
+;.org $7D0B
 ; Data from 7D0B to 7D2B (33 bytes)
 _DATA_7D0B_:	;This is also some trap thing.
 .db $00 $02 $01 $04 $03 $06 $05 $08 $07 $0A $09 $0C $0B $0E $0D $0F
@@ -12516,7 +11966,7 @@ _DATA_7D2C_:	;This is connected to some trap processing on the stages, or projec
 .db $11 $11 $0D $03 $05 $07 $01 $09 $0B $09 $09 $0F $00 $12 $15 $14
 .db $13 $1C $1E $11 $01 $07
 
-.org $7E74
+;.org $7E74
 _LABEL_7E74_:
 	;ret
 	call _LABEL_6573_CALC_DMG
@@ -12536,47 +11986,6 @@ _LABEL_7E74_:
 	dec hl
 	ret
 
-; Data from 7E8F to 7E99 (11 bytes)
-_DATA_7E8F_VDPREGVALS:
-.db $36 $E0 $FF $FF $FF $FF $FB $00 $06 $00 $FF
-
-;_LABEL_7E9A_REGION_CHKSETUP:	
-;;Checks if the console is PAL or NTSC. 
-;;The game is not released in NA, so this is not really needed. NTSC speed differences are getting compensated, and a different legal screen is shown in this mode. 
-;;The game is not any faster though.
-;;TODO: This code is not really needed, so removing it, or moving it to a different bank would be preferable.
-;	di
-;	ld hl, _DATA_7E8F_VDPREGVALS
-;	call _LABEL_61F_WRITE_VDP_REG	;WE WRITE THE INITIAL VDP REGISTERS, GET A DEFAULT VDP STATE.
-;	ei
-;	halt
-;	halt
-;	halt
-;	ld hl, _RAM_DE9D_TIMER
-;	ld bc, $0000
-;	halt
-;	ld a, (hl)
-;-:
-;	inc bc
-;	cp (hl)
-;	jr z, - ;THIS IS SOME WAITING RIGHT HERE, BUT IT'S NOT REALLY NECESSARY.
-;	di
-;	ld a, b
-;	cp $0D
-;	jp nc, _LABEL_7E9A_REGION_CHKSETUP
-;	cp $08
-;	jp c, _LABEL_7E9A_REGION_CHKSETUP	;USELESS COMPARISON,WE'LL BRANCH BACK ANYWAYS.
-;	ld h, b
-;	ld l, c
-;	ld de, $0A41
-;	and a
-;	sbc hl, de
-;	ld a, $00
-;	jr nc, +		;WON'T GET TAKEN.
-;	ld a, $01
-;+:
-;	ld (_RAM_DE23_CONSOLE_REGION), a	;GET THE CONSOLE'S REGION, AND THEN SET UP THE CORRECT LEGAL SCREEN. 0 IS PAL, ANYTHING ELSE IS NTSC.
-;	ret
 
 ; -----------------------------------------------------------------------------
 ; ZX0 decoder by Einar Saukas & Urusergi
@@ -12640,54 +12049,752 @@ dzx0s_elias_backtrack:
         rl      b
         jr      dzx0s_elias_loop
 ; -----------------------------------------------------------------------------
+_LABEL_5F4_RESET:	;This is how the code handles reset. I have not thought about this, since none of my consoles have reset. 
+;The SMS2 doesn't, and neither the MD--->SMS adapter.
+push af
+	ld a,31
+	ld (_RAM_FFFF_),a
+	call program_reset
+	pop af
+	ret
+clock:	;To measure the time of cours.
+    xor a   ;Zero the acc just in case.
+    ld  a,(frame)    ;Get the current frame.
+    cp  $3B ;Compare with 59. We count 0 too as a frame, 60 would be actually 61 frames.
+    jp nc, +;If we are over 59 frames, jump ahead.
+    inc a   ;Increment value.
+    ld  (frame),a    ;Put back into RAM.
+    jp  vbend   ;Jump ahead to end for now.
+    ;Else we just increment the frame counter, and return.
++:
+    xor a   ;Reset a again.
+    ld  (frame),a   ;And put it to the framecounter.
+    ld  a,(seconds) ;Get the second value.
+    cp  $3B
+    jp nc, ++   ;Are we at 59 yet? If we are, jump to ++.
+    inc a   ;Else increment the counter.
+    ld (seconds),a  ;Put it back to RAM.
+    jp  vbend   ;End this section
+++:
+    xor a   ;Load 0 into a.
+    ld  (seconds),a ;Put it into the second counter.
+    ld a, (minutes) ;Do the minutes part.
+    cp $3B  ;Are we at 59?
+    jp  nc, +++ ;If so, reset it.
+    inc a
+    ld  (minutes),a
+    jp vbend
++++:
+    xor a
+    ld  (minutes),a ;Reset the minutes part, we go to the hours one.
+    ld  a,(hours)
+    cp  $3B
+    jp  nc, ++++
+    inc a
+    ld  (hours),a
+    jp  vbend
+++++:
+    xor a
+    ld  (hours),a
+    ld  a,(days)
+    or a
+    ld a,(days)
+vbend:
+ret
 
 
+; Usage:
+;
+; 1. If you want to decompress to VRAM:
+    .define aPLibToVRAM
+; 2. .include this file in your code
+; 3. ld hl,<source address>
+;    ld de,<destination address> ; e.g. $4000 for VRAM address 0
+;    call aPLib_decompress
+;
+; At most four bytes of stack are used (apart from the call to the decompressor in the first place)
+; ROM usage is 333 bytes in VRAM mode, 262 in RAM mode. The extra bytes are the cost 
+; of VRAM to VRAM copies, which also makes it pretty slow.
+; This file is using WLA-DX syntax quite heavily, you'd better use it too...
+
+; Reader's note:
+; The code uses the registers as follows:
+; hl  = (input) data pointer. This is incremented as we work through the data, and always points at the next byte to be read.
+; de  = (input) destination address. This is incremented after every write.
+; a   = the current byte from the bitstream part of the compressed data. 
+;       (See https://github.com/maxim-zhao/aplib.py/blob/master/aplib.py for an overview of the format.)
+;       Through careful use of the carry flag, it will never be zero until it is time for a new byte to be read in.
+;       The shadow a register is used when the code needs to do some 8-bit accumulator work.
+; bc  = "variable-length numbers", when they are encountered.
+; iy  = last used offset
+; ixh = "paired sequence" flag: 1 when not in such a sequence, 0 when we are
+; The main loop is _mainLoop, which dispatches off to handlers for the four data types.
+
+; Format note: we do not attempt to handle offsets that exceed 16 bits (for obvious reasons) or lengths exceeding 32000 
+; (which are a fourth case for the length-amendment part).
+
+; aPPack decompressor 
+; original source by dwedit
+; very slightly adapted by utopian
+; optimized by Metalbrain
+
+;hl = source
+;de = dest
+
+.define VDP_ADDRESS_PORT $bf
+.define VDP_DATA_PORT $be
+
+aPLib_decompress:
+.ifdef aPLibToVRAM
+  ; Set the write address
+  ld c, VDP_ADDRESS_PORT
+  out (c), e
+  out (c), d
+.endif
+
+  ; Set up bitstream with only the MSB set. This will trigger a bitstream read.
+  ; The code shifts a left and then checks for zero every time a bit is consumed.
+  ; If the remaining bits in a are zero, then the carry will always be 1.
+  ; This then leads to code which reads another 8 bits in, and immediately rotates through c.
+  ; This is guaranteed to insert a set bit at the LSB. Thus, it is possible to know when all the
+  ; bits are consumed (a = 0 after shift) even if the bitstream itself is all zeroes.
+  ld a, %10000000
+  
+  ; First byte must be a literal, so fall through into this handler
+_emitRawByte:
+; *de++ = *hl++
+.ifdef aPLibToVRAM
+  push af
+    ld a,(hl)
+    out (VDP_DATA_PORT),a
+  pop af
+  inc hl
+  inc de
+.else
+	ldi
+.endif
+  ; Fall through
+  
+_mainLoop_noPair: ; _mainLoop2
+  ld ixh, 1 ; Set "no pair" flag
+
+_mainLoop:
+  ; Main loop
+  ; a = bitstream, we shift it left into carry
+  ; hl = next byte in the stream
+  ; de = destination
+  ; ixh = "pair" flag, 0 if can use last offset
+  ; iy = last used offset
+  
+  ; Get next bit. See above about how this works...
+  add a, a
+  jr z, _getBitstream_bit1
+  
+  ; If we got a zero, emit a raw byte
+  jr nc, _emitRawByte
+_getBitstream_bit1_set:
+
+  ; Else, look at the next bit. If we have run out of bits, again go to a bespoke handler
+  add a, a
+  jr z, _getBitstream_bit2
+  jr nc, _emitBlock
+_getBitstream_bit2_set:
+
+  ; Next bit
+  add a, a
+  jr z, _getBitstream_bit3
+  jr nc, _emitSmallBlock
+_getBitstream_bit3_set:
+
+_emitSingleByte:
+  ; We read in a 4-bit offset.
+  ; We do this by putting a bit in c and rotating bits out of a into it, 
+  ; until the first bit comes out. We also zero b here so bc comes out as the final result.
+  ld bc, 1<<4
+
+-:add a, a
+  jr z, _getBitstream_fourBitNumber
+_getBitstream_fourBitNumber_done:
+  rl c
+  jp nc, -
+
+  jr nz, _emitSingleByte_offset
+  
+_emitSingleByte_zero:
+  ; If the final result in c is zero, it's a literal zero. We zeroed b above.
+  ex de, hl
+.ifdef aPLibToVRAM
+  ld c, VDP_DATA_PORT
+  out (c), b
+.else
+  ld (hl), b ;write a 0
+.endif
+  ex de, hl
+  inc de
+  jp _mainLoop_noPair
+
+_getBitstream_bit1:
+  ; Read eight more bits of the bitstream
+  ld a,(hl)
+  inc hl
+  ; Check high bit - existing carry goes into LSB
+  rla
+  ; 1 = continue
+  jr c, _getBitstream_bit1_set
+  ; 0 = raw byte
+  jp _emitRawByte
 
 
+; we jr here and then jp back, because it is the fastest:
+; - the jr condition is met 1/8 of the time; it costs 7 cycles when not met and 12 otherwise, so average 7.625
+; - jp condition costs 10 cycles, so the averge cost is higher
+; - a plain jp costs 10 cycles, 12 for jr
+; - a conditional call costs 17/10 cycles, and ret is 10, so it is worse (and we always return to the same place)
+_getBitstream_fourBitNumber:
+  ld a, (hl)
+  inc hl
+  rla
+  jp _getBitstream_fourBitNumber_done
 
 
+_emitSingleByte_offset:
+  ; Preserve the bitstream
+  ex af, af'
+    ; Get the dest into hl for maths
+    ex de, hl
+.ifdef aPLibToVRAM
+    push hl
+      sbc hl, bc
+      res 6,h
+      ld c,VDP_ADDRESS_PORT
+      out (c),l
+      out (c),h
+      in a,(VDP_DATA_PORT)
+    pop hl
+    out (c),l
+    out (c),h
+    out (VDP_DATA_PORT),a
+.else
+    ; Subtract offset. Presumably f' never has carry set?
+    sbc hl, bc
+    ; Read byte
+    ld a, (hl)
+    ; Add offset back on
+    add hl, bc
+    ld (hl), a
+.endif
+    ex de, hl
+  ex af, af'
+  inc de
+  jp _mainLoop_noPair
 
 
+_getBitstream_bit3:
+  ld a, (hl)
+  inc hl
+  rla
+  jr c, _getBitstream_bit3_set
+  ; Fall through if unset
+  
+_emitSmallBlock:
+  ; Retrieve the data byte
+  ; (high 7 bits = offset, low bit = byte count - 2)
+  ld c, (hl)
+  inc hl
+  ex af, af'
+    ; Get the offset, and the length bit in carry
+    rr c
+    ; Check it for zero - that means end of data
+    ret z
+    ; a = carry + 2
+    ld a, 2
+    ld b, 0 ; Persists until the ldir later
+    adc a, b
+    push hl
+      ; Save offset into iy for possible later reuse
+      ld iyh, b
+      ld iyl, c
+      ; Get the destination into hl
+      ld h, d
+      ld l, e
+      ; Subtract the offset. Carry will be 0 from the adc above which can't overflow.
+      sbc hl, bc
+      ld c, a ; Store the byte count in bc
+    ex af, af'
+.ifdef aPLibToVRAM
+    call _ldir_vram_to_vram
+.else
+    ldir
+.endif
+  pop hl
+  ld ixh, b ; will be zero
+  jp _mainLoop
+  
+  
+_getBitstream_bit2:
+  ; Get bitstream next byte
+  ld a, (hl)
+  inc hl
+  rla
+  jr c, _getBitstream_bit2_set
+  ; fall through if unset
+
+_emitBlock:
+  ; Get the first part of the offset (usually the MSB)
+  call _getVariableLengthNumber
+  dec c
+  ex af, af' ; make a usable for maths
+    ld a, c
+    sub a,ixh ; will be 1 if we should use the last offset, 0 otherwise (?)
+    jr z, _emitBlock_lastOffset ; If we hit zero here the the encoded MSB was 2 and ixh was 1.
+    dec a ; Else we subtract another 1 so we are at n-3 (if the "r0" flag was set) or n-2 (otherwise)
+
+    ; Shift into b and get a byte in c
+    ld b, a
+    ld c, (hl)
+    inc hl
+    
+    ; Save offset
+    ld iyh, b
+    ld iyl, c
+
+    push bc
+      ; Get the length
+      call _getVariableLengthNumber_fromShadowA
+    ; previous call restores us to normal af
+    ; Swap the offset (on the stack) with the source pointer, to preserve the latter and do maths with the former
+    ; This is cunning: it's almost equivalent to pop bc; push hl; ld h,b; ld l,c
+    ex (sp), hl ;bc = len, hl=offs
+    ; We need to amend the length
+    ; Range       Amendment
+    ; 0..127        +2
+    ; 128..1279      0
+    ; 1280..31999   +1
+    ; 32000+        +2    <-- we don't bother with this
+    push de
+      ex de, hl ; de = length, hl = dest
+      ex af, af' ; To scratch a
+        ; First check for <128
+        ld hl, 127
+        sbc hl, de
+        jr c, +
+        inc bc
+        inc bc
+        jp ++
++:      ; Then for >=1280
+        ld a, 4
+        cp d
+        jr nc,++
+        inc bc
+        or a
+++:   pop hl ;bc = len, de = offs, hl=junk
+      push hl
+        sbc hl, de
+      ex af, af' ; To bitstream a
+    pop de ;hl=dest-offs, bc=len, de = dest
+.ifdef aPLibToVRAM
+    call _ldir_vram_to_vram
+.else
+    ldir
+.endif
+  pop hl
+  ld ixh, b ; will be 0
+  jp _mainLoop
 
 
+_emitBlock_lastOffset:
+  ; Retrieve just the run length. Note that this is guaranteed to return with carry unset.
+  call _getVariableLengthNumber_fromShadowA
+  push hl
+    push de
+      ; Get the current destination pointer
+      ex de, hl
+      ; Retrieve the offset from iy
+      ld d, iyh
+      ld e, iyl
+      ; Subtract it from the destination pointer
+      ; Carry is unset (see above)
+      sbc hl, de
+    pop de ;hl=dest-offs, bc=len, de = dest
+.ifdef aPLibToVRAM
+    call _ldir_vram_to_vram
+.else
+    ldir
+.endif
+  pop hl
+  ld ixh, b ; will be 0
+  jp _mainLoop
+
+; These _getBitstream_* functions are all special cases to retrieve a new bitstream byte
+; when needed, using a jr z, <label> opcode. They are tuned to jp back to the appropriate 
+; place after getting a byte and rotating it into a.
+_getBitstream_variableLengthNumber_bit1:
+  ld a,(hl)
+  inc hl
+  rla
+  jp _getBitstream_variableLengthNumber_bit1_done
+_getBitstream_variableLengthNumber_bit1flag:
+  ld a, (hl)
+  inc hl
+  rla
+  jp _getBitstream_variableLengthNumber_bit1flag_done
+_getBitstream_variableLengthNumber_bit2:
+  ld a, (hl)
+  inc hl
+  rla
+  jp _getBitstream_variableLengthNumber_bit2_done
+_getBitstream_variableLengthNumber_bit2flag:
+  ld a, (hl)
+  inc hl
+  rla
+  jp _getBitstream_variableLengthNumber_bit2flag_done
+_getBitstream_variableLengthNumber_bit:
+  ld a, (hl)
+  inc hl
+  rla
+  jp _getBitstream_variableLengthNumber_bit_done
+_getBitstream_variableLengthNumber_bitflag:
+  ld a, (hl)
+  inc hl
+  rla
+  ret nc 
+  jp _getVariableLengthNumberloop
 
 
+_getVariableLengthNumber_fromShadowA:
+  ; Variant of the below where we restore the bitstream a before we start
+  ex af, af'
+  
+_getVariableLengthNumber:
+  ; Reads a number encoded as all the bits of the number after the first 1 bit, 
+  ; separated by 1 bits and terminated by a 0. Returns the number in bc.
+  ; It has a minimum value of 2, i.e. we always read at tleast two bits.
+  ; The most common cases will be shorter numbers, so we have an unrolled loop for the first two bits.
+  
+  ; Accumulate into bc
+  ld bc, 1
+  
+  ; Bit 1
+  add a, a
+  jr z, _getBitstream_variableLengthNumber_bit1
+_getBitstream_variableLengthNumber_bit1_done:
+  rl c
+  add a, a
+  jr z, _getBitstream_variableLengthNumber_bit1flag
+_getBitstream_variableLengthNumber_bit1flag_done:
+  ret nc
+  
+  ; Bit 2
+  add a, a
+  jr z, _getBitstream_variableLengthNumber_bit2
+_getBitstream_variableLengthNumber_bit2_done:
+  rl c
+  add a, a
+  jr z, _getBitstream_variableLengthNumber_bit2flag
+_getBitstream_variableLengthNumber_bit2flag_done:
+  ret nc
+  
+  ; Remaining bits
+_getVariableLengthNumberloop:
+  add a, a
+  jr z, _getBitstream_variableLengthNumber_bit
+_getBitstream_variableLengthNumber_bit_done:
+  rl c
+  rl b
+  add a, a
+  jr z, _getBitstream_variableLengthNumber_bitflag
+_getBitstream_variableLengthNumber_bitflag_done:
+  ret nc 
+  jp _getVariableLengthNumberloop
+  
+.define BUFFER_SIZE 16
+.define BUFFER $d000
+  
+.ifdef aPLibToVRAM
+
+_ldir_vram_to_vram:
+  ; Copy bc bytes from VRAM address hl to VRAM address de
+  ; Both hl and de are "write" addresses ($4xxx)
+  ; TODO optimisations from zx7
+  ; preserve flags
+  ex af, af'
+    ; Make hl a read address
+    res 6, h
+    ; Check if the count is below 256
+    ld a,b
+    or a
+    jr z,_below256
+    ; Else emit 256*b bytes
+  -:push bc
+      ld b,0
+      ld c,VDP_ADDRESS_PORT
+      call +
+    pop bc
+    djnz -
+    ; Then fall through for the rest - if c>0
+    ld a,c
+    or a
+    jr z,_done
+_below256:
+    ; By emitting 256 at a time, we can use the out (c),r opcode
+    ; for address setting, which then relieves pressure on a
+    ; and saves some push/pops; and we can use djnz for the loop.
+    ld b,c
+    ld c,VDP_ADDRESS_PORT
+    call +
+_done:
+  ex af, af'
+  ret
+
++:
+-:out (c),l
+  out (c),h
+  in a,(VDP_DATA_PORT)
+  out (c),e
+  out (c),d
+  out (VDP_DATA_PORT),a
+  inc hl
+  inc de
+  djnz -
+  ret
+.endif
+
+pictest:
+call DefaultInitialiseVDP
+di
+call ClearVRAM
+ei
+;call NoSprites ; they mess things up
+	ld a,30
+	ld (_RAM_FFFF_),a
+	di
+	;ld hl,titlePal
+	call LOADPAL;LOADPAL
+	ld de,$4000
+	ld hl,titleTiles
+	
+	call aPLib_decompress
+	
+	ld hl,titleTileMap
+	ld de,$3800 | $4000
+	call aPLib_decompress
+	
+	; Turn screen on
+  ld a,$c4
+  out ($bf),a
+  ld a,$81
+ out ($bf),a
+  ;call WaitForButton
+;-:				;test this with an infinite loop to stop messing things up
+;	jp -
+	ei
+	
+	ret
+LOADPAL:
+  ; Load palette
+  ld hl,$c000                     ; palette index 0 write address
+  call VRAMToHL
+  ld hl,titlePal               ; data
+  ld c,$10 ; size
+  call WriteToVRAM
+
+ ;==============================================================
+; VRAM to HL
+;==============================================================
+; Sets VRAM write address to hl
+;==============================================================
+VRAMToHL:
+  push af
+    ld a,l
+    out ($bf),a
+    ld a,h
+    out ($bf),a
+  pop af
+  ret
 
 
+;==============================================================
+; VRAM writer
+;==============================================================
+; Writes BC bytes from HL to VRAM
+; Clobbers HL, BC, A
+;==============================================================
+WriteToVRAM:
+-:ld a,(hl)
+  out ($be),a
+  inc hl
+  dec bc
+  ld a,c
+  or b
+  jp nz,-
+  ret
+;==============================================================
+; Set up VDP registers (default values)
+;==============================================================
+; Call DefaultInitialiseVDP to set up VDP to default values.
+; Also defines NameTableAddress, SpriteTableAddress and SpriteSet
+; which can be used after this code in the source file.
+; To change the values used, copy and paste the modified data
+; and code into the main source. Data is commented to help.
+;==============================================================
+DefaultInitialiseVDP:
+    push hl
+    push bc
+        ld hl,_Data
+        ld b,_End-_Data
+        ld c,$bf
+        otir
+    pop bc
+    pop hl
+    ret
 
+.define SpriteSet           0       ; 0 for sprites to use tiles 0-255, 1 for 256+
+.define NameTableAddress    $3800   ; must be a multiple of $800; usually $3800; fills $700 bytes (unstretched)
+.define SpriteTableAddress  $3f00   ; must be a multiple of $100; usually $3f00; fills $100 bytes
 
+_Data:
+    .db %00110100,$80
+    ;    |||||||`- Disable synch
+    ;    ||||||`-- Enable extra height modes
+    ;    |||||`--- SMS mode instead of SG
+    ;    ||||`---- Shift sprites left 8 pixels
+    ;    |||`----- Enable line interrupts
+    ;    ||`------ Blank leftmost column for scrolling
+    ;    |`------- Fix top 2 rows during horizontal scrolling
+    ;    `-------- Fix right 8 columns during vertical scrolling
+    .db %10000100,$81
+    ;     |||| |`- Zoomed sprites -> 16x16 pixels
+    ;     |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+    ;     |||`---- 30 row/240 line mode
+    ;     ||`----- 28 row/224 line mode
+    ;     |`------ Enable VBlank interrupts
+    ;     `------- Enable display
+    .db (NameTableAddress>>10) |%11110001,$82
+    .db (SpriteTableAddress>>7)|%10000001,$85
+    .db (SpriteSet<<2)         |%11111011,$86
+    .db $f|$f0,$87
+    ;    `-------- Border palette colour (sprite palette)
+    .db $08,$88
+    ;    ``------- Horizontal scroll
+    .db $00,$89
+    ;    ``------- Vertical scroll
+    .db $7f,$8a
+    ;    ``------- Line interrupt spacing ($ff to disable)
+;.db $36 $E0 $FF $FF $FF $FF $FB $F0 $08 $00 $7F 
+_End:
+;==============================================================
+; Sprite disabler
+;==============================================================
+; Sets sprite 1 to y=208
+; Clobbers HL, A
+;==============================================================
+NoSprites:
+  ld hl,SpriteTableAddress | $4000
+  call VRAMToHL
+  ld a,208
+  out ($be),a
+  ret
+;==============================================================
+; Clear VRAM
+;==============================================================
+; Sets all of VRAM to zero
+;==============================================================
+ClearVRAM:
+  push af
+  push hl
+    ld hl,$4000
+    call VRAMToHL
+    ; Output 16KB of zeroes
+    ld hl, $4000    ; Counter for 16KB of VRAM
+  -:ld a,$00        ; Value to write
+    out ($be),a ; Output to VRAM address, which is auto-incremented after each write
+    dec hl
+    ld a,h
+    or l
+    jp nz,-
+  pop hl
+  pop af
+  ret
 
+;==============================================================
+; Wait for button press
+;==============================================================
+; Clobbers A
+; Not very efficient, I'm aiming for simplicity here
+;==============================================================
 
+WaitForButton:
+-:in a,$dc ; get input
+  cpl      ; invert bits
+  or a     ; test bits
+  jr nz,-  ; wait for no button press
+-:in a,$dc ; get input
+  cpl      ; invert bits
+  or a     ; see if any are set
+  jr z,-
+  ret
+menu_sprite:
+;What this should do: Load a single arrow tile to the Sprite part of VRAM, and show the sprite on the screen at the
+;first menu option.
+	push hl
+	push de
+	push bc
+	push af						;Save registers we will use here.
+	ld a,(_RAM_FFFF_)
+	ld (lastbank),a				;save the last used bank for later, to return to it.
+	ld a, 31					;Load the last bank.
+	ld (_RAM_FFFF_),a			;switch to the last bank.
+	ld bc,$20					;32 bytes to load, a tile.
+	ld hl,$0000					;This will be the very first tile in VRAM.
+	di							;Disable interrupts for safe VDP access.
+	call VRAMToHL				;Set the target address in the VDP.
+	ld hl,$8A20		;This is the arrow tile's address, if things are not changing in the meantime.
+	call WriteToVRAM	;Write to VRAM this one single tile.
+	;--------------Tile has been loaded into VRAM.----------------------
+	xor a
+	ld d,a
+	out (Port_VDPAddress), a	;0000 0000
+	ld a, $7F
+	out (Port_VDPAddress), a	;0111 1111 THIS IS THE SAT'S ADDRESS.
+	ld bc, $4000 | Port_VDPData	;Set up some SAT VDP access here.
+	ld e,b
+	ld hl,arrow_base			;This is the basic position of the sprite we will use.
+	outi
+	outi						;Load the first two bytes.
+	inc a
+	out (Port_VDPAddress), a
+	dec a
+	out (Port_VDPAddress), a
+	outi
+	outi						;Load the second two byte from below.
+;-------------------Sprite is loaded into VRAM.---------------------------	
+	xor a
+	ld (arrow_pos),a			;This is the very first element of the menu, so let's point it to that.
+	ld hl,arrow_base			;Load source.
+	ld de,menu_arrow			;Destination.
+	ld bc,$0004					;Amount of bytes to copy.
+	ldir						;Do a small copy from ROM to RAM to init the menu arrow coord.
+	ei							;Turn on interrupts.
+;--------------------Indirect Arrow position copy from ROM to RAM.---------
+	ld a,(lastbank)
+	ld (_RAM_FFFF_),a			;Put back the last ROM bank used.
+	pop af
+	pop bc
+	pop de
+	pop hl						;Restore regs.
+	ret
+	arrow_base:					;This is the basic Arrow position, that will be shown on the options screen.
+	.db $17,$D0,$10,$00
+	;$17-Vertical Sprite Coordinate.
+	;$D0-End of Sprite list, marks for the VDP that there are no more sprites to draw.
+	;$10-Horizontal Sprite position.
+	;$00-Tile number used for this sprite. Since the arrow sprite is loaded to the very first tile slot, this is why zero is written here.
+arrow_up:
 
+	ret
+arrow_down:
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-; Data from 7F3A to 7FEF (182 bytes)
-;This is empty space, and it could be even more, since many things can be moved around without much of a hassle.
-
+	ret
 .BANK 1 SLOT 1
 .ORG $0000
 
@@ -12735,7 +12842,10 @@ _DATA_A7C2_SCORE_SCR_TEXT:	;MONSTERS KILLED, AND OTHER TEXT. USED ON THE SCORE S
 ; Data from A871 to AC6B (1019 bytes)
 _DATA_A871_MENUTXT:	;Menu text.
 
-.db $20 $20 $4D $41 $49 $4E $20 $4D $45 $4E $55 $0D $48 $65 $72 $6F
+
+
+.db $20 $20 $4D $41 $49 $4E $20 $4D $45 $4E $55 $0D
+.db $48 $65 $72 $6F
 .db $20 $73 $65 $6C $65 $63 $74 $0D $4D $61 $67 $69 $63 $20 $75 $73
 .db $65 $72 $20 $73 $70 $65 $6C $6C $73 $0D $43 $6C $65 $72 $69 $63
 .db $61 $6C $20 $73 $74 $61 $66 $66 $20 $73 $70 $65 $6C $6C $73 $0D
@@ -12946,315 +13056,315 @@ _DATA_AF25_WINTEXT:	;Congratulations. You have recovered the Disks of Mishakal.
 	.db $72 $65 $64 $20 $74 $68 $65 $0D $44 $69 $73 $6B $73 $20 $6F $66
 	.db $20 $4D $69 $73 $68 $61 $6B $61 $6C $FF 
 	;CHANGED
-_DATA_AF5F_:	;This is some data, but seemingly nothing is read from here. Possibly level data, but the beginning is the ending text.
-	.db $40 $00 $00 $00 $00 $00
-	.db $00 $00 $40 $00 $00 $90 $40 $0A $00 $40 $40 $00 $00 $00 $00 $08
-	.db $00 $00 $40 $00 $00 $00 $40 $0A $00 $00 $40 $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FA $FF $FF $FF $FF $FF $FA $FD $FF $FF $FF $FF $FF $FF $FF $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $FF $5F $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $FF $FF $5F $FE $F5 $FC $FF $DB $FF $FF $F5 $FE $F5 $FC $FF
-	.db $DB $FF $FF $D4 $FE $F5 $FC $FF $DB $FF $FF $D4 $7E $F5 $FE $FF
-	.db $DB $FF $FF $F4 $FE $F5 $FC $FF $DB $FF $FF $D4 $FE $F5 $FE $FF
-	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FC $FF
-	.db $DB $FF $FF $D4 $7E $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FE $FF
-	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $7E $F7 $FC $FF
-	.db $DB $FF $FF $F4 $FE $FD $FE $FF $DB $FF $DF $F4 $FE $F5 $FC $FF
-	.db $DB $FF $FE $F4 $FE $FD $FE $FF $DB $FF $FF $D4 $FE $F5 $FC $FF
-	.db $DB $FF $FE $F4 $50 $10 $0C $3F $0B $00 $00 $00 $00 $10 $00 $00
-	.db $0B $07 $40 $00 $50 $10 $0C $00 $0B $00 $00 $40 $08 $00 $00 $00
-	.db $0B $00 $50 $40 $70 $10 $0C $BF $0B $00 $00 $00 $40 $00 $00 $00
-	.db $0B $0F $50 $00 $00 $00 $00 $10 $0B $02 $40 $00 $1A $00 $00 $00
-	.db $0B $04 $50 $40 $50 $00 $0C $3F $0B $00 $00 $00 $40 $00 $00 $00
-	.db $0B $00 $50 $00 $40 $10 $00 $10 $0B $00 $00 $00 $08 $00 $00 $FF
-	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $02 $00 $F0 $00
-	.db $0B $04 $50 $00 $00 $10 $00 $10 $0B $00 $00 $00 $40 $10 $00 $00
-	.db $0B $04 $50 $40 $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FE $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $7F $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $50 $10 $0C $BF $09 $00 $00 $00 $00 $00 $00 $00
-	.db $0B $00 $00 $10 $70 $00 $0C $00 $0B $00 $00 $00 $0A $00 $00 $00
-	.db $0B $04 $50 $00 $50 $00 $0C $7F $4B $00 $00 $40 $00 $00 $00 $10
-	.db $0B $04 $50 $00 $00 $00 $00 $00 $1B $00 $00 $00 $4A $00 $00 $00
-	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $40 $00 $0C $00
-	.db $0B $0D $40 $00 $40 $10 $00 $00 $0B $00 $00 $40 $4A $10 $10 $00
-	.db $0B $04 $F0 $40 $70 $40 $0C $30 $0B $00 $00 $00 $48 $00 $00 $00
-	.db $0B $00 $50 $00 $00 $00 $00 $00 $0B $0A $50 $00 $48 $00 $00 $10
-	.db $0B $05 $50 $40 $40 $10 $08 $00 $00 $00 $00 $00 $00 $10 $00 $00
-	.db $0B $00 $00 $00 $40 $10 $0C $00 $08 $00 $00 $40 $4A $10 $00 $10
-	.db $0B $00 $40 $40 $00 $10 $0C $02 $00 $00 $00 $00 $40 $10 $00 $00
-	.db $0B $20 $00 $00 $00 $10 $00 $00 $09 $00 $00 $00 $00 $00 $00 $00
-	.db $0B $00 $50 $00 $00 $00 $0C $00 $00 $00 $00 $00 $50 $00 $00 $00
-	.db $0B $00 $08 $00 $00 $10 $0C $00 $01 $00 $00 $00 $40 $00 $00 $10
-	.db $0B $00 $40 $00 $10 $00 $08 $06 $00 $00 $00 $00 $00 $00 $00 $00
-	.db $0B $00 $40 $00 $40 $00 $00 $10 $09 $00 $00 $00 $00 $10 $00 $00
-	.db $0B $00 $40 $00 $FF $FF $FC
-	.dsb 15, $FF
-	.db $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $FF $BF $FC $FF $FF $FF $FF $FF $FF $FF $FE $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $FF $FF $FC
-	.dsb 25, $FF
-	.db $FB $FF $FF $FF $40 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
-	.db $01 $00 $00 $10 $00 $00 $0C
-	.dsb 9, $00
-	.db $49 $40 $00 $00 $00 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
-	.db $09 $00 $00 $00 $00 $10 $00 $20 $00 $00 $00 $00 $00 $00 $00 $00
-	.db $09 $00 $00 $00 $00 $00 $0C
-	.dsb 9, $00
-	.db $01 $00 $00 $00 $00 $00 $0C $10 $40 $00 $00 $00 $00 $00 $00 $00
-	.db $09 $00 $00 $00 $00 $00 $08 $00 $00 $00 $00 $00 $40 $00 $00 $00
-	.db $09
-	.dsb 15, $00
-	.db $09 $00 $00 $40 $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F0 $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF $FC $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $4F $FF $FF $FF $FC
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $7B $FF $FF $D4 $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $7F
-	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $FD $DF $FF
-	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $FF $7F $75 $DF $FF
-	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $F5 $DF $FF
-	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $7F $7F $75 $DF $7F
-	.db $FA $F9 $7E $7F $7F $75 $DF $7F $FA $F9 $7E $7F $7F $FD $5E $F7
-	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $FF
-	.db $FA $F9 $7E $FF $FF $F7 $DF $FF $FA $F9 $FE $FF $7F $FD $DF $FF
-	.db $FA $F9 $7E $FF $50 $00 $0E $57 $0A $00 $00 $10 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $70 $00 $0E $40 $0A $00 $00 $40 $08 $00 $00 $40
-	.db $0A $00 $30 $40 $70 $00 $0F $7F $0A $00 $00 $00 $08 $00 $08 $50
-	.db $0A $11 $10 $40 $00 $00 $00 $50 $0A $00 $00 $40 $0E $00 $00 $40
-	.db $0A $00 $70 $40 $70 $00 $0E $57 $0A $00 $00 $40 $00 $00 $00 $40
-	.db $0A $11 $10 $10 $00 $00 $00 $00 $0A $00 $00 $10 $0C $00 $00 $5F
-	.db $0A $10 $70 $00 $70 $00 $0F $5F $0A $00 $00 $50 $04 $00 $D0 $40
-	.db $0A $00 $30 $10 $00 $00 $00 $40 $0A $00 $00 $00 $04 $00 $00 $50
-	.db $0A $00 $30 $40
-	.dsb 12, $FF
-	.db $FA $F9 $FF $FF $7F $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FD $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FD $FF $FF $7F $FF $FE $FF $FA $FF $FF $FF $DF $FF $FF $FF
-	.db $FA $F9 $FF $FF $FF $FF $FE $FF $FA $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FB $FF $FF $7F $FF $FF $7F $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FD $FF $FF $50 $00 $0A $57 $0A $00 $00 $00 $00 $00 $00 $40
-	.db $0A $00 $00 $40 $70 $00 $0E $40 $0A $00 $00 $00 $0C $00 $00 $40
-	.db $0A $00 $30 $00 $50 $00 $0E $57 $0A $00 $00 $00 $00 $00 $00 $40
-	.db $0A $40 $00 $00 $00 $00 $00 $50 $1A $10 $20 $40 $0E $00 $00 $40
-	.db $0A $0F $30 $50 $70 $00 $0F $5F $0A $00 $00 $40 $00 $00 $0E $40
-	.db $0A $10 $10 $40 $00 $00 $00 $40 $0A $00 $00 $40 $0E $00 $00 $40
-	.db $0A $40 $F0 $40 $50 $00 $0E $50 $0A $00 $00 $40 $08 $00 $00 $40
-	.db $0A $00 $10 $00 $00 $00 $00 $40 $0A $10 $00 $40 $00 $00 $00 $00
-	.db $0A $10 $10 $40 $00 $00 $0F $50 $00 $00 $00 $40 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $00 $00 $0E $50 $08 $10 $00 $50 $0F $00 $00 $40
-	.db $0A $00 $20 $40 $00 $00 $0E $C4 $08 $00 $00 $00 $00 $00 $00 $50
-	.db $0A $00 $00 $00 $00 $00 $00 $40 $0A $00 $00 $50 $00 $00 $00 $40
-	.db $0A $00 $10 $40 $00 $00 $0A $40 $00 $00 $00 $00 $70 $10 $00 $50
-	.db $0A $00 $00 $50 $00 $00 $0E $40 $0A $00 $00 $50 $10 $04 $00 $40
-	.db $0A $00 $60 $40 $00 $00 $0E $55 $08 $00 $00 $40 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $00 $00 $00 $50 $0A $10 $00 $40 $00 $00 $00 $40
-	.db $0A $00 $10 $50
-	.dsb 60, $FF
-	.db $FE
-	.dsb 31, $FF
-	.db $FA $FF $FF $FF $FF $FF $FE
-	.dsb 9, $FF
-	.db $FE
-	.dsb 15, $FF
-	.db $FA $FF $FF $FF $00 $00 $0A $40 $00 $00 $00 $40 $00 $00 $00 $50
-	.db $08 $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $40 $00 $08 $40 $40
-	.db $08 $00 $00 $40 $00 $00 $0A $40 $00 $10 $00 $00 $00 $00 $00 $40
-	.db $0A $00 $00 $00 $00 $00 $00 $40 $08 $00 $00 $40 $00 $00 $00 $50
-	.db $0A $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $00 $00 $00 $00 $50
-	.db $0A $40 $00 $40 $00 $00 $0E $40 $08 $00 $00 $40 $00 $00 $00 $40
-	.db $08 $00 $00 $00 $00 $00 $0E $40 $40 $00 $00 $00 $00 $00 $D0 $50
-	.db $0A $00 $00 $40 $00 $00 $00 $40 $08 $00 $08 $40 $00 $10 $00 $40
-	.db $08 $00 $00 $10 $FF $FF $FE
-	.dsb 9, $FF
-	.db $FA
-	.dsb 15, $FF
-	.db $FE $FF $FF $FF $FF $FF $FE
-	.dsb 9, $FF
-	.db $FA
-	.dsb 15, $FF
-	.db $FA $F0
-	.dsb 14, $FF
-	.db $FA
-	.dsb 15, $FF
-	.db $FE $FF $0F $FF $FF $FF $FE
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FA $FF $FF $7F $FE $FF $FB $FF $FE $F7 $F7 $F7 $FE $FF $FB $7F
-	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $F7 $D7 $DE $7F $FB $FF
-	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $77 $D7 $FE $7F $FB $7F
-	.db $FE $F3 $F7 $D7 $DE $7F $FB $FF $FE $D3 $F7 $D7 $DE $7F $FB $FF
-	.db $FE $F3 $F7 $D7 $DE $7F $FB $7F $FE $F3 $F7 $D7 $DE $3F $FB $7F
-	.db $FE $F1 $F7 $D7 $FE $7F $FB $7F $FE $F1 $F7 $D7 $FE $FF $FB $FF
-	.db $FE $F5 $FF $FF $FE $FF $FB $7F $FE $F3 $F7 $D7 $FE $FF $FB $7F
-	.db $FE $F3 $FF $F7 $FE $7F $FB $FF $FE $F3 $F7 $D7 $FE $FF $FB $FF
-	.db $FE $F7 $F7 $F7 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $40 $00 $D0 $00 $0B $10 $0E $01 $00 $40 $08 $00 $00 $10
-	.db $0E $01 $70 $40 $D0 $00 $0B $7F $0E $00 $00 $40 $08 $00 $00 $10
-	.db $0E $01 $50 $40 $00 $00 $00 $00 $0E $01 $00 $00 $0A $00 $00 $10
-	.db $0E $01 $F0 $00 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $70 $40 $00 $00 $00 $00 $0E $01 $00 $40 $08 $00 $20 $7F
-	.db $0E $01 $F0 $40 $D0 $00 $0B $3F $1E $00 $00 $40 $48 $00 $D0 $00
-	.db $0E $01 $70 $40 $00 $00 $00 $10 $0E $01 $40 $40 $00 $00 $00 $10
-	.db $0E $01 $70 $40 $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FE $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $7F $FF $FF
-	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $F7 $FF $FF $D0 $00 $0B $5F $0E $00 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $60 $50 $D0 $00 $0B $10 $1E $00 $00 $40 $08 $00 $00 $10
-	.db $0E $01 $70 $40 $D0 $10 $1B $1F $0E $01 $00 $00 $00 $00 $00 $10
-	.db $0E $01 $30 $00 $00 $00 $00 $00 $1E $01 $10 $40 $0A $00 $00 $10
-	.db $0E $0F $F0 $40 $D0 $00 $0B $1F $0E $01 $00 $00 $00 $00 $0B $10
-	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $00 $08 $00 $00 $10
-	.db $0E $01 $F0 $40 $D0 $00 $0B $70 $0E $01 $00 $00 $08 $00 $00 $10
-	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $40 $00 $00 $00 $10
-	.db $0E $01 $50 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0A $00 $00 $40 $00 $00 $0B $00 $0A $00 $00 $40 $0E $00 $00 $10
-	.db $0E $00 $00 $40 $00 $00 $0B $11 $80 $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $40 $40 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $70 $40 $00 $00 $0B $10 $00 $00 $00 $40 $D0 $00 $00 $10
-	.db $0E $00 $00 $40 $00 $00 $0B $10 $0A $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $60 $40 $00 $00 $0B $1B $08 $00 $00 $40 $00 $00 $00 $00
-	.db $0E $00 $40 $08 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $50 $50 $FF $FF $FB
-	.dsb 9, $FF
-	.db $FA $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $DE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $00 $00 $0B $10 $00 $00 $00 $40 $00 $10 $00 $10
-	.db $02 $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0A $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0A $00 $00 $40 $00 $00 $00 $00 $10 $00 $00 $40 $00 $01 $00 $10
-	.db $1A $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $00 $00 $00 $00 $10
-	.db $02 $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $00 $40 $00 $00 $0B $10 $00 $00 $10 $40 $00 $00 $10 $10
-	.db $0A $00 $00 $40 $00 $00 $00 $10 $00 $00 $00 $40 $00 $00 $00 $10
-	.db $0E $00 $00 $40 $FF $FF $FB
-	.dsb 9, $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $F0 $FF $DF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $5F $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
-	.db $FE $FF $FF $D7 $DE $FF $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
-	.db $FB $F1 $FE $7F $DE $F7 $FB $75 $FB $F1 $FE $7F $DE $77 $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $D1 $FE $7F $DE $FF $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $5F $DE $77 $FB $F5
-	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $FF $FB $F5
-	.db $FB $F5 $FE $7F $DE $FF $FB $F5 $FB $F1 $FE $FF $DE $F7 $FB $F5
-	.db $FB $F1 $FE $7F $DE $FF $FB $FF $FB $F1 $FE $7F $DE $FF $FB $F5
-	.db $FB $F1 $FE $FF $50 $00 $0B $21 $03 $00 $00 $50 $00 $00 $00 $00
-	.db $03 $01 $00 $00 $50 $00 $0A $00 $03 $01 $00 $00 $02 $00 $00 $00
-	.db $0B $01 $20 $50 $D0 $00 $08 $85 $03 $00 $00 $40 $00 $00 $00 $00
-	.db $03 $01 $00 $00 $40 $00 $00 $00 $03 $01 $00 $10 $06 $00 $00 $00
-	.db $0B $01 $60 $10 $50 $00 $0A $C5 $0B $00 $00 $00 $00 $00 $00 $00
-	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $46 $00 $00 $E1
-	.db $03 $01 $40 $50 $D0 $00 $08 $A1 $03 $01 $00 $50 $06 $00 $F0 $00
-	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $04 $00 $00 $00
-	.db $43 $01 $60 $00 $DF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $FF $DF $FF $FB $FF $FB $FF $FF $FF $FE $FF $FF $FF
-	.db $FB $FF $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $FF $FF $FB $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $DF $FF $FB $F5 $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $F7 $FF $FF $50 $00 $08 $01 $03 $00 $00 $10 $00 $10 $00 $00
-	.db $03 $01 $00 $50 $D0 $00 $08 $00 $03 $01 $00 $10 $02 $00 $00 $00
-	.db $03 $41 $40 $10 $50 $00 $08 $A1 $03 $01 $00 $00 $00 $00 $00 $00
-	.db $03 $41 $00 $40 $00 $00 $00 $00 $03 $01 $00 $40 $06 $00 $00 $00
-	.db $03 $0F $00 $60 $50 $00 $08 $A1 $03 $00 $00 $00 $02 $00 $08 $00
-	.db $03 $01 $00 $40 $00 $00 $00 $00 $03 $01 $00 $00 $06 $00 $00 $00
-	.db $03 $01 $F0 $40 $50 $00 $08 $A0 $03 $01 $00 $10 $00 $00 $00 $00
-	.db $03 $41 $00 $10 $40 $00 $00 $00 $0B $01 $00 $50 $00 $00 $00 $00
-	.db $03 $01 $00 $40 $00 $00 $0A $00 $00 $00 $00 $50 $00 $00 $00 $00
-	.db $03 $00 $00 $10 $00 $00 $08 $00 $03 $00 $00 $40 $06 $00 $00 $00
-	.db $03 $00 $00 $50 $10 $00 $0A $01 $00 $00 $00 $10 $00 $00 $00 $00
-	.db $03 $00 $00 $50 $00 $00 $10 $00 $03 $10 $00 $50 $00 $00 $00 $00
-	.db $0B $00 $00 $40 $00 $00 $2A $01 $00 $00 $00 $00 $50 $00 $00 $00
-	.db $03 $00 $00 $50 $00 $00 $0A $00 $03 $00 $00 $40 $00 $00 $00 $10
-	.db $03 $00 $00 $50 $10 $00 $08 $01 $01 $00 $00 $50 $10 $00 $00 $00
-	.db $03 $00 $00 $00 $00 $00 $00 $00 $03 $00 $00 $40 $10 $00 $40 $00
-	.db $0B $00 $00 $50 $FF $FF $FB
-	.dsb 15, $FF
-	.db $FB
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FB
-	.dsb 25, $FF
-	.db $FB $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF $FB $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB
-	.dsb 15, $FF
-	.db $FB $FF $FF $FF $40 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
-	.db $01 $00 $00 $50 $00 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
-	.db $03 $00 $08 $40 $00 $00 $08 $00 $00 $00 $00 $50 $10 $00 $00 $00
-	.db $03 $40
-	.dsb 9, $00
-	.db $40 $00 $00 $00 $00 $01 $00 $00 $40 $00 $00 $09 $00 $00 $00 $00
-	.db $50 $00 $00 $00 $00 $03 $10 $00 $00 $00 $00 $0A $00 $00 $00 $00
-	.db $40 $00 $00 $00 $00 $03 $00 $10 $50 $00 $00 $0B $01 $00 $00 $00
-	.db $50 $00 $00 $70 $00 $03 $00 $00 $40 $50 $00 $00 $00 $01 $00 $04
-	.db $10 $00 $00 $00 $00 $03 $00 $10 $40 $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
-	.db $FB
-	.dsb 10, $FF
-	.db $7F $FF $FF $FF $FF $FB $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF
-	.db $FF $FF $FF $FB $FF $FB
-	.dsb 15, $FF
-	.db $FB $FF $0F $FF $FF $FF $FA
-	.dsb 9, $FF
-	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
-	.db $FB $FF $FF $5F
+;_DATA_AF5F_:	;This is some data, but seemingly nothing is read from here. Possibly level data, but the beginning is the ending text.
+;	.db $40 $00 $00 $00 $00 $00
+;	.db $00 $00 $40 $00 $00 $90 $40 $0A $00 $40 $40 $00 $00 $00 $00 $08
+;	.db $00 $00 $40 $00 $00 $00 $40 $0A $00 $00 $40 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FA $FD $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $5F $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $FF $5F $FE $F5 $FC $FF $DB $FF $FF $F5 $FE $F5 $FC $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FC $FF $DB $FF $FF $D4 $7E $F5 $FE $FF
+;	.db $DB $FF $FF $F4 $FE $F5 $FC $FF $DB $FF $FF $D4 $FE $F5 $FE $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FC $FF
+;	.db $DB $FF $FF $D4 $7E $F5 $FE $FF $DB $FF $7F $D4 $FE $F5 $FE $FF
+;	.db $DB $FF $FF $D4 $FE $F5 $FE $FF $DB $FF $7F $D4 $7E $F7 $FC $FF
+;	.db $DB $FF $FF $F4 $FE $FD $FE $FF $DB $FF $DF $F4 $FE $F5 $FC $FF
+;	.db $DB $FF $FE $F4 $FE $FD $FE $FF $DB $FF $FF $D4 $FE $F5 $FC $FF
+;	.db $DB $FF $FE $F4 $50 $10 $0C $3F $0B $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $07 $40 $00 $50 $10 $0C $00 $0B $00 $00 $40 $08 $00 $00 $00
+;	.db $0B $00 $50 $40 $70 $10 $0C $BF $0B $00 $00 $00 $40 $00 $00 $00
+;	.db $0B $0F $50 $00 $00 $00 $00 $10 $0B $02 $40 $00 $1A $00 $00 $00
+;	.db $0B $04 $50 $40 $50 $00 $0C $3F $0B $00 $00 $00 $40 $00 $00 $00
+;	.db $0B $00 $50 $00 $40 $10 $00 $10 $0B $00 $00 $00 $08 $00 $00 $FF
+;	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $02 $00 $F0 $00
+;	.db $0B $04 $50 $00 $00 $10 $00 $10 $0B $00 $00 $00 $40 $10 $00 $00
+;	.db $0B $04 $50 $40 $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FE $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $7F $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $50 $10 $0C $BF $09 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $00 $10 $70 $00 $0C $00 $0B $00 $00 $00 $0A $00 $00 $00
+;	.db $0B $04 $50 $00 $50 $00 $0C $7F $4B $00 $00 $40 $00 $00 $00 $10
+;	.db $0B $04 $50 $00 $00 $00 $00 $00 $1B $00 $00 $00 $4A $00 $00 $00
+;	.db $0B $0F $50 $00 $50 $00 $0C $FF $0B $00 $00 $00 $40 $00 $0C $00
+;	.db $0B $0D $40 $00 $40 $10 $00 $00 $0B $00 $00 $40 $4A $10 $10 $00
+;	.db $0B $04 $F0 $40 $70 $40 $0C $30 $0B $00 $00 $00 $48 $00 $00 $00
+;	.db $0B $00 $50 $00 $00 $00 $00 $00 $0B $0A $50 $00 $48 $00 $00 $10
+;	.db $0B $05 $50 $40 $40 $10 $08 $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $00 $00 $00 $40 $10 $0C $00 $08 $00 $00 $40 $4A $10 $00 $10
+;	.db $0B $00 $40 $40 $00 $10 $0C $02 $00 $00 $00 $00 $40 $10 $00 $00
+;	.db $0B $20 $00 $00 $00 $10 $00 $00 $09 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $50 $00 $00 $00 $0C $00 $00 $00 $00 $00 $50 $00 $00 $00
+;	.db $0B $00 $08 $00 $00 $10 $0C $00 $01 $00 $00 $00 $40 $00 $00 $10
+;	.db $0B $00 $40 $00 $10 $00 $08 $06 $00 $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $00 $40 $00 $40 $00 $00 $10 $09 $00 $00 $00 $00 $10 $00 $00
+;	.db $0B $00 $40 $00 $FF $FF $FC
+;	.dsb 15, $FF
+;	.db $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $BF $FC $FF $FF $FF $FF $FF $FF $FF $FE $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 25, $FF
+;	.db $FB $FF $FF $FF $40 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $01 $00 $00 $10 $00 $00 $0C
+;	.dsb 9, $00
+;	.db $49 $40 $00 $00 $00 $00 $0C $00 $00 $00 $00 $00 $00 $10 $00 $00
+;	.db $09 $00 $00 $00 $00 $10 $00 $20 $00 $00 $00 $00 $00 $00 $00 $00
+;	.db $09 $00 $00 $00 $00 $00 $0C
+;	.dsb 9, $00
+;	.db $01 $00 $00 $00 $00 $00 $0C $10 $40 $00 $00 $00 $00 $00 $00 $00
+;	.db $09 $00 $00 $00 $00 $00 $08 $00 $00 $00 $00 $00 $40 $00 $00 $00
+;	.db $09
+;	.dsb 15, $00
+;	.db $09 $00 $00 $40 $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F0 $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF $FC $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $4F $FF $FF $FF $FC
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $7B $FF $FF $D4 $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $7F
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $FD $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $FF $7F $75 $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $7F $7F $F5 $DF $FF
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $7F $FA $F9 $7E $7F $7F $75 $DF $7F
+;	.db $FA $F9 $7E $7F $7F $75 $DF $7F $FA $F9 $7E $7F $7F $FD $5E $F7
+;	.db $FA $F9 $7E $FF $7F $F5 $DF $FF $FA $F9 $7E $FF $7F $F5 $DF $FF
+;	.db $FA $F9 $7E $FF $FF $F7 $DF $FF $FA $F9 $FE $FF $7F $FD $DF $FF
+;	.db $FA $F9 $7E $FF $50 $00 $0E $57 $0A $00 $00 $10 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $70 $00 $0E $40 $0A $00 $00 $40 $08 $00 $00 $40
+;	.db $0A $00 $30 $40 $70 $00 $0F $7F $0A $00 $00 $00 $08 $00 $08 $50
+;	.db $0A $11 $10 $40 $00 $00 $00 $50 $0A $00 $00 $40 $0E $00 $00 $40
+;	.db $0A $00 $70 $40 $70 $00 $0E $57 $0A $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $11 $10 $10 $00 $00 $00 $00 $0A $00 $00 $10 $0C $00 $00 $5F
+;	.db $0A $10 $70 $00 $70 $00 $0F $5F $0A $00 $00 $50 $04 $00 $D0 $40
+;	.db $0A $00 $30 $10 $00 $00 $00 $40 $0A $00 $00 $00 $04 $00 $00 $50
+;	.db $0A $00 $30 $40
+;	.dsb 12, $FF
+;	.db $FA $F9 $FF $FF $7F $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $7F $FF $FE $FF $FA $FF $FF $FF $DF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FE $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FB $FF $FF $7F $FF $FF $7F $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $F9 $FF $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FD $FF $FF $50 $00 $0A $57 $0A $00 $00 $00 $00 $00 $00 $40
+;	.db $0A $00 $00 $40 $70 $00 $0E $40 $0A $00 $00 $00 $0C $00 $00 $40
+;	.db $0A $00 $30 $00 $50 $00 $0E $57 $0A $00 $00 $00 $00 $00 $00 $40
+;	.db $0A $40 $00 $00 $00 $00 $00 $50 $1A $10 $20 $40 $0E $00 $00 $40
+;	.db $0A $0F $30 $50 $70 $00 $0F $5F $0A $00 $00 $40 $00 $00 $0E $40
+;	.db $0A $10 $10 $40 $00 $00 $00 $40 $0A $00 $00 $40 $0E $00 $00 $40
+;	.db $0A $40 $F0 $40 $50 $00 $0E $50 $0A $00 $00 $40 $08 $00 $00 $40
+;	.db $0A $00 $10 $00 $00 $00 $00 $40 $0A $10 $00 $40 $00 $00 $00 $00
+;	.db $0A $10 $10 $40 $00 $00 $0F $50 $00 $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $0E $50 $08 $10 $00 $50 $0F $00 $00 $40
+;	.db $0A $00 $20 $40 $00 $00 $0E $C4 $08 $00 $00 $00 $00 $00 $00 $50
+;	.db $0A $00 $00 $00 $00 $00 $00 $40 $0A $00 $00 $50 $00 $00 $00 $40
+;	.db $0A $00 $10 $40 $00 $00 $0A $40 $00 $00 $00 $00 $70 $10 $00 $50
+;	.db $0A $00 $00 $50 $00 $00 $0E $40 $0A $00 $00 $50 $10 $04 $00 $40
+;	.db $0A $00 $60 $40 $00 $00 $0E $55 $08 $00 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $00 $50 $0A $10 $00 $40 $00 $00 $00 $40
+;	.db $0A $00 $10 $50
+;	.dsb 60, $FF
+;	.db $FE
+;	.dsb 31, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FE
+;	.dsb 15, $FF
+;	.db $FA $FF $FF $FF $00 $00 $0A $40 $00 $00 $00 $40 $00 $00 $00 $50
+;	.db $08 $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $40 $00 $08 $40 $40
+;	.db $08 $00 $00 $40 $00 $00 $0A $40 $00 $10 $00 $00 $00 $00 $00 $40
+;	.db $0A $00 $00 $00 $00 $00 $00 $40 $08 $00 $00 $40 $00 $00 $00 $50
+;	.db $0A $00 $00 $40 $00 $00 $0E $40 $00 $00 $00 $00 $00 $00 $00 $50
+;	.db $0A $40 $00 $40 $00 $00 $0E $40 $08 $00 $00 $40 $00 $00 $00 $40
+;	.db $08 $00 $00 $00 $00 $00 $0E $40 $40 $00 $00 $00 $00 $00 $D0 $50
+;	.db $0A $00 $00 $40 $00 $00 $00 $40 $08 $00 $08 $40 $00 $10 $00 $40
+;	.db $08 $00 $00 $10 $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FA $F0
+;	.dsb 14, $FF
+;	.db $FA
+;	.dsb 15, $FF
+;	.db $FE $FF $0F $FF $FF $FF $FE
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FA $FF $FF $7F $FE $FF $FB $FF $FE $F7 $F7 $F7 $FE $FF $FB $7F
+;	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $F7 $D7 $DE $7F $FB $FF
+;	.db $FE $F3 $F7 $D7 $FE $7F $FB $7F $FE $F3 $77 $D7 $FE $7F $FB $7F
+;	.db $FE $F3 $F7 $D7 $DE $7F $FB $FF $FE $D3 $F7 $D7 $DE $7F $FB $FF
+;	.db $FE $F3 $F7 $D7 $DE $7F $FB $7F $FE $F3 $F7 $D7 $DE $3F $FB $7F
+;	.db $FE $F1 $F7 $D7 $FE $7F $FB $7F $FE $F1 $F7 $D7 $FE $FF $FB $FF
+;	.db $FE $F5 $FF $FF $FE $FF $FB $7F $FE $F3 $F7 $D7 $FE $FF $FB $7F
+;	.db $FE $F3 $FF $F7 $FE $7F $FB $FF $FE $F3 $F7 $D7 $FE $FF $FB $FF
+;	.db $FE $F7 $F7 $F7 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $40 $00 $D0 $00 $0B $10 $0E $01 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $70 $40 $D0 $00 $0B $7F $0E $00 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $00 $0E $01 $00 $00 $0A $00 $00 $10
+;	.db $0E $01 $F0 $00 $D0 $00 $0B $1F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $70 $40 $00 $00 $00 $00 $0E $01 $00 $40 $08 $00 $20 $7F
+;	.db $0E $01 $F0 $40 $D0 $00 $0B $3F $1E $00 $00 $40 $48 $00 $D0 $00
+;	.db $0E $01 $70 $40 $00 $00 $00 $10 $0E $01 $40 $40 $00 $00 $00 $10
+;	.db $0E $01 $70 $40 $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FE $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $7F $FE $FF $FF $FF $FF $7F $FF $FF
+;	.db $FE $F7 $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F7 $FF $FF $D0 $00 $0B $5F $0E $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $60 $50 $D0 $00 $0B $10 $1E $00 $00 $40 $08 $00 $00 $10
+;	.db $0E $01 $70 $40 $D0 $10 $1B $1F $0E $01 $00 $00 $00 $00 $00 $10
+;	.db $0E $01 $30 $00 $00 $00 $00 $00 $1E $01 $10 $40 $0A $00 $00 $10
+;	.db $0E $0F $F0 $40 $D0 $00 $0B $1F $0E $01 $00 $00 $00 $00 $0B $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $00 $08 $00 $00 $10
+;	.db $0E $01 $F0 $40 $D0 $00 $0B $70 $0E $01 $00 $00 $08 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $00 $10 $0E $01 $00 $40 $00 $00 $00 $10
+;	.db $0E $01 $50 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $0B $00 $0A $00 $00 $40 $0E $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $11 $80 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $40 $40 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $70 $40 $00 $00 $0B $10 $00 $00 $00 $40 $D0 $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $60 $40 $00 $00 $0B $1B $08 $00 $00 $40 $00 $00 $00 $00
+;	.db $0E $00 $40 $08 $00 $00 $00 $10 $0A $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $50 $50 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FA $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FE $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $DE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $00 $00 $0B $10 $00 $00 $00 $40 $00 $10 $00 $10
+;	.db $02 $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0A $00 $00 $40 $00 $00 $00 $00 $10 $00 $00 $40 $00 $01 $00 $10
+;	.db $1A $00 $00 $40 $00 $00 $0B $10 $00 $00 $00 $00 $00 $00 $00 $10
+;	.db $02 $00 $00 $40 $00 $00 $0B $50 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $00 $40 $00 $00 $0B $10 $00 $00 $10 $40 $00 $00 $10 $10
+;	.db $0A $00 $00 $40 $00 $00 $00 $10 $00 $00 $00 $40 $00 $00 $00 $10
+;	.db $0E $00 $00 $40 $FF $FF $FB
+;	.dsb 9, $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $F0 $FF $DF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $5F $FF $FF $FF $FB $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $FF $FF $FF $FF $FF $FE $FF $FF $FF $FF $FF $FF $FF
+;	.db $FE $FF $FF $D7 $DE $FF $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $F7 $FB $75 $FB $F1 $FE $7F $DE $77 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $D1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $5F $DE $77 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $77 $FB $F5 $FB $F1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F5 $FE $7F $DE $FF $FB $F5 $FB $F1 $FE $FF $DE $F7 $FB $F5
+;	.db $FB $F1 $FE $7F $DE $FF $FB $FF $FB $F1 $FE $7F $DE $FF $FB $F5
+;	.db $FB $F1 $FE $FF $50 $00 $0B $21 $03 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $01 $00 $00 $50 $00 $0A $00 $03 $01 $00 $00 $02 $00 $00 $00
+;	.db $0B $01 $20 $50 $D0 $00 $08 $85 $03 $00 $00 $40 $00 $00 $00 $00
+;	.db $03 $01 $00 $00 $40 $00 $00 $00 $03 $01 $00 $10 $06 $00 $00 $00
+;	.db $0B $01 $60 $10 $50 $00 $0A $C5 $0B $00 $00 $00 $00 $00 $00 $00
+;	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $46 $00 $00 $E1
+;	.db $03 $01 $40 $50 $D0 $00 $08 $A1 $03 $01 $00 $50 $06 $00 $F0 $00
+;	.db $0B $01 $00 $50 $00 $00 $00 $00 $03 $01 $00 $40 $04 $00 $00 $00
+;	.db $43 $01 $60 $00 $DF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $FF $DF $FF $FB $FF $FB $FF $FF $FF $FE $FF $FF $FF
+;	.db $FB $FF $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $DF $FF $FA $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FB $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $DF $FF $FB $F5 $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $F7 $FF $FF $50 $00 $08 $01 $03 $00 $00 $10 $00 $10 $00 $00
+;	.db $03 $01 $00 $50 $D0 $00 $08 $00 $03 $01 $00 $10 $02 $00 $00 $00
+;	.db $03 $41 $40 $10 $50 $00 $08 $A1 $03 $01 $00 $00 $00 $00 $00 $00
+;	.db $03 $41 $00 $40 $00 $00 $00 $00 $03 $01 $00 $40 $06 $00 $00 $00
+;	.db $03 $0F $00 $60 $50 $00 $08 $A1 $03 $00 $00 $00 $02 $00 $08 $00
+;	.db $03 $01 $00 $40 $00 $00 $00 $00 $03 $01 $00 $00 $06 $00 $00 $00
+;	.db $03 $01 $F0 $40 $50 $00 $08 $A0 $03 $01 $00 $10 $00 $00 $00 $00
+;	.db $03 $41 $00 $10 $40 $00 $00 $00 $0B $01 $00 $50 $00 $00 $00 $00
+;	.db $03 $01 $00 $40 $00 $00 $0A $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $00 $00 $10 $00 $00 $08 $00 $03 $00 $00 $40 $06 $00 $00 $00
+;	.db $03 $00 $00 $50 $10 $00 $0A $01 $00 $00 $00 $10 $00 $00 $00 $00
+;	.db $03 $00 $00 $50 $00 $00 $10 $00 $03 $10 $00 $50 $00 $00 $00 $00
+;	.db $0B $00 $00 $40 $00 $00 $2A $01 $00 $00 $00 $00 $50 $00 $00 $00
+;	.db $03 $00 $00 $50 $00 $00 $0A $00 $03 $00 $00 $40 $00 $00 $00 $10
+;	.db $03 $00 $00 $50 $10 $00 $08 $01 $01 $00 $00 $50 $10 $00 $00 $00
+;	.db $03 $00 $00 $00 $00 $00 $00 $00 $03 $00 $00 $40 $10 $00 $40 $00
+;	.db $0B $00 $00 $50 $FF $FF $FB
+;	.dsb 15, $FF
+;	.db $FB
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FB
+;	.dsb 25, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA $FF $FF $FF $FF $FF $FF $FF $FB $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $FF $FF $40 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $01 $00 $00 $50 $00 $00 $08 $00 $00 $00 $00 $50 $00 $00 $00 $00
+;	.db $03 $00 $08 $40 $00 $00 $08 $00 $00 $00 $00 $50 $10 $00 $00 $00
+;	.db $03 $40
+;	.dsb 9, $00
+;	.db $40 $00 $00 $00 $00 $01 $00 $00 $40 $00 $00 $09 $00 $00 $00 $00
+;	.db $50 $00 $00 $00 $00 $03 $10 $00 $00 $00 $00 $0A $00 $00 $00 $00
+;	.db $40 $00 $00 $00 $00 $03 $00 $10 $50 $00 $00 $0B $01 $00 $00 $00
+;	.db $50 $00 $00 $70 $00 $03 $00 $00 $40 $50 $00 $00 $00 $01 $00 $04
+;	.db $10 $00 $00 $00 $00 $03 $00 $10 $40 $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FB $F5 $FF $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB
+;	.dsb 10, $FF
+;	.db $7F $FF $FF $FF $FF $FB $F0 $FF $FF $FF $FF $FB $FF $FF $FF $FF
+;	.db $FF $FF $FF $FB $FF $FB
+;	.dsb 15, $FF
+;	.db $FB $FF $0F $FF $FF $FF $FA
+;	.dsb 9, $FF
+;	.db $FB $FF $FF $FF $FF $FF $FF $FF $FB $FF $FF $FF $FF $FF $FF $FF
+;	.db $FB $FF $FF $5F
 	
 
 .BANK 3		;THIS SEEMS TO BE THE LEVEL BACKGROUND. MAYBE FOR ALL LEVELS?
@@ -13270,90 +13380,90 @@ _DATA_AF5F_:	;This is some data, but seemingly nothing is read from here. Possib
 ;.DSB 8640,$00
 .incbin "HOTL_mod_DATA_10000_.inc"	;This is some level data.metatiles
 
-; Data from 121C0 to 12305 (326 bytes)
-_DATA_121C0_HUD_TILEMAP:
-.db $80 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00
-.db $81 $00 $82 $00 $83 $00 $84 $00 $85 $00 $86 $00 $84 $00 $87 $00
-.db $84 $00 $85 $00 $86 $00 $84 $00 $87 $00 $84 $00 $85 $00 $86 $00
-.db $84 $00 $87 $00 $84 $00 $85 $00 $86 $00 $84 $00 $88 $00 $89 $00
-.db $8A $00 $8B $00 $8C $00 $8B $00 $8B $00 $8B $00 $8B $00 $8C $02
-.db $8B $00 $8D $00 $8E $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $8F $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00
-.db $8A $00 $8B $00 $8B $00 $90 $00 $8B $00 $8B $00 $90 $02 $8B $00
-.db $8B $00 $8D $00 $91 $00 $89 $00 $89 $00 $89 $00 $89 $00 $92 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $92 $00 $89 $00 $89 $00 $89 $00 $89 $00 $93 $00 $89 $00
-.db $8A $00 $8B $00 $8B $00 $94 $00 $90 $00 $90 $02 $94 $02 $8B $00
-.db $8B $00 $8D $00 $95 $00 $89 $00 $89 $00 $89 $00 $89 $00 $95 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $95 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $95 $00 $89 $00 $89 $00 $89 $00 $89 $00 $95 $00 $89 $00
-.db $8A $00 $8B $00 $8B $00 $96 $00 $90 $02 $90 $00 $96 $02 $8B $00
-.db $8B $00 $8D $00 $8F $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $8F $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00
-.db $8A $00 $8B $00 $8B $00
+;; Data from 121C0 to 12305 (326 bytes)
+;_DATA_121C0_HUD_TILEMAP:
+;.db $80 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00 $81 $00
+;.db $81 $00 $82 $00 $83 $00 $84 $00 $85 $00 $86 $00 $84 $00 $87 $00
+;.db $84 $00 $85 $00 $86 $00 $84 $00 $87 $00 $84 $00 $85 $00 $86 $00
+;.db $84 $00 $87 $00 $84 $00 $85 $00 $86 $00 $84 $00 $88 $00 $89 $00
+;.db $8A $00 $8B $00 $8C $00 $8B $00 $8B $00 $8B $00 $8B $00 $8C $02
+;.db $8B $00 $8D $00 $8E $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $8F $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00
+;.db $8A $00 $8B $00 $8B $00 $90 $00 $8B $00 $8B $00 $90 $02 $8B $00
+;.db $8B $00 $8D $00 $91 $00 $89 $00 $89 $00 $89 $00 $89 $00 $92 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $92 $00 $89 $00 $89 $00 $89 $00 $89 $00 $93 $00 $89 $00
+;.db $8A $00 $8B $00 $8B $00 $94 $00 $90 $00 $90 $02 $94 $02 $8B $00
+;.db $8B $00 $8D $00 $95 $00 $89 $00 $89 $00 $89 $00 $89 $00 $95 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $95 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $95 $00 $89 $00 $89 $00 $89 $00 $89 $00 $95 $00 $89 $00
+;.db $8A $00 $8B $00 $8B $00 $96 $00 $90 $02 $90 $00 $96 $02 $8B $00
+;.db $8B $00 $8D $00 $8F $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $8F $00 $89 $00 $89 $00 $89 $00 $89 $00 $8F $00 $89 $00
+;.db $8A $00 $8B $00 $8B $00
 
 ; Data from 12306 to 1247F (378 bytes)
-_DATA_12306_HUD_LPART:	;THIS IS THE TILEMAP OF ONE PART OF THE HUD. THE LOWER PART OF THE COMPASS, AND THE PORTRAITS AS WELL.
-;.dsb 378,$00
-.db $90 $02 $8B $00 $8B $00 $90 $00 $8B $00 $8B $00 $8D $00 $91 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $92 $00 $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $93 $00 $89 $00 $8A $00 $8B $00 $8C $04
-.db $8B $00 $8B $00 $8B $00 $8B $00 $8C $06 $8B $00 $8D $00 $97 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $98 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $98 $00 $89 $00 $89 $00 $89 $00 $89 $00 $98 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $99 $00 $89 $00 $9A $00 $9B $00 $9B $00
-.db $9B $00 $9B $00 $9B $00 $9B $00 $9B $00 $9B $00 $9C $00 $9D $00
-.db $9E $00 $9F $00 $A0 $00 $9E $00 $A1 $00 $9E $00 $9F $00 $A0 $00
-.db $9E $00 $A1 $00 $9E $00 $9F $00 $A0 $00 $9E $00 $A1 $00 $9E $00
-.db $9F $00 $A0 $00 $9E $00 $A2 $00 $89 $00 $A3 $00 $A4 $00 $A5 $00
-.db $A6 $00 $A7 $00 $A8 $00 $A9 $00 $AA $00 $AB $00 $AC $00 $AD $00
-.db $AE $00 $AF $00 $B0 $00 $B1 $00 $B2 $00 $B3 $00 $B4 $00 $B5 $00
-.db $B6 $00 $B7 $00 $B8 $00 $B9 $00 $BA $00 $BB $00 $BC $00 $BD $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $BE $00 $BF $00 $C0 $00
-.db $C1 $00 $C2 $00 $C3 $00 $C4 $00 $C5 $00 $C6 $00 $C7 $00 $C8 $00
-.db $C9 $00 $CA $00 $CB $00 $CC $00 $CD $00 $CE $00 $CF $00 $D0 $00
-.db $D1 $00 $D2 $00 $D3 $00 $D4 $00 $D5 $00 $89 $00 $D6 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $D7 $00 $D8 $00 $D9 $00
-.db $DA $00 $DB $00 $DC $00 $DD $00 $DE $00 $DF $00 $E0 $00 $E1 $00
-.db $E2 $00 $E3 $00 $E4 $00 $E5 $00 $E6 $00 $E7 $00 $E8 $00 $E9 $00
-.db $EA $00 $EB $00 $EC $00 $ED $00 $EE $00 $89 $00 $EF $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;_DATA_12306_HUD_LPART:	;THIS IS THE TILEMAP OF ONE PART OF THE HUD. THE LOWER PART OF THE COMPASS, AND THE PORTRAITS AS WELL.
+;;.dsb 378,$00
+;.db $90 $02 $8B $00 $8B $00 $90 $00 $8B $00 $8B $00 $8D $00 $91 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $92 $00 $89 $00 $89 $00 $89 $00 $89 $00 $92 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $93 $00 $89 $00 $8A $00 $8B $00 $8C $04
+;.db $8B $00 $8B $00 $8B $00 $8B $00 $8C $06 $8B $00 $8D $00 $97 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $98 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $98 $00 $89 $00 $89 $00 $89 $00 $89 $00 $98 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $99 $00 $89 $00 $9A $00 $9B $00 $9B $00
+;.db $9B $00 $9B $00 $9B $00 $9B $00 $9B $00 $9B $00 $9C $00 $9D $00
+;.db $9E $00 $9F $00 $A0 $00 $9E $00 $A1 $00 $9E $00 $9F $00 $A0 $00
+;.db $9E $00 $A1 $00 $9E $00 $9F $00 $A0 $00 $9E $00 $A1 $00 $9E $00
+;.db $9F $00 $A0 $00 $9E $00 $A2 $00 $89 $00 $A3 $00 $A4 $00 $A5 $00
+;.db $A6 $00 $A7 $00 $A8 $00 $A9 $00 $AA $00 $AB $00 $AC $00 $AD $00
+;.db $AE $00 $AF $00 $B0 $00 $B1 $00 $B2 $00 $B3 $00 $B4 $00 $B5 $00
+;.db $B6 $00 $B7 $00 $B8 $00 $B9 $00 $BA $00 $BB $00 $BC $00 $BD $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $BE $00 $BF $00 $C0 $00
+;.db $C1 $00 $C2 $00 $C3 $00 $C4 $00 $C5 $00 $C6 $00 $C7 $00 $C8 $00
+;.db $C9 $00 $CA $00 $CB $00 $CC $00 $CD $00 $CE $00 $CF $00 $D0 $00
+;.db $D1 $00 $D2 $00 $D3 $00 $D4 $00 $D5 $00 $89 $00 $D6 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $D7 $00 $D8 $00 $D9 $00
+;.db $DA $00 $DB $00 $DC $00 $DD $00 $DE $00 $DF $00 $E0 $00 $E1 $00
+;.db $E2 $00 $E3 $00 $E4 $00 $E5 $00 $E6 $00 $E7 $00 $E8 $00 $E9 $00
+;.db $EA $00 $EB $00 $EC $00 $ED $00 $EE $00 $89 $00 $EF $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
 
-; Data from 12480 to 1254F (208 bytes)
-_DATA_12480_LIFEBAR_TILES:
-;.dsb 208,$00
-.db $F0 $00 $F1 $00 $F2 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $F3 $00 $F3 $00 $F3 $00 $F4 $00 $F1 $00 $F5 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F7 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $F8 $00 $F9 $00 $FA $00 $FB $00 $FC $00 $FD $00 $FE $00 $FF $00
-
-; Data from 12550 to 125BF (112 bytes)
-_DATA_12550_COMPASS_ON_MAP:
-
-.db $00 $01 $01 $01 $02 $01 $03 $01 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $04 $01 $05 $01 $06 $01 $07 $01 $08 $01 $09 $01 $0A $01 $0B $01
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
-
-; Data from 125C0 to 13FFF (6720 bytes)
-_DATA_125C0_HUD_DATA:	;HUD AND PORTRAITS.
-
-.incbin "HOTL_mod_DATA_125C0_.inc"
+;; Data from 12480 to 1254F (208 bytes)
+;_DATA_12480_LIFEBAR_TILES:
+;;.dsb 208,$00
+;.db $F0 $00 $F1 $00 $F2 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $F3 $00 $F3 $00 $F3 $00 $F4 $00 $F1 $00 $F5 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F6 $00 $F7 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $F8 $00 $F9 $00 $FA $00 $FB $00 $FC $00 $FD $00 $FE $00 $FF $00
+;
+;; Data from 12550 to 125BF (112 bytes)
+;_DATA_12550_COMPASS_ON_MAP:
+;
+;.db $00 $01 $01 $01 $02 $01 $03 $01 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $04 $01 $05 $01 $06 $01 $07 $01 $08 $01 $09 $01 $0A $01 $0B $01
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;.db $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00 $89 $00
+;
+;; Data from 125C0 to 13FFF (6720 bytes)
+;_DATA_125C0_HUD_DATA:	;HUD AND PORTRAITS.
+;
+;.incbin "HOTL_mod_DATA_125C0_.inc"
 
 .BANK 5
 .ORG $0000
@@ -13489,1192 +13599,1196 @@ _DATA_2007C_:	;THIS MIGHT BE SOME SPRITE COORDINATES, AND SPRITE MAPS, AS THE PL
 .BANK 24	;THIS IS THE SOUND ENGINE'S BANK, AND THE MUSIC AND SOUND IS HERE AS WELL.
 .ORG $0000
 
-; Data from 60000 to 600E5 (230 bytes)
-_DATA_60000_:	;THESE MAY BE THE INSTRUMENT DATAS.
-.dsb 34, $00
-.db $E4 $0F $00 $0F $29 $0E $5D $0D $9C $0C $E7 $0B $3C $0B $9B $0A
-.db $02 $0A $73 $09 $EB $08 $6B $08 $F2 $07 $80 $07 $14 $07 $AE $06
-.db $4E $06 $F4 $05 $9E $05 $4D $05 $01 $05 $B9 $04 $75 $04 $35 $04
-.db $F9 $03 $C0 $03 $8A $03 $57 $03 $27 $03 $FA $02 $CF $02 $A7 $02
-.db $81 $02 $5D $02 $3B $02 $1B $02 $FC $01 $E0 $01 $C5 $01 $AC $01
-.db $94 $01 $7D $01 $68 $01 $53 $01 $40 $01 $2E $01 $1D $01 $0D $01
-.db $FE $00 $F0 $00 $E2 $00 $D6 $00 $CA $00 $BE $00 $B4 $00 $AA $00
-.db $A0 $00 $97 $00 $8F $00 $87 $00 $7F $00 $78 $00 $71 $00 $6B $00
-.db $65 $00 $5F $00 $5A $00 $55 $00 $50 $00 $4C $00 $47 $00 $43 $00
-.db $40 $00 $3C $00 $39 $00 $35 $00 $32 $00 $30 $00 $2D $00 $2A $00
-.db $28 $00 $26 $00 $24 $00 $22 $00 $20 $00 $1E $00 $1C $00 $1B $00
-.db $19 $00 $18 $00 $16 $00 $15 $00 $14 $00 $13 $00 $12 $00 $11 $00
-.db $10 $00 $0F $00
-
-; 11th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 600E6 to 60126 (65 bytes)
-_DATA_600E6_:
-
-.db $13 $1E $01 $00 $01 $0C $0C $0C $0B $0B $0B $0A $0A $0A $09 $09
-.db $09 $08 $08 $08 $08 $07 $07 $07 $07 $07 $07 $06 $06 $06 $06 $05
-.db $05 $04 $00 $00 $00 $FF $01 $FE $02 $00 $02 $FE $02 $FF $01 $02
-.db $FE $FF $01 $02 $FE $01 $FF
-.dsb 10, $00
-
-; 10th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 60127 to 60161 (59 bytes)
-_DATA_60127_:
-.db $13 $1B $01 $00 $01 $0E $0E $0D $0C $0B $0B $0A $0A $0A $0A $09
-.db $09 $09 $09 $09 $08 $08 $07 $07 $06 $06 $05 $04 $03 $02 $01
-.dsb 28, $00
-
-; 2nd entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 60162 to 601E5 (132 bytes)
-_DATA_60162_:
-.db $13 $40 $01 $01 $0E $0E $0E $0E $0D $0D $0D $0D $0C $0C $0C $0C
-.db $0B $0B $0B $0B $0A $0A $0A $0A $09 $09 $09 $09 $08 $08 $08 $08
-.db $07 $07 $07 $07 $06 $06 $06 $06 $05 $05 $05 $05 $04 $04 $04 $04
-.db $03 $03 $03 $03 $02 $02 $02 $02 $01 $01 $01 $01 $00 $00 $00 $00
-.db $00 $00 $00 $00 $01 $64 $9D $00 $FF $00 $FF $00 $FF $00 $FF $00
-.db $01 $00 $01 $00 $02 $00 $02 $00 $FE $00 $FE $00 $FE $00 $FE $00
-.db $02 $00 $02
-.dsb 33, $00
-
-; 3rd entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 601E6 to 601FC (23 bytes)
-_DATA_601E6_:
-.db $13 $09 $01 $00 $01 $0A $0A $0A $0A $0A $0A $0A $0A $FF $00 $02
-.db $02 $FE $FE $FE $02 $00 $00
-
-; 7th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 601FD to 60258 (92 bytes)
-_DATA_601FD_:
-.db $13 $09 $01 $00 $01 $00 $00 $00 $00 $00 $00 $00 $00 $FF $28 $28
-.db $28 $28 $28 $28 $28 $28 $00
-
-; 1st entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 60214 to 60258 (69 bytes)
-_DATA_60214_:
-.db $13 $20 $01 $00 $01 $06 $07 $08
-.dsb 26, $09
-.db $08 $07 $06 $00 $64 $9C $00 $01 $01 $FF $FF $FF $FF $01 $01 $01
-.db $01 $FF $FF $FF $FF $01 $01 $01 $01 $FF $FF $FF $FF $01 $01 $01
-.db $01 $00 $00
-
-; 8th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 60259 to 60339 (225 bytes)
-_DATA_60259_:
-.db $13 $6E $01 $00 $01
-.dsb 27, $0C
-.dsb 16, $0B
-.dsb 17, $0A
-.dsb 16, $09
-.dsb 9, $08
-.db $07 $07 $07 $07 $07 $06 $06 $06 $06 $06 $06 $05 $05 $05 $05 $04
-.db $04 $04 $04 $03 $03 $03 $02 $01
-.dsb 61, $00
-.db $01 $01 $01 $FF $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF
-.db $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF
-.db $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF $01 $01 $01 $01
-.db $FF $FF
-
-; 9th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 6033A to 6045E (293 bytes)
-_DATA_6033A_:
-.db $13 $6E $01 $00 $01
-.dsb 27, $0B
-.dsb 17, $0A
-.dsb 11, $09
-.dsb 15, $08
-.dsb 14, $07
-.dsb 10, $06
-.db $05 $05 $05 $05 $05 $05 $04 $04 $04 $04 $03 $03 $03 $02 $01
-.dsb 61, $00
-.db $01 $01 $01 $FF $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF
-.db $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF
-.db $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF $01 $01 $01 $01
-.db $FF $FF $0D $20 $01 $01 $08 $09 $0A
-.dsb 26, $0B
-.db $0A $09 $08
-.dsb 32, $07
-
-; 5th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 6045F to 60482 (36 bytes)
-_DATA_6045F_:
-.db $13 $10 $01 $01 $0E $0C $0A $08 $0C $0A $08 $06 $0A $08 $06 $04
-.db $08 $06 $04 $00 $00 $28 $28 $28 $88 $28 $28 $28 $88 $28 $28 $28
-.db $88 $28 $28 $28
-
-; 6th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 60483 to 604A6 (36 bytes)
-_DATA_60483_:
-.db $13 $10 $01 $01 $0E $0C $0A $08 $06 $04 $02
-.dsb 10, $00
-.dsb 14, $3C
-.db $1E
-
-; 4th entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 604A7 to 6062B (389 bytes)
-_DATA_604A7_:
-.db $13 $C0 $00 $01 $01 $0F $0F $0E $0E $0E $0E $0E $0E
-.dsb 12, $0D
-.dsb 24, $0C
-.dsb 48, $0B
-.dsb 100, $0A
-.dsb 192, $00
-
-; Data from 6062C to 6062D (2 bytes)
-_DATA_6062C_:
-.db $3E $87
-
-; Pointer Table from 6062E to 6064B (15 entries, indexed by _RAM_DD13_MUSIC_NR)
-.dw _DATA_60BE2_ _DATA_61276_ _DATA_60666_ _DATA_6153E_ _DATA_61910_ _DATA_60666_ _DATA_60666_ _DATA_61CC2_
-.dw _DATA_61D0D_ _DATA_61D7A_ _DATA_60666_ _DATA_61E11_ _DATA_6203A_ _DATA_6224F_ _DATA_60666_
-
-; Data from 6064C to 6064D (2 bytes)
-.db $00 $00
-;THIS IS WHERE THE ROM SLIDES A BIT OFF COMPARED TO THE ORIGINAL!
-; Pointer Table from 6064E to 60663 (11 entries, indexed by unknown)
-_DATA_6064E_:
-.dw _DATA_61276_ _DATA_60162_ _DATA_601E6_ _DATA_604A7_ _DATA_6045F_ _DATA_60483_ _DATA_601FD_ _DATA_60259_
-.dw _DATA_6033A_ _DATA_60127_ _DATA_600E6_
-
-; Data from 60664 to 60665 (2 bytes)
-.db $00 $00
-
-; 3rd entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 60666 to 6066C (7 bytes)
-_DATA_60666_:
-.db $86 $9E $FE $00 $FE $9D $FF
-
-; 1st entry of Pointer Table from 60732 (indexed by unknown)
-; Data from 6066D to 606C9 (93 bytes)
-_DATA_6066D_:
-.db $0D $2C $01 $00
-.dsb 17, $01
-.db $0A $0A $0C $0C $0E $0E $0F $0F $0E $0E $0D $0D $0C $0C $0B $0B
-.db $0A $0A $09 $09 $08 $08 $07 $07 $06 $06 $03
-.dsb 17, $00
-.db $14 $28 $32 $3C
-.dsb 15, $FE
-.db $FC $FA $F8 $F6 $EC $EC $EC $EC $EC
-
-; 2nd entry of Pointer Table from 60732 (indexed by unknown)
-; Data from 606CA to 606DC (19 bytes)
-_DATA_606CA_:
-.db $0D $07 $01 $00 $01 $0C $0B $00 $00 $00 $00 $00 $14 $FB $FB $FB
-.db $FB $FB $FB
-
-; 3rd entry of Pointer Table from 60732 (indexed by unknown)
-; Data from 606DD to 6070B (47 bytes)
-_DATA_606DD_:
-.db $13 $15 $E0 $00 $01 $0F $0E $0E $0E $0D $0D $0C $0C $0C $0C $0C
-.db $0B $0B $0B $0B $0A $0A $09 $09 $08 $00 $F4 $0C $00 $F4 $0C $00
-.db $F8 $08 $00 $F8 $04 $04 $00 $04 $04 $00 $02 $02 $02 $02 $00
-
-; 4th entry of Pointer Table from 60732 (indexed by unknown)
-; Data from 6070C to 6071E (19 bytes)
-_DATA_6070C_:
-.db $13 $07 $00 $02 $01 $0C $07 $03 $03 $02 $02 $00 $00 $00 $00 $00
-.db $00 $00 $00
-
-; 5th entry of Pointer Table from 60732 (indexed by unknown)
-; Data from 6071F to 60731 (19 bytes)
-_DATA_6071F_:
-.db $13 $07 $80 $03 $01 $0C $07 $03 $03 $02 $02 $00 $00 $00 $00 $00
-.db $00 $00 $00
-
-; Pointer Table from 60732 to 6073B (5 entries, indexed by unknown)
-_DATA_60732_SOUNDFX_TABLE:
-.dw _DATA_6066D_ _DATA_606CA_ _DATA_606DD_ _DATA_6070C_ _DATA_6071F_
-
-
-; Data from 6073C to 60BE1 (1190 bytes)
-.incbin "HOTL_mod_DATA_6073C_.inc"
-
-; 1st entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 60BE2 to 61275 (1684 bytes)
-_DATA_60BE2_:
-.incbin "HOTL_mod_DATA_60BE2_.inc"
-
-; 1st entry of Pointer Table from 6064E (indexed by unknown)
-; Data from 61276 to 6153D (712 bytes)
-_DATA_61276_:	;THE TITLE SCREEN, AND THE GAME OVER MUSIC USES THIS DATA.
-.db $83 $37 $01 $30 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
-.db $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33
-.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30
-.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C
-.db $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33
-.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30 $0B $00 $25 $33
-.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C
-.db $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32
-.db $17 $00 $01 $33 $05 $00 $67 $30 $0B $00 $25 $33 $0B $00 $01 $32
-.db $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A
-.db $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
-.db $05 $00 $67 $30 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
-.db $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33
-.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30
-.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C
-.db $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33
-.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $2C $23 $00 $01 $33
-.db $23 $00 $01 $30 $17 $00 $01 $2B $24 $32 $05 $00 $1F $2E $05 $00
-.db $12 $00 $01 $30 $24 $32 $05 $00 $1E $00 $01 $33 $17 $00 $01 $3A
-.db $23 $00 $01 $37 $23 $00 $01 $33 $11 $00 $07 $2C $23 $00 $01 $33
-.db $23 $00 $01 $30 $17 $00 $01 $2B $24 $32 $05 $00 $1F $2E $05 $00
-.db $12 $00 $01 $30 $24 $32 $05 $00 $1E $00 $01 $33 $17 $00 $01 $3A
-.db $23 $00 $01 $37 $23 $00 $01 $33 $11 $00 $07 $30 $0B $00 $25 $33
-.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C
-.db $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32
-.db $17 $00 $01 $33 $05 $00 $67 $30 $0B $00 $25 $33 $0B $00 $01 $32
-.db $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A
-.db $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
-.db $05 $00 $67 $37 $23 $00 $01 $33 $0B $00 $19 $37 $0B $00 $0D $37
-.db $23 $00 $01 $33 $0B $00 $0D $33 $23 $00 $01 $35 $23 $00 $01 $33
-.db $11 $00 $13 $32 $17 $00 $01 $30 $47 $00 $01 $32 $11 $00 $07 $37
-.db $23 $00 $01 $33 $0B $00 $19 $37 $0B $00 $0D $37 $23 $00 $01 $33
-.db $0B $00 $0D $33 $23 $00 $01 $35 $23 $00 $01 $33 $11 $00 $13 $32
-.db $17 $00 $01 $30 $47 $00 $01 $32 $11 $00 $07 $30 $05 $00 $07 $30
-.db $0B $00 $01 $3C $0C $3A $05 $00 $06 $00 $31 $2C $05 $00 $07 $2C
-.db $0B $00 $01 $38 $0C $37 $05 $00 $06 $00 $19 $32 $17 $00 $01 $30
-.db $05 $00 $07 $30 $0B $00 $01 $3C $0C $3A $05 $00 $06 $00 $31 $38
-.db $05 $00 $07 $38 $0B $00 $0D $37 $0B $00 $0D $32 $1D $00 $07 $30
-.db $05 $00 $07 $30 $0B $00 $01 $3C $0C $3A $05 $00 $06 $00 $31 $2C
-.db $05 $00 $07 $2C $0B $00 $01 $38 $0C $37 $05 $00 $06 $00 $19 $32
-.db $17 $00 $01 $30 $05 $00 $07 $30 $0B $00 $01 $3C $0C $3A $05 $00
-.db $06 $00 $31 $38 $05 $00 $07 $38 $0B $00 $0D $37 $0B $00 $0D $32
-.db $1D $00 $07 $32 $23 $00 $01 $33 $23 $00 $01 $37 $17 $00 $01 $2C
-.db $23 $00 $01 $33 $23 $00 $01 $30 $17 $00 $01 $2B $5F $00 $01 $2E
-.db $2F $00 $01 $32 $29 $00 $00 $FF
-
-; 4th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 6153E to 6190F (978 bytes)
-_DATA_6153E_:
-.db $82 $33 $00 $30 $3C $00 $31 $00 $74 $2E $08 $32 $07 $00 $00 $00
-.db $01 $33 $00 $30 $3F $00 $0B $00 $A5 $30 $07 $00 $08 $37 $07 $00
-.db $01 $35 $07 $00 $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00
-.db $0F $33 $07 $00 $01 $30 $07 $00 $01 $2C $12 $00 $04 $33 $25 $00
-.db $01 $32 $1D $00 $0F $2F $0F $00 $01 $30 $00 $41 $06 $00 $08 $37
-.db $04 $00 $03 $00 $01 $35 $00 $3F $07 $00 $0B $00 $04 $3E $0B $00
-.db $05 $30 $00 $3F $06 $00 $08 $35 $04 $00 $03 $00 $01 $33 $00 $3E
-.db $07 $00 $0B $00 $04 $33 $00 $3C $07 $00 $01 $30 $07 $00 $00 $00
-.db $01 $2C $00 $43 $12 $00 $03 $00 $01 $33 $00 $41 $16 $00 $01 $3F
-.db $06 $00 $08 $00 $01 $32 $00 $3E $12 $00 $04 $3B $07 $00 $0F $00
-.db $01 $2F $00 $3E $0E $00 $00 $00 $01 $30 $00 $30 $0E $00 $01 $3C
-.db $07 $3A $03 $00 $05 $37 $03 $00 $04 $35 $03 $00 $04 $37 $04 $00
-.db $00 $00 $03 $00 $01 $3A $00 $30 $07 $00 $01 $3C $00 $2E $03 $00
-.db $0B $00 $01 $3F $07 $3C $03 $00 $04 $00 $08 $3C $07 $3F $04 $00
-.db $00 $00 $00 $00 $04 $41 $07 $2B $0F $00 $01 $3F $06 $00 $01 $3C
-.db $07 $00 $01 $3A $06 $00 $01 $3C $03 $00 $04 $00 $01 $3A $00 $2B
-.db $06 $00 $01 $37 $07 $00 $01 $29 $06 $00 $01 $35 $07 $00 $01 $33
-.db $07 $35 $03 $00 $05 $37 $03 $00 $03 $00 $01 $3A $07 $00 $01 $37
-.db $03 $00 $03 $00 $01 $3C $07 $00 $01 $3A $00 $30 $06 $00 $01 $30
-.db $07 $00 $01 $3C $06 $00 $01 $3A $07 $00 $01 $37 $06 $00 $01 $3C
-.db $07 $00 $01 $3A $03 $00 $03 $00 $01 $37 $00 $30 $07 $00 $00 $00
-.db $01 $3C $00 $2E $07 $3F $03 $00 $04 $00 $01 $41 $06 $00 $01 $3F
-.db $08 $3C $03 $00 $03 $00 $01 $3F $07 $00 $01 $41 $03 $00 $00 $00
-.db $04 $43 $07 $2B $07 $00 $01 $41 $07 $00 $01 $3F $07 $41 $03 $00
-.db $04 $00 $01 $43 $03 $00 $07 $00 $04 $46 $00 $2B $08 $48 $03 $00
-.db $04 $00 $01 $46 $00 $29 $03 $00 $03 $00 $01 $43 $07 $00 $01 $41
-.db $06 $00 $01 $3F $03 $00 $05 $3C $06 $00 $01 $3A $07 $00 $00 $00
-.db $01 $3C $0A $00 $05 $30 $06 $00 $08 $37 $07 $00 $01 $35 $07 $00
-.db $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00 $0F $33 $07 $00
-.db $01 $30 $07 $00 $01 $2C $12 $00 $04 $33 $25 $00 $01 $32 $1D $00
-.db $0F $2F $0F $00 $01 $30 $06 $00 $08 $37 $07 $00 $01 $35 $07 $00
-.db $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00 $0F $33 $07 $00
-.db $01 $30 $07 $00 $01 $2C $12 $00 $04 $33 $25 $00 $01 $32 $1D $00
-.db $0F $2F $0F $00 $01 $30 $1D $00 $01 $33 $1D $00 $01 $32 $2C $00
-.db $0F $33 $2D $37 $04 $00 $0B $35 $04 $00 $1A $00 $01 $38 $19 $00
-.db $04 $2C $1E $2B $04 $00 $0B $2C $04 $00 $0B $00 $01 $30 $1D $2C
-.db $04 $00 $0B $30 $04 $00 $0B $00 $01 $38 $00 $35 $15 $00 $08 $00
-.db $01 $37 $00 $33 $0E $00 $01 $38 $00 $32 $03 $00 $0B $00 $00 $00
-.db $01 $37 $00 $33 $19 $00 $13 $00 $01 $32 $00 $3A $0A $00 $04 $00
-.db $01 $30 $06 $00 $08 $37 $07 $00 $01 $35 $07 $00 $1F $30 $06 $00
-.db $08 $35 $07 $00 $01 $33 $07 $00 $0F $33 $07 $00 $01 $30 $07 $00
-.db $01 $2C $12 $00 $04 $33 $25 $00 $01 $32 $1D $00 $0F $2F $0F $00
-.db $01 $29 $0F $2C $03 $00 $04 $30 $03 $00 $04 $00 $01 $35 $07 $30
-.db $03 $00 $04 $00 $01 $35 $07 $30 $03 $00 $04 $00 $01 $35 $07 $38
-.db $03 $00 $05 $3C $03 $00 $04 $41 $03 $00 $22 $00 $01 $38 $06 $00
-.db $01 $3C $08 $3F $03 $00 $03 $00 $01 $41 $0F $3F $07 $00 $01 $3C
-.db $03 $00 $04 $38 $03 $00 $04 $00 $01 $3A $07 $3E $03 $00 $04 $3F
-.db $04 $00 $03 $00 $01 $41 $07 $3F $07 $00 $01 $3E $03 $00 $05 $3A
-.db $03 $00 $07 $00 $04 $29 $10 $2C $03 $00 $04 $30 $03 $00 $04 $00
-.db $01 $35 $07 $30 $03 $00 $04 $00 $01 $35 $07 $30 $03 $00 $04 $00
-.db $01 $35 $07 $38 $03 $00 $05 $3C $03 $00 $04 $41 $03 $00 $22 $00
-.db $01 $38 $06 $00 $01 $3C $08 $3F $03 $00 $03 $00 $01 $41 $0F $3F
-.db $07 $00 $01 $3C $03 $00 $04 $38 $03 $00 $04 $00 $01 $3A $07 $3E
-.db $03 $00 $04 $3F $04 $00 $03 $00 $01 $41 $07 $3F $07 $00 $01 $3E
-.db $03 $00 $05 $3A $03 $00 $07 $00 $04 $2C $16 $00 $01 $30 $16 $00
-.db $01 $2C $0E $00 $01 $33 $15 $00 $01 $30 $16 $00 $01 $2C $06 $00
-.db $01 $30 $07 $00 $01 $33 $15 $00 $01 $35 $16 $37 $04 $00 $0B $00
-.db $01 $3B $16 $3E $03 $00 $13 $00 $01 $3B $0E $00 $01 $2C $15 $00
-.db $01 $30 $16 $00 $01 $2C $0E $00 $01 $33 $15 $00 $01 $30 $16 $00
-.db $01 $2C $06 $00 $01 $30 $07 $00 $01 $33 $15 $00 $01 $35 $16 $37
-.db $04 $00 $0B $00 $01 $3B $16 $3E $03 $00 $13 $00 $01 $3B $0E $00
-.db $00 $FF
-
-; 5th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 61910 to 61CC1 (946 bytes)
-_DATA_61910_:
-.db $82 $24 $07 $00 $08 $24 $07 $00 $08 $24 $07 $00 $08 $24 $07 $00
-.db $01 $22 $07 $00 $01 $24 $06 $00 $08 $24 $07 $00 $08 $24 $07 $00
-.db $08 $24 $0F $00 $01 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00
-.db $08 $20 $07 $00 $08 $1F $07 $00 $08 $1F $07 $00 $08 $1F $07 $00
-.db $08 $1F $07 $00 $09 $24 $06 $00 $08 $24 $07 $00 $08 $24 $07 $00
-.db $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00 $09 $24 $06 $00
-.db $08 $24 $07 $00 $08 $24 $0F $00 $01 $20 $06 $00 $08 $20 $07 $00
-.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $1F $07 $00 $08 $1F $07 $00
-.db $08 $1F $07 $00 $08 $1F $07 $00 $08 $24 $07 $00 $08 $24 $07 $00
-.db $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00
-.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00 $01 $20 $06 $00
-.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00 $09 $1F $06 $00
-.db $08 $1F $07 $00 $09 $1F $06 $00 $08 $1F $07 $00 $09 $24 $06 $00
-.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00
-.db $01 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00
-.db $01 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00 $09 $20 $06 $00
-.db $09 $1F $06 $00 $08 $1F $07 $00 $09 $1F $06 $00 $09 $1F $06 $00
-.db $09 $1D $12 $00 $04 $1D $07 $00 $0F $1D $07 $00 $01 $1B $08 $1F
-.db $03 $00 $0B $00 $08 $1F $07 $00 $0F $1F $07 $00 $08 $20 $13 $00
-.db $04 $20 $07 $00 $10 $20 $06 $00 $09 $1F $0E $00 $08 $1F $07 $00
-.db $10 $1F $0E $00 $01 $1D $12 $00 $04 $1D $07 $00 $10 $1D $06 $00
-.db $01 $1B $08 $1F $03 $00 $0B $00 $08 $1F $07 $00 $10 $1F $06 $00
-.db $08 $20 $13 $00 $04 $20 $07 $00 $0F $20 $07 $00 $09 $1F $0E $00
-.db $08 $1F $07 $00 $10 $1F $0E $00 $01 $24 $06 $00 $08 $24 $07 $00
-.db $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00
-.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00 $01 $20 $06 $00
-.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00 $09 $1F $06 $00
-.db $08 $1F $07 $00 $09 $1F $06 $00 $08 $1F $07 $00 $09 $24 $06 $00
-.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00
-.db $01 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00
-.db $01 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00
-.db $09 $1F $06 $00 $08 $1F $07 $00 $09 $1F $06 $00 $08 $1F $07 $00
-.db $09 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $07 $00
-.db $09 $22 $06 $00 $08 $22 $07 $00 $08 $22 $07 $00 $09 $22 $06 $00
-.db $08 $27 $07 $00 $08 $27 $07 $00 $08 $27 $07 $00 $08 $27 $07 $00
-.db $08 $29 $07 $00 $08 $29 $07 $00 $09 $29 $06 $00 $08 $29 $07 $00
-.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00
-.db $09 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00
-.db $01 $24 $07 $00 $01 $1F $06 $00 $08 $1F $07 $00 $09 $1F $06 $00
-.db $09 $1F $06 $00 $09 $1D $06 $00 $08 $1D $07 $00 $08 $1D $07 $00
-.db $09 $22 $06 $00 $09 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00
-.db $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00 $08 $24 $07 $00
-.db $09 $24 $06 $00 $08 $24 $0F $00 $01 $20 $06 $00 $08 $20 $07 $00
-.db $08 $20 $07 $00 $08 $20 $07 $00 $09 $1F $06 $00 $08 $1F $07 $00
-.db $09 $1F $06 $00 $08 $1F $07 $00 $09 $29 $03 $00 $04 $29 $07 $00
-.db $01 $27 $06 $00 $01 $29 $07 $00 $1F $29 $03 $00 $04 $29 $07 $00
-.db $01 $27 $06 $00 $01 $29 $03 $00 $13 $29 $07 $00 $01 $27 $07 $00
-.db $01 $2C $03 $00 $04 $2C $07 $00 $01 $2B $06 $00 $01 $2C $07 $00
-.db $10 $2C $06 $00 $01 $2B $07 $00 $01 $2E $06 $00 $08 $2E $07 $00
-.db $08 $2E $07 $00 $01 $2C $07 $00 $01 $2B $0A $00 $04 $29 $04 $00
-.db $04 $29 $07 $00 $01 $27 $06 $00 $01 $29 $07 $00 $1F $29 $03 $00
-.db $04 $29 $07 $00 $01 $27 $06 $00 $01 $29 $03 $00 $13 $29 $07 $00
-.db $01 $27 $07 $00 $01 $2C $03 $00 $04 $2C $07 $00 $01 $2B $06 $00
-.db $01 $2C $07 $00 $10 $2C $06 $00 $01 $2B $07 $00 $01 $2E $06 $00
-.db $08 $2E $07 $00 $08 $2E $07 $00 $01 $2C $07 $00 $01 $2B $0A $00
-.db $04 $29 $31 $00 $04 $27 $07 $00 $01 $29 $30 $00 $04 $27 $08 $29
-.db $03 $00 $21 $00 $08 $27 $0F $00 $01 $1F $28 $00 $05 $1F $06 $00
-.db $09 $29 $30 $00 $04 $27 $07 $00 $01 $29 $30 $00 $04 $27 $08 $29
-.db $03 $00 $21 $00 $08 $27 $0F $00 $01 $1F $28 $00 $05 $1F $06 $00
-.db $08 $FF
-
-; 8th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 61CC2 to 61D0C (75 bytes)
-_DATA_61CC2_:
-.db $95 $01 $F4 $C7 $9C $87 $39 $87 $38 $9A $35 $9B $34 $74 $32 $09
-.db $34 $0A $35 $0A $34 $09 $32 $0A $31 $0A $39 $3A $35 $4D $31 $4D
-.db $34 $4E $32 $4D $34 $4D $35 $4D $37 $14 $3A $43 $00 $0A $3E $3A
-.db $40 $3A $3E $13 $40 $14 $41 $13 $40 $13 $3E $14 $39 $3A $39 $13
-.db $37 $3A $3C $13 $39 $3A $37 $27 $39 $9B $FF
-
-; 9th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 61D0D to 61D79 (109 bytes)
-_DATA_61D0D_:
-.db $95 $01 $F4 $12 $9D $88 $35 $13 $3C $13 $3B $61 $3F $AE $37 $13
-.db $3E $13 $3A $61 $3D $60 $3A $27 $39 $27 $32 $09 $31 $0A $32 $0A
-.db $34 $09 $35 $14 $32 $09 $31 $0A $32 $0A $34 $09 $35 $14 $37 $13
-.db $34 $4D $37 $61 $32 $0A $31 $09 $32 $0A $34 $0A $35 $13 $32 $0A
-.db $31 $09 $32 $0A $34 $09 $35 $14 $37 $13 $39 $4D $3A $14 $3D $4D
-.db $35 $3A $37 $3A $35 $13 $37 $14 $39 $13 $37 $13 $35 $14 $32 $3A
-.db $32 $13 $30 $3A $35 $13 $32 $3A $30 $27 $34 $9B $FF
-
-; 10th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 61D7A to 61E10 (151 bytes)
-_DATA_61D7A_:
-.db $95 $01 $F4 $7F $9D $89 $26 $26 $26 $13 $26 $14 $26 $26 $26 $14
-.db $26 $13 $26 $27 $26 $13 $26 $13 $26 $27 $26 $13 $26 $14 $26 $26
-.db $26 $14 $26 $13 $26 $27 $26 $13 $26 $13 $26 $27 $26 $13 $26 $13
-.db $26 $27 $26 $13 $26 $14 $26 $26 $26 $14 $26 $13 $26 $27 $26 $13
-.db $26 $13 $22 $27 $22 $13 $22 $14 $22 $26 $22 $14 $22 $13 $26 $27
-.db $26 $13 $26 $13 $26 $27 $26 $13 $26 $13 $22 $27 $22 $13 $22 $14
-.db $22 $26 $22 $14 $22 $13 $26 $27 $26 $13 $26 $13 $24 $27 $24 $13
-.db $24 $14 $22 $27 $22 $14 $22 $13 $21 $27 $21 $13 $21 $13 $1F $27
-.db $1F $13 $1F $13 $1D $27 $1D $13 $1D $14 $1C $27 $1C $14 $1C $13
-.db $21 $27 $21 $13 $21 $78 $94
-
-; 12th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 61E11 to 62039 (553 bytes)
-_DATA_61E11_:
-.db $95 $01 $F7 $16 $9E $89 $1A $09 $26 $0A $1A $0A $26 $0A $1A $0A
-.db $26 $0A $1A $0A $26 $0A $18 $0A $24 $0A $18 $0A $24 $0A $18 $0A
-.db $24 $0A $18 $0A $24 $0A $22 $0A $2E $09 $22 $0A $2E $0A $22 $0A
-.db $2E $0A $22 $0A $2E $0A $1F $0A $2B $0A $1F $0A $2B $0A $21 $0A
-.db $2D $0A $21 $0A $2D $0A $1A $0A $26 $0A $1A $09 $26 $0A $1A $0A
-.db $26 $0A $1A $0A $26 $0A $1A $0A $26 $0A $1A $0A $26 $0A $1A $0A
-.db $26 $0A $1A $0A $26 $0A $18 $0A $24 $0A $18 $0A $24 $09 $18 $0A
-.db $24 $0A $18 $0A $24 $0A $18 $0A $24 $0A $18 $0A $24 $0A $18 $0A
-.db $24 $0A $18 $0A $24 $0A $22 $0A $2E $0A $22 $0A $2E $0A $22 $09
-.db $2E $0A $22 $0A $2E $0A $1F $0A $2B $0A $1F $0A $2B $0A $1F $0A
-.db $2B $0A $1F $0A $2B $0A $21 $0A $2D $0A $21 $0A $2D $0A $21 $0A
-.db $2D $09 $21 $0A $2D $0A $21 $0A $2D $0A $1F $0A $2B $0A $1D $0A
-.db $29 $0A $1C $0A $28 $0A $1A $0A $1A $0A $1A $0A $1A $0A $1A $0A
-.db $1A $0A $1A $09 $1A $0A $1D $0A $1D $0A $1D $0A $1D $0A $1D $0A
-.db $1D $0A $1D $0A $1D $0A $22 $0A $22 $0A $22 $0A $22 $0A $22 $0A
-.db $22 $0A $22 $0A $22 $0A $21 $09 $21 $0A $21 $0A $21 $0A $21 $0A
-.db $21 $0A $21 $0A $21 $0A $26 $0A $26 $0A $26 $0A $26 $0A $24 $0A
-.db $24 $0A $24 $0A $24 $0A $22 $0A $22 $09 $22 $0A $22 $0A $1F $0A
-.db $1F $0A $1F $0A $1F $0A $21 $0A $21 $0A $21 $0A $21 $0A $1F $0A
-.db $1F $0A $1F $0A $1F $0A $1D $0A $1D $0A $1D $09 $1D $0A $1C $0A
-.db $1C $0A $1C $0A $1C $0A $1A $14 $1A $0A $1A $0A $1A $14 $1A $0A
-.db $1A $0A $1A $14 $1A $0A $1A $09 $1A $14 $1A $0A $1A $0A $1A $14
-.db $1A $0A $1A $0A $1A $14 $1A $0A $1A $0A $1A $14 $1A $0A $1A $0A
-.db $1A $13 $1A $0A $1A $0A $1F $14 $1F $14 $1F $14 $1F $0A $1F $05
-.db $21 $05 $22 $0A $21 $0A $1F $0A $1D $0A $1F $13 $1A $14 $1D $14
-.db $1D $14 $1D $14 $1D $0A $1D $05 $1F $05 $21 $0A $1F $0A $1D $0A
-.db $21 $0A $1F $27 $1F $05 $21 $05 $22 $0A $1F $14 $21 $05 $22 $05
-.db $24 $0A $21 $14 $22 $05 $24 $05 $26 $0A $24 $05 $26 $05 $27 $0A
-.db $26 $14 $2A $14 $2B $13 $29 $0F $27 $05 $26 $0A $24 $0A $22 $14
-.db $21 $14 $22 $0A $21 $0A $1F $28 $1F $0A $1F $09 $1F $0A $1F $0A
-.db $1D $0A $1D $0A $1D $0A $1D $0A $1C $0A $1C $0A $1C $0A $1C $0A
-.db $1B $0A $1B $0A $1B $0A $1B $0A $1A $0A $1A $0A $1A $13 $1A $0A
-.db $1A $0A $1A $14 $21 $0A $21 $0A $21 $14 $21 $0A $21 $0A $21 $14
-.db $21 $14 $21 $0A $21 $09 $21 $14 $21 $0A $21 $0A $21 $14 $21 $0A
-.db $21 $0A $21 $14 $21 $0A $21 $0B $94
-
-; 13th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 6203A to 6224E (533 bytes)
-_DATA_6203A_:
-.db $95 $01 $F7 $3F $A0 $8A $39 $09 $39 $05 $39 $05 $39 $14 $39 $0A
-.db $39 $05 $39 $05 $39 $14 $3C $0A $3C $05 $3C $05 $3C $3C $39 $0A
-.db $39 $04 $39 $05 $39 $14 $39 $0A $39 $05 $39 $05 $39 $14 $3E $0A
-.db $3E $05 $3E $05 $3E $14 $40 $0A $40 $05 $40 $05 $40 $14 $32 $05
-.db $34 $05 $35 $05 $34 $05 $35 $04 $37 $05 $35 $05 $37 $05 $39 $28
-.db $32 $05 $34 $05 $35 $05 $34 $05 $35 $05 $37 $05 $35 $05 $37 $05
-.db $39 $28 $32 $05 $34 $05 $35 $05 $34 $05 $35 $05 $37 $05 $35 $04
-.db $37 $05 $39 $28 $32 $05 $34 $05 $35 $05 $34 $05 $35 $05 $37 $05
-.db $35 $05 $37 $05 $39 $28 $3E $1E $3C $1D $3A $14 $3E $1E $3C $1E
-.db $3E $14 $40 $1E $41 $1D $3E $14 $40 $5A $39 $03 $37 $03 $35 $04
-.db $32 $45 $45 $04 $43 $03 $41 $03 $3E $0A $45 $04 $43 $03 $41 $03
-.db $3E $32 $39 $03 $37 $04 $35 $03 $32 $45 $45 $04 $43 $03 $41 $03
-.db $3E $0A $45 $04 $43 $03 $41 $03 $3E $28 $43 $03 $44 $02 $45 $05
-.db $48 $07 $43 $03 $44 $05 $45 $05 $48 $02 $43 $03 $44 $05 $45 $02
-.db $48 $03 $45 $02 $44 $03 $43 $05 $41 $05 $3E $1E $39 $05 $3C $05
-.db $3E $05 $41 $06 $3E $04 $3C $05 $3E $02 $3C $04 $39 $05 $37 $0A
-.db $39 $17 $40 $05 $41 $0A $40 $0A $3E $0A $40 $0A $41 $0A $40 $0A
-.db $3E $0A $40 $0A $41 $0A $40 $09 $41 $0A $43 $0A $41 $0A $43 $0A
-.db $45 $0A $2D $1E $2B $1E $29 $14 $28 $1E $26 $1D $24 $14 $26 $1E
-.db $28 $1E $29 $14 $2B $4F $3A $0A $41 $0A $41 $0A $41 $0A $3A $0A
-.db $41 $0A $41 $0A $41 $0A $37 $0A $3E $0A $3E $0A $3E $0A $37 $0A
-.db $3E $09 $3E $0A $3E $0A $35 $0A $3C $0A $3C $0A $3C $0A $35 $0A
-.db $3C $0A $3C $0A $3C $0A $35 $0A $3C $0A $3C $0A $3C $0A $37 $0A
-.db $3E $0A $3E $0A $3E $09 $37 $05 $3A $05 $3E $05 $3A $05 $37 $14
-.db $37 $05 $3A $05 $3E $05 $3A $05 $39 $14 $37 $05 $3A $05 $3E $05
-.db $3A $05 $37 $14 $37 $05 $3A $05 $3E $05 $3A $05 $39 $14 $3A $13
-.db $39 $0F $37 $05 $35 $0A $33 $0A $32 $0A $30 $0A $2D $14 $2E $0A
-.db $2D $0A $2B $28 $37 $05 $3A $05 $3E $04 $3A $05 $37 $14 $37 $05
-.db $3A $05 $3E $05 $3A $05 $37 $14 $37 $05 $3A $05 $3E $05 $3A $05
-.db $37 $14 $37 $05 $3A $05 $3E $05 $3A $05 $3D $14 $36 $0A $36 $0A
-.db $36 $13 $36 $0A $36 $0A $36 $14 $37 $0A $37 $0A $37 $14 $37 $0A
-.db $37 $0A $37 $14 $37 $0A $37 $0A $34 $0A $34 $09 $31 $0A $31 $0A
-.db $34 $0A $34 $0A $37 $0A $37 $0A $34 $0A $34 $0A $31 $0A $31 $0A
-.db $34 $0A $34 $0B $FF
-
-; 14th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
-; Data from 6224F to 623E7 (409 bytes)
-_DATA_6224F_:
-.db $95 $01 $F7 $54 $A2 $8A $32 $09 $32 $05 $32 $05 $32 $14 $32 $0A
-.db $32 $05 $32 $05 $32 $14 $35 $0A $35 $05 $35 $05 $35 $3C $32 $0A
-.db $32 $04 $32 $05 $32 $14 $32 $0A $32 $05 $32 $05 $32 $14 $37 $0A
-.db $37 $05 $37 $05 $37 $14 $39 $0A $39 $05 $39 $05 $39 $14 $32 $3B
-.db $30 $0A $32 $0A $2D $50 $32 $3B $32 $05 $34 $05 $35 $0A $34 $1E
-.db $32 $1E $34 $14 $35 $1E $34 $1D $32 $14 $37 $1E $35 $1E $37 $14
-.db $39 $1E $3A $1D $37 $14 $39 $0A $3A $0A $37 $0A $39 $0A $35 $0A
-.db $37 $0A $34 $0A $35 $14 $3C $03 $3B $03 $39 $04 $35 $45 $48 $04
-.db $47 $03 $45 $03 $41 $0A $48 $04 $47 $03 $45 $03 $41 $32 $3C $03
-.db $3B $04 $39 $03 $35 $45 $48 $04 $47 $03 $45 $03 $41 $0A $48 $04
-.db $47 $03 $45 $03 $41 $28 $32 $28 $34 $28 $35 $27 $37 $28 $39 $28
-.db $3A $14 $37 $14 $39 $27 $3D $28 $26 $1E $24 $1E $22 $14 $21 $1E
-.db $1F $1D $1D $14 $1F $1E $21 $1E $22 $14 $24 $4F $2B $0A $32 $0A
-.db $32 $0A $32 $0A $33 $0A $32 $0A $32 $0A $32 $0A $37 $0A $32 $0A
-.db $37 $0A $39 $0A $3A $0A $39 $09 $37 $0A $37 $0A $39 $14 $39 $14
-.db $39 $14 $39 $0A $39 $05 $3A $05 $3C $0A $3A $0A $39 $0A $3C $0A
-.db $3A $27 $3E $05 $3C $05 $3A $0A $3A $14 $3C $05 $3A $05 $39 $0A
-.db $36 $14 $37 $0A $3E $14 $3E $14 $3E $0A $3F $14 $3E $13 $3C $0F
-.db $3A $05 $39 $0A $37 $0A $35 $14 $33 $14 $35 $0A $33 $0A $32 $28
-.db $3D $05 $3E $05 $43 $04 $3D $05 $3C $05 $3A $05 $37 $05 $39 $05
-.db $3A $05 $39 $05 $37 $05 $35 $05 $32 $05 $35 $05 $37 $0A $39 $05
-.db $3A $05 $39 $05 $37 $05 $39 $05 $37 $05 $35 $05 $32 $19 $39 $14
-.db $39 $0A $39 $0A $39 $13 $39 $0A $39 $0A $39 $14 $3D $0A $3D $0A
-.db $3D $14 $40 $0A $40 $0A $40 $14 $2D $0A $2D $0A $31 $0A $31 $09
-.db $34 $0A $34 $0A $39 $0A $39 $0A $3D $0A $3D $0A $40 $0A $40 $0A
-.db $45 $0A $45 $0A $49 $0A $49 $0B $FF
-
-_LABEL_623E8_PREP_MUS_BANK:
-	ld hl, _RAM_DD12_MUS_ENA
-	ld de, _RAM_DD12_MUS_ENA + 1
-	ld (hl), $00
-	ld bc, $010F
-	ldir
-	ld ix, _RAM_DD42_SOUND
-	ld de, $001C
-	ld (ix+0), $00
-	add ix, de
-	ld (ix+0), $01
-	add ix, de
-	ld (ix+0), $02
-	add ix, de
-	ld (ix+0), $03
-	add ix, de
-	ld (ix+0), $00
-	add ix, de
-	ld (ix+0), $01
-	add ix, de
-	ld (ix+0), $02
-	add ix, de
-	ld (ix+0), $03
-	ret
-
-_LABEL_6242B_SET_MUS:
-	push de
-	push bc
-	push hl
-	push ix
-	push iy
-	call +
-	pop iy
-	pop ix
-	pop hl
-	pop bc
-	pop de
-	ret
-
-+:
-	ld (_RAM_DD13_MUSIC_NR), a
-	ld a, (_RAM_DD13_MUSIC_NR)
-	ld iy, _RAM_DD32_SOUND;$DD32
-	cp $FF
-	jp z, _LABEL_62549_
-	dec a
-	call _LABEL_624D0_
-	ld a, $01
-	ld (_RAM_DD12_MUS_ENA), a
-	ld a, (_RAM_DD13_MUSIC_NR)
-	dec a
-	add a, a
-	add a, a
-	add a, a
-	ld e, a
-	ld d, $00
-	ld hl, _DATA_6062C_
-	add hl, de
-	ex de, hl
-	ld hl, $864A
-	sbc hl, de
-	jp c, _LABEL_624D0_
-	ex de, hl
-	ld ix, _RAM_DD42_SOUND
-	ld b, $04
--:
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	inc hl
-	ld (ix+12), e
-	ld (ix+13), d
-	ld (ix+10), $01
-	ld de, $001C
-	add ix, de
-	djnz -
-	ret
-
-_LABEL_62489_PLAYSFX:	;This is the same, just saving more registers.
-	push bc
-	push de
-	push hl
-_LABEL_6248C_PLAYSFX:	;We come here from the pretty convincing sound effect init part.
-	push ix
-	push iy
-	call +
-	pop iy
-	pop ix
-	pop hl
-	pop de
-	pop bc
-	ret
-
-+:
-	ld iy, _RAM_DD22_;$DD22
-	ld ix, _RAM_DDB2_ ;$DDB2	;Fixed some RAM stuff here. If the vals are changed, this would look bad. Also: CHANGED!
-	ld (_RAM_DD15_), a
-	dec a
-	bit 7, a
-	jp nz, _LABEL_62502_
-	add a, a
-	ld e, a
-	ld d, $00	;DE will be the sound nr.
-	ld hl, _DATA_60732_SOUNDFX_TABLE	;Load the source of the sound effects.
-	add hl, de	;Yup, add the 'index' to the HL source.
-	ex de, hl
-	ld hl, $873B
-	sbc hl, de
-	ret c
-	ex de, hl
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	ex de, hl
-	ld ix, _RAM_DDEA_
-	bit 2, (hl)
-	jp z, _LABEL_62520_
-	ld ix, _RAM_DE06_
-	jp _LABEL_62520_
-
-_LABEL_624D0_:
-	ld ix, _RAM_DD42_SOUND
-	ld b, $04
-	ld hl, _RAM_DD3A_
-	ld de, $001C
-	xor a
--:
-	ld (hl), a
-	inc hl
-	ld (ix+5), a
-	ld (ix+14), a
-	ld (ix+18), a
-	ld (ix+15), a
-	ld (ix+21), a
-	ld (ix+22), a
-	ld (ix+26), a
-	ld (ix+6), a
-	add ix, de
-	djnz -
-	ld (_RAM_DD16_), a
-	ld (_RAM_DD12_MUS_ENA), a
-	ret
-
-_LABEL_62502_:
-	ld b, $04
-	ld ix, _RAM_DDB2_
-	ld hl, _RAM_DD2A_
-	ld de, $001C
--:
-	ld (hl), $00
-	inc hl
-	ld a, (ix+5)
-	inc a
-	jr z, +
-	ld (ix+5), $00
-+:
-	add ix, de
-	djnz -
-	ret
-
-_LABEL_62520_:
-	ld (ix+6), $00
-	ld (ix+3), l
-	ld (ix+4), h
-	ld a, (hl)
-	inc hl
-	ld (ix+7), a
-	ld a, (hl)
-	inc hl
-	ld (ix+8), a
-	ld a, (hl)
-	inc hl
-	ld (ix+1), a
-	ld a, (hl)
-	inc hl
-	ld (ix+2), a
-	ld a, (hl)
-	ld (ix+5), a
-	ld a, (_RAM_DD15_)
-	ld (ix+9), a
-	ret
-
-_LABEL_62549_:	;This is also controls the volumes of the channels, but more things are needed to be checked. Whatever values are given, the routine does not really do anything differently.
-	ld a, $10
-	ld (_RAM_DD16_), a
-	ld a, c
-	ld (_RAM_DD19_), a
-	ld a, $00
-	ld (_RAM_DD17_), a
-	ret
-
-_LABEL_62558_MUSIC_VOL_ADJST:	;This will change volume levels, and fade the sound out as well. If this is not running, then for example the title screen music will also play on the character description screens as well.
-	ld a, (_RAM_DD16_)
-	and a
-	ret z
-	ld a, (_RAM_DD17_)
-	dec a
-	ld (_RAM_DD17_), a
-	jp p, +
-	ld a, (_RAM_DD19_)
-	ld (_RAM_DD17_), a
-	ld a, (_RAM_DD16_)
-	dec a
-	ld (_RAM_DD16_), a
-	jr nz, +
-	xor a
-	ld c, a
-	jp _LABEL_6242B_SET_MUS
-
-+:
-	ld hl, _RAM_DD3A_
-	ld b, $03
---:
-	ld d, (hl)
-	ld a, (_RAM_DD16_)
-	ld e, a
-	xor a
-	dec e
-	jp m, +
--:
-	add a, d
-	dec e
-	jp p, -
-+:
-	srl a
-	srl a
-	srl a
-	srl a
-	ld (hl), a
-	inc hl
-	djnz --
-	ret
-
-_LABEL_6259C_PREPSOUND_VALS:
-	ld a, (ix+5)
-	and a
-	jp z, _LABEL_6263B_
-	inc a
-	jp z, _LABEL_6263B_
-	ld l, (ix+3)
-	ld h, (ix+4)
-	ld a, (ix+6)
-	add a, $05
-	ld e, a
-	ld d, $00
-	add hl, de
-	ld a, (hl)
-	cp $FE
-	jr nz, +
-	inc (ix+6)
-	inc (ix+6)
-	inc hl
-	ld a, (hl)
-	push ix
-	push bc
-	call _LABEL_62489_PLAYSFX
-	pop bc
-	pop ix
-	jr _LABEL_6259C_PREPSOUND_VALS
-
-+:
-	cp $FF
-	jr nz, +
-	ld (ix+6), $00
-	jr _LABEL_6259C_PREPSOUND_VALS
-
-+:
-	ld c, a
-	ld e, (ix+0)
-	ld d, $00
-	push iy
-	add iy, de
-	ld (iy+8), c
-	pop iy
-	ld a, c
-	and a
-	jr nz, +
-	ld (ix+5), $00
-	jr _LABEL_6263B_
-
-+:
-	ld e, (ix+8)
-	ld d, $00
-	add hl, de
-	ld a, (ix+0)
-	cp $03
-	jr z, ++
-	ld e, (hl)
-	ld d, $00
-	bit 7, e
-	jr z, +
-	dec d
-+:
-	push hl
-	ld l, (ix+1)
-	ld h, (ix+2)
-	ld a, l
-	or h
-	jr z, +
-	add hl, de
-	ld (ix+1), l
-	ld (ix+2), h
-+:
-	pop hl
-	ld e, (ix+0)
-	sla e
-	ld d, $00
-	push iy
-	add iy, de
-	ld a, (ix+1)
-	ld (iy+0), a
-	ld a, (ix+2)
-	ld (iy+1), a
-	pop iy
-	jr +++
-
-++:
-	ld a, (hl)
-	ld (iy+6), a
-+++:
-	inc (ix+6)
-_LABEL_6263B_:
-	ld de, $001C
-	add ix, de
-	dec b
-	jp nz, _LABEL_6259C_PREPSOUND_VALS
-	ret
-
-_LABEL_62645_SOUND_ENGINE:
-	push af
-	push bc
-	push de
-	push hl
-	push ix
-	push iy				;SAVE ALL REGISTERS ON STACK.
-	ld a, $00;(_RAM_DE23_CONSOLE_REGION)	;CHECK THE CONSOLE REGION. disabled check, there's no need for this now.
-	and a
-	jr z, _LABEL_62660_SOUND_MAIN			;JUMP THERE IF CONSOLE IS PAL REGION.
-	ld hl, _RAM_DE24_NTSC_COMP			;OTHERWISE IT'S NTSC.
-	inc (hl)
-	ld a, (hl)
-	cp $06				;SO, IT SEEMS WE COMPENSATE FOR EVERY SIXT FRAME, SINCE PAL IS 50HZ.
-	jr nz, _LABEL_62660_SOUND_MAIN		;IF WE ARE NOT IN THE SIXTH FRAME, THEN WE NEED TO DO THE OTHER FIVE.
-	ld (hl), $00			;WE WERE IN THE SIXTH, RESET THE EXTRA COUNTER.
-	jr +				;AND EXIT THE ROUTINE THERE.
-
-_LABEL_62660_SOUND_MAIN:		;MAIN PART OF THE SOUND ENGINE.
-	call _LABEL_6286E_INIT_SOUND	;We have to init the sound engine first.
-	ld iy, _RAM_DD32_SOUND
-	ld ix, _RAM_DD42_SOUND		;These are used for playback.
-	ld b, $04			;How many channels are we going to use.
-	call _LABEL_6259C_PREPSOUND_VALS		;This silences the music, if commented out.
-	ld iy, $DD22			
-	ld ix, _RAM_DDEA_		
-	ld b, $02			;Sound channels for the sound fx.
-	call _LABEL_6259C_PREPSOUND_VALS		;This silences out the sound effect, if commented out.
-	call _LABEL_62558_MUSIC_VOL_ADJST ;So, you give two index values, then shoot these, and the code will play them later.
-	call ++
-+:
-	pop iy
-	pop ix
-	pop hl
-	pop de
-	pop bc
-	pop af
-	ret				;RESTORE THE REGISTER VALUES, AND GO ON.
-
-++:	;This is some sound output part, but i'm not yet ready to dissect this. Yet I have a faint clue what this is.
-	ld iy, _RAM_DD22_
-	ld ix, $DD42
-	ld a, (iy+16)
-	ld (_RAM_DD18_SOUND_NOTE), a
-	ld a, (iy+17)
-	ld e, $80
-	call _LABEL_6270C_OUTPUT_SOUND
-	ld a, (iy+24)
-	and $0F
-	xor $9F
-	out (Port_PSG), a
-	ld bc, $001C
-	add ix, bc
-	ld a, (iy+18)
-	ld (_RAM_DD18_SOUND_NOTE), a
-	ld a, (iy+19)
-	ld e, $A0
-	call _LABEL_6270C_OUTPUT_SOUND
-	ld a, (iy+25)
-	and $0F
-	xor $BF
-	out (Port_PSG), a
-	add ix, bc
-	ld e, $04
-	call _LABEL_6272F_3RDCHANNEL
-	ld (_RAM_DD18_SOUND_NOTE), a
-	ld e, $05
-	call _LABEL_6272F_3RDCHANNEL
-	ld e, $C0
-	call _LABEL_6270C_OUTPUT_SOUND
-	ld e, $0A
-	call _LABEL_6272F_3RDCHANNEL
-	and $0F
-	xor $DF
-	out (Port_PSG), a
-	add ix, bc
-	ld e, $06
-	call _LABEL_6272F_3RDCHANNEL
-	and $07
-	or $E0
-	ld e, a
-	ld a, (_RAM_DD14_SFX_PLAY)
-	cp e
-	jr z, +		;Oh! This part is actually controls the sound effects, and whenever this equals, the sound effect is not playing. Otherwise we have to load and play a sound effect.
-	ld a, e
-	ld (_RAM_DD14_SFX_PLAY), a
-	out (Port_PSG), a
-+:
-
-	ld e, $0B
-	call _LABEL_6272F_3RDCHANNEL
-	and $0F
-	xor $0F
-	or $F0
-	out (Port_PSG), a
-	ret
-
-_LABEL_6270C_OUTPUT_SOUND:
-	ld h, a
-	ld a, (_RAM_DD18_SOUND_NOTE)
-	ld l, a
-	srl h
-	rr l
-	srl h
-	rr l
-	ld a, l
-	and $0F
-	or e
-	out (Port_PSG), a
-	srl h
-	rr l
-	srl h
-	rr l
-	srl l
-	srl l
-	ld a, l
-	out (Port_PSG), a
-	ret
-
-_LABEL_6272F_3RDCHANNEL:	;Messes with the music channels, that's what I can see.
-	push iy
-	ld d, $00
-	add iy, de
-	ld d, (iy+16)		;This looks like the third channel's frequency.
-	ld a, (ix+117)		;This messes with the third channel's time for how long an instrument is playing.
-	;Wtf with these indexes? 117 really this was necessary?
-	and a
-	jr z, +
-	inc a
-	jr z, +
-	ld d, (iy+0)
-+:
-	pop iy
-	ld a, d
-	ret
-
-_LABEL_62748_LOAD_NOTES:	;THIS LOOKS LIKE IT LOADS THE NOTES TO EACH CHANNEL, AND THEY RUN BEFORE A LEVER ACTAUALLY LOADS.
-	push ix
-	pop iy	;THESE NEEDED TO BE SAVED, THAT'S TRUE.
-	ld a, (ix+21)	;THIS IS DD42+21=DD57
-	and a
-	jr z, +
-	ld de, $0008
-	add iy, de
-+:
-	ld l, (iy+12)
-	ld h, (iy+13)
-	ld e, (iy+14)
-	ld d, (iy+18)
-	add hl, de
-	bit 7, (hl)
-	jr Nz, +
-	inc de
-	inc de
-	ld (iy+14), e
-	ld (iy+18), d
-	ret
-
-+:	;THIS IS SOME NOTE HANDLING, I'M SURE. lATER ON, THE MUSIC FORMAT MIGHT BE ALSO DISASSEMBLED, BUT NOT FOR NOW.
-	ld a, (hl)
-	cp $94
-
-	jp z, _LABEL_627CC_
-	cp $95
-	jp z, _LABEL_627E1_LOAD_NOTE_LEN
-	cp $9D
-	jp z, _LABEL_62810_LOAD_NEXT__MUS_SEGMENT
-	cp $9E
-	jp z, _LABEL_62837_LOAD_INSTR
-	cp $FF
-	jp z, _LABEL_6285B_LOOP_MUSIC
-	cp $FE
-	jp z, _LABEL_62866_
-	add a, a
-	ld e, a
-	ld d, $00
-	ld hl, _DATA_6064E_
-	add hl, de
-	ex de, hl
-	ld hl, $8662
-	sbc hl, de
-	jr nc, +
-	ld de, _DATA_6064E_
-+:
-	ex de, hl
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	ex de, hl
-	push bc
-	push iy
-	ld iy, $DD32
-	call _LABEL_62520_
-	ld (ix+9), $FF
-	pop iy
-	pop bc
-	ld a, (iy+14)
-	add a, $01
-	ld (iy+14), a
-	ld a, (iy+18)
-	adc a, $00
-	ld (iy+18), a
-	jp _LABEL_62748_LOAD_NOTES
-
-_LABEL_627CC_:	;Decreases ome RAM value, maybe this loads the song lenghts or something. I don't see to be used in normal gameplay so far, but since this is decoded, i'm sure the code reaches it sometimes.
-	ld (iy+14), $00
-	ld (iy+18), $00
-	dec (ix+11) ;dec
-	jp nz, _LABEL_62748_LOAD_NOTES
-	ld (ix+21), $00
-	jp _LABEL_62748_LOAD_NOTES
-
-_LABEL_627E1_LOAD_NOTE_LEN:	;Note lenghts and things are getting this way from the song data.
-	inc hl
-	ld a, (hl)
-	ld (ix+11), a
-	inc hl
-	ld a, (hl)
-	ld (ix+25), a
-	inc hl
-	ld a, (hl)
-	ld (ix+20), a
-	inc hl
-	ld a, (hl)
-	ld (ix+21), a
-	ld a, (ix+14)
-	add a, $05
-	ld (ix+14), a
-	ld a, (ix+18)
-	adc a, $00
-	ld (ix+18), a
-	ld (ix+22), $00
-	ld (ix+26), $00
-	jp _LABEL_62748_LOAD_NOTES
-
-_LABEL_62810_LOAD_NEXT__MUS_SEGMENT:	;This loads the next segment in the song.
-	dec (iy+15)
-	jr nz, +
-	ld a, (iy+14)
-	add a, $01
-	ld (iy+14), a
-	ld a, (iy+18)
-	adc a, $00
-	ld (iy+18), a
-	jp _LABEL_62748_LOAD_NOTES
-
-+:
-	ld a, (iy+16)
-	ld (iy+14), a
-	ld a, (iy+19)
-	ld (iy+18), a
-	jp _LABEL_62748_LOAD_NOTES
-
-_LABEL_62837_LOAD_INSTR:	;This seems like a "note prepare" for the next song.
-
-	ld a, (iy+14)
-	add a, $02
-	ld (iy+14), a
-	ld a, (iy+18)
-	adc a, $00
-	ld (iy+18), a
-	ld a, (iy+14)
-	ld (iy+16), a
-	ld a, (iy+18)
-	ld (iy+19), a
-	inc hl
-	ld a, (hl)
-	ld (iy+15), a
-	jp _LABEL_62748_LOAD_NOTES
-
-_LABEL_6285B_LOOP_MUSIC:		;This restarts the music, once it loops.
-	pop bc
-	pop bc
-	ld a, (_RAM_DD13_MUSIC_NR)
-	call _LABEL_6242B_SET_MUS
-	jp _LABEL_62660_SOUND_MAIN
-
-_LABEL_62866_:
-	pop bc
-	pop bc
-	call _LABEL_624D0_
-	jp _LABEL_62660_SOUND_MAIN
-
-_LABEL_6286E_INIT_SOUND:	;THIS IS THE FIRST THING WE DO AFTER THE MAIN SOUND ROUTINE IS ON.
-	ld a, (_RAM_DD12_MUS_ENA)
-	and a
-	ret z	;IF WE HAVE NOT ENABLED MUSIC\SOUND, THEN JUST RETURN.
-	ld ix, _RAM_DD42_SOUND	;THIS LOOKS LIKE THE BEGINNING OF THE SOUND VARIABLES.
-	ld b, $04		;HOW MANY SOUND CHANNELS WE HAVE.
---:		;WE DECREMENT THE MUSIC TIMERS HERE.
-	dec (ix+10)	;THIS IS DD4C, THE FIRST CHANNEL'S TIMER.
-	jr nz, _LABEL_628B2_CALC_CH_ADDRESS	;IF THE TIMER IS NOT EXPIRED, JUMP AHEAD AND GET THE OTHER CHANNEL'S ADDRESSES, AND DECREASE THEIR TIMER AS WELL WHEN THE LOOP IS BACK.
--:
-	call _LABEL_62748_LOAD_NOTES	;LOAD THE INIT. NOTES. THIS IS ALSO USED AT THE BEGINNING OF LEVELS, AS FAR AS I'VE NOTICED.
-	ld a, (hl)
-	and a
-	jr z, +	;EITHER Z OR NZ, DOES NOT REALLY MATTER FROM THE ENGINE'S STANDPOINT.
-	cp $7F
-	jr z, ++
-	add a, (iy+17)
-+:	;DOES NOT MATTER, BUT THE BELOW IS STILL USED.
-	add a, a
-	ld e, a
-	ld d, $00
-	ld iy, _DATA_60000_	;MY GUESS FOR THIS IS THAT IT'S THE INSTRUMENTS THE MUSIC USES. AT THE MOMENT, I DON'T WANT TO 
-	add iy, de
-	ld e, (iy+0)
-	ld d, (iy+1)
-	ld (ix+2), d
-	ld (ix+1), e
-	inc hl
-	ld a, (hl)
-	and a
-	jr z, -
-	ld (ix+10), a
-	ld (ix+6), $00
-	ld (ix+5), $01
-_LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
-	ld de, $001C	;I LIKE HOW THE ADDRESSES ARE SCATTERED AROUND, LIKE THESE.
-	add ix, de	;DD4C+1C=DD68, THIS IS THE SECOND CHANNEL'S TIMER.
-			;DD84 IS THE THIRD.
-			;DDA0 IS THE NOISE.
-	djnz --
-	ret
-
-++:
-	inc hl
-	ld a, (hl)
-	and a
-	jr z, -
-	ld (ix+10), a
-	jr _LABEL_628B2_CALC_CH_ADDRESS
+.inc "/media/work/devver/disas/HOTL/anotherexam/PSGlib/src/PSGlib.inc"
+;
+;; Data from 60000 to 600E5 (230 bytes)
+;_DATA_60000_:	;THESE MAY BE THE INSTRUMENT DATAS.
+;.dsb 34, $00
+;.db $E4 $0F $00 $0F $29 $0E $5D $0D $9C $0C $E7 $0B $3C $0B $9B $0A
+;.db $02 $0A $73 $09 $EB $08 $6B $08 $F2 $07 $80 $07 $14 $07 $AE $06
+;.db $4E $06 $F4 $05 $9E $05 $4D $05 $01 $05 $B9 $04 $75 $04 $35 $04
+;.db $F9 $03 $C0 $03 $8A $03 $57 $03 $27 $03 $FA $02 $CF $02 $A7 $02
+;.db $81 $02 $5D $02 $3B $02 $1B $02 $FC $01 $E0 $01 $C5 $01 $AC $01
+;.db $94 $01 $7D $01 $68 $01 $53 $01 $40 $01 $2E $01 $1D $01 $0D $01
+;.db $FE $00 $F0 $00 $E2 $00 $D6 $00 $CA $00 $BE $00 $B4 $00 $AA $00
+;.db $A0 $00 $97 $00 $8F $00 $87 $00 $7F $00 $78 $00 $71 $00 $6B $00
+;.db $65 $00 $5F $00 $5A $00 $55 $00 $50 $00 $4C $00 $47 $00 $43 $00
+;.db $40 $00 $3C $00 $39 $00 $35 $00 $32 $00 $30 $00 $2D $00 $2A $00
+;.db $28 $00 $26 $00 $24 $00 $22 $00 $20 $00 $1E $00 $1C $00 $1B $00
+;.db $19 $00 $18 $00 $16 $00 $15 $00 $14 $00 $13 $00 $12 $00 $11 $00
+;.db $10 $00 $0F $00
+;
+;; 11th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 600E6 to 60126 (65 bytes)
+;_DATA_600E6_:
+;
+;.db $13 $1E $01 $00 $01 $0C $0C $0C $0B $0B $0B $0A $0A $0A $09 $09
+;.db $09 $08 $08 $08 $08 $07 $07 $07 $07 $07 $07 $06 $06 $06 $06 $05
+;.db $05 $04 $00 $00 $00 $FF $01 $FE $02 $00 $02 $FE $02 $FF $01 $02
+;.db $FE $FF $01 $02 $FE $01 $FF
+;.dsb 10, $00
+;
+;; 10th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 60127 to 60161 (59 bytes)
+;_DATA_60127_:
+;.db $13 $1B $01 $00 $01 $0E $0E $0D $0C $0B $0B $0A $0A $0A $0A $09
+;.db $09 $09 $09 $09 $08 $08 $07 $07 $06 $06 $05 $04 $03 $02 $01
+;.dsb 28, $00
+;
+;; 2nd entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 60162 to 601E5 (132 bytes)
+;_DATA_60162_:
+;.db $13 $40 $01 $01 $0E $0E $0E $0E $0D $0D $0D $0D $0C $0C $0C $0C
+;.db $0B $0B $0B $0B $0A $0A $0A $0A $09 $09 $09 $09 $08 $08 $08 $08
+;.db $07 $07 $07 $07 $06 $06 $06 $06 $05 $05 $05 $05 $04 $04 $04 $04
+;.db $03 $03 $03 $03 $02 $02 $02 $02 $01 $01 $01 $01 $00 $00 $00 $00
+;.db $00 $00 $00 $00 $01 $64 $9D $00 $FF $00 $FF $00 $FF $00 $FF $00
+;.db $01 $00 $01 $00 $02 $00 $02 $00 $FE $00 $FE $00 $FE $00 $FE $00
+;.db $02 $00 $02
+;.dsb 33, $00
+;
+;; 3rd entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 601E6 to 601FC (23 bytes)
+;_DATA_601E6_:
+;.db $13 $09 $01 $00 $01 $0A $0A $0A $0A $0A $0A $0A $0A $FF $00 $02
+;.db $02 $FE $FE $FE $02 $00 $00
+;
+;; 7th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 601FD to 60258 (92 bytes)
+;_DATA_601FD_:
+;.db $13 $09 $01 $00 $01 $00 $00 $00 $00 $00 $00 $00 $00 $FF $28 $28
+;.db $28 $28 $28 $28 $28 $28 $00
+;
+;; 1st entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 60214 to 60258 (69 bytes)
+;_DATA_60214_:
+;.db $13 $20 $01 $00 $01 $06 $07 $08
+;.dsb 26, $09
+;.db $08 $07 $06 $00 $64 $9C $00 $01 $01 $FF $FF $FF $FF $01 $01 $01
+;.db $01 $FF $FF $FF $FF $01 $01 $01 $01 $FF $FF $FF $FF $01 $01 $01
+;.db $01 $00 $00
+;
+;; 8th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 60259 to 60339 (225 bytes)
+;_DATA_60259_:
+;.db $13 $6E $01 $00 $01
+;.dsb 27, $0C
+;.dsb 16, $0B
+;.dsb 17, $0A
+;.dsb 16, $09
+;.dsb 9, $08
+;.db $07 $07 $07 $07 $07 $06 $06 $06 $06 $06 $06 $05 $05 $05 $05 $04
+;.db $04 $04 $04 $03 $03 $03 $02 $01
+;.dsb 61, $00
+;.db $01 $01 $01 $FF $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF
+;.db $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF
+;.db $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF $01 $01 $01 $01
+;.db $FF $FF
+;
+;; 9th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 6033A to 6045E (293 bytes)
+;_DATA_6033A_:
+;.db $13 $6E $01 $00 $01
+;.dsb 27, $0B
+;.dsb 17, $0A
+;.dsb 11, $09
+;.dsb 15, $08
+;.dsb 14, $07
+;.dsb 10, $06
+;.db $05 $05 $05 $05 $05 $05 $04 $04 $04 $04 $03 $03 $03 $02 $01
+;.dsb 61, $00
+;.db $01 $01 $01 $FF $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF
+;.db $FF $FF $FF $FF $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF
+;.db $FF $01 $01 $01 $01 $01 $01 $FF $FF $FF $FF $FF $01 $01 $01 $01
+;.db $FF $FF $0D $20 $01 $01 $08 $09 $0A
+;.dsb 26, $0B
+;.db $0A $09 $08
+;.dsb 32, $07
+;
+;; 5th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 6045F to 60482 (36 bytes)
+;_DATA_6045F_:
+;.db $13 $10 $01 $01 $0E $0C $0A $08 $0C $0A $08 $06 $0A $08 $06 $04
+;.db $08 $06 $04 $00 $00 $28 $28 $28 $88 $28 $28 $28 $88 $28 $28 $28
+;.db $88 $28 $28 $28
+;
+;; 6th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 60483 to 604A6 (36 bytes)
+;_DATA_60483_:
+;.db $13 $10 $01 $01 $0E $0C $0A $08 $06 $04 $02
+;.dsb 10, $00
+;.dsb 14, $3C
+;.db $1E
+;
+;; 4th entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 604A7 to 6062B (389 bytes)
+;_DATA_604A7_:
+;.db $13 $C0 $00 $01 $01 $0F $0F $0E $0E $0E $0E $0E $0E
+;.dsb 12, $0D
+;.dsb 24, $0C
+;.dsb 48, $0B
+;.dsb 100, $0A
+;.dsb 192, $00
+;
+;; Data from 6062C to 6062D (2 bytes)
+;_DATA_6062C_:
+;.db $3E $87
+;
+;; Pointer Table from 6062E to 6064B (15 entries, indexed by _RAM_DD13_MUSIC_NR)
+;.dw _DATA_60BE2_ _DATA_61276_ _DATA_60666_ _DATA_6153E_ _DATA_61910_ _DATA_60666_ _DATA_60666_ _DATA_61CC2_
+;.dw _DATA_61D0D_ _DATA_61D7A_ _DATA_60666_ _DATA_61E11_ _DATA_6203A_ _DATA_6224F_ _DATA_60666_
+;
+;; Data from 6064C to 6064D (2 bytes)
+;.db $00 $00
+;;THIS IS WHERE THE ROM SLIDES A BIT OFF COMPARED TO THE ORIGINAL!
+;; Pointer Table from 6064E to 60663 (11 entries, indexed by unknown)
+;_DATA_6064E_:
+;.dw _DATA_61276_ _DATA_60162_ _DATA_601E6_ _DATA_604A7_ _DATA_6045F_ _DATA_60483_ _DATA_601FD_ _DATA_60259_
+;.dw _DATA_6033A_ _DATA_60127_ _DATA_600E6_
+;
+;; Data from 60664 to 60665 (2 bytes)
+;.db $00 $00
+;
+;; 3rd entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 60666 to 6066C (7 bytes)
+;_DATA_60666_:
+;.db $86 $9E $FE $00 $FE $9D $FF
+;
+;; 1st entry of Pointer Table from 60732 (indexed by unknown)
+;; Data from 6066D to 606C9 (93 bytes)
+;_DATA_6066D_:
+;.db $0D $2C $01 $00
+;.dsb 17, $01
+;.db $0A $0A $0C $0C $0E $0E $0F $0F $0E $0E $0D $0D $0C $0C $0B $0B
+;.db $0A $0A $09 $09 $08 $08 $07 $07 $06 $06 $03
+;.dsb 17, $00
+;.db $14 $28 $32 $3C
+;.dsb 15, $FE
+;.db $FC $FA $F8 $F6 $EC $EC $EC $EC $EC
+;
+;; 2nd entry of Pointer Table from 60732 (indexed by unknown)
+;; Data from 606CA to 606DC (19 bytes)
+;_DATA_606CA_:
+;.db $0D $07 $01 $00 $01 $0C $0B $00 $00 $00 $00 $00 $14 $FB $FB $FB
+;.db $FB $FB $FB
+;
+;; 3rd entry of Pointer Table from 60732 (indexed by unknown)
+;; Data from 606DD to 6070B (47 bytes)
+;_DATA_606DD_:
+;.db $13 $15 $E0 $00 $01 $0F $0E $0E $0E $0D $0D $0C $0C $0C $0C $0C
+;.db $0B $0B $0B $0B $0A $0A $09 $09 $08 $00 $F4 $0C $00 $F4 $0C $00
+;.db $F8 $08 $00 $F8 $04 $04 $00 $04 $04 $00 $02 $02 $02 $02 $00
+;
+;; 4th entry of Pointer Table from 60732 (indexed by unknown)
+;; Data from 6070C to 6071E (19 bytes)
+;_DATA_6070C_:
+;.db $13 $07 $00 $02 $01 $0C $07 $03 $03 $02 $02 $00 $00 $00 $00 $00
+;.db $00 $00 $00
+;
+;; 5th entry of Pointer Table from 60732 (indexed by unknown)
+;; Data from 6071F to 60731 (19 bytes)
+;_DATA_6071F_:
+;.db $13 $07 $80 $03 $01 $0C $07 $03 $03 $02 $02 $00 $00 $00 $00 $00
+;.db $00 $00 $00
+;
+;; Pointer Table from 60732 to 6073B (5 entries, indexed by unknown)
+;_DATA_60732_SOUNDFX_TABLE:
+;.dw _DATA_6066D_ _DATA_606CA_ _DATA_606DD_ _DATA_6070C_ _DATA_6071F_
+;
+;
+;; Data from 6073C to 60BE1 (1190 bytes)
+;.incbin "HOTL_mod_DATA_6073C_.inc"
+;
+;; 1st entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 60BE2 to 61275 (1684 bytes)
+;_DATA_60BE2_:
+;.incbin "HOTL_mod_DATA_60BE2_.inc"
+;
+;; 1st entry of Pointer Table from 6064E (indexed by unknown)
+;; Data from 61276 to 6153D (712 bytes)
+;_DATA_61276_:	;THE TITLE SCREEN, AND THE GAME OVER MUSIC USES THIS DATA.
+;.db $83 $37 $01 $30 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
+;.db $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33
+;.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30
+;.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C
+;.db $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33
+;.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30 $0B $00 $25 $33
+;.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C
+;.db $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32
+;.db $17 $00 $01 $33 $05 $00 $67 $30 $0B $00 $25 $33 $0B $00 $01 $32
+;.db $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A
+;.db $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
+;.db $05 $00 $67 $30 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
+;.db $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33
+;.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $30
+;.db $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C
+;.db $05 $00 $07 $3C $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33
+;.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $67 $2C $23 $00 $01 $33
+;.db $23 $00 $01 $30 $17 $00 $01 $2B $24 $32 $05 $00 $1F $2E $05 $00
+;.db $12 $00 $01 $30 $24 $32 $05 $00 $1E $00 $01 $33 $17 $00 $01 $3A
+;.db $23 $00 $01 $37 $23 $00 $01 $33 $11 $00 $07 $2C $23 $00 $01 $33
+;.db $23 $00 $01 $30 $17 $00 $01 $2B $24 $32 $05 $00 $1F $2E $05 $00
+;.db $12 $00 $01 $30 $24 $32 $05 $00 $1E $00 $01 $33 $17 $00 $01 $3A
+;.db $23 $00 $01 $37 $23 $00 $01 $33 $11 $00 $07 $30 $0B $00 $25 $33
+;.db $0B $00 $01 $32 $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C
+;.db $05 $00 $13 $3A $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32
+;.db $17 $00 $01 $33 $05 $00 $67 $30 $0B $00 $25 $33 $0B $00 $01 $32
+;.db $17 $00 $01 $33 $05 $00 $2B $3C $05 $00 $07 $3C $05 $00 $13 $3A
+;.db $0B $00 $0D $33 $0B $00 $25 $33 $0B $00 $01 $32 $17 $00 $01 $33
+;.db $05 $00 $67 $37 $23 $00 $01 $33 $0B $00 $19 $37 $0B $00 $0D $37
+;.db $23 $00 $01 $33 $0B $00 $0D $33 $23 $00 $01 $35 $23 $00 $01 $33
+;.db $11 $00 $13 $32 $17 $00 $01 $30 $47 $00 $01 $32 $11 $00 $07 $37
+;.db $23 $00 $01 $33 $0B $00 $19 $37 $0B $00 $0D $37 $23 $00 $01 $33
+;.db $0B $00 $0D $33 $23 $00 $01 $35 $23 $00 $01 $33 $11 $00 $13 $32
+;.db $17 $00 $01 $30 $47 $00 $01 $32 $11 $00 $07 $30 $05 $00 $07 $30
+;.db $0B $00 $01 $3C $0C $3A $05 $00 $06 $00 $31 $2C $05 $00 $07 $2C
+;.db $0B $00 $01 $38 $0C $37 $05 $00 $06 $00 $19 $32 $17 $00 $01 $30
+;.db $05 $00 $07 $30 $0B $00 $01 $3C $0C $3A $05 $00 $06 $00 $31 $38
+;.db $05 $00 $07 $38 $0B $00 $0D $37 $0B $00 $0D $32 $1D $00 $07 $30
+;.db $05 $00 $07 $30 $0B $00 $01 $3C $0C $3A $05 $00 $06 $00 $31 $2C
+;.db $05 $00 $07 $2C $0B $00 $01 $38 $0C $37 $05 $00 $06 $00 $19 $32
+;.db $17 $00 $01 $30 $05 $00 $07 $30 $0B $00 $01 $3C $0C $3A $05 $00
+;.db $06 $00 $31 $38 $05 $00 $07 $38 $0B $00 $0D $37 $0B $00 $0D $32
+;.db $1D $00 $07 $32 $23 $00 $01 $33 $23 $00 $01 $37 $17 $00 $01 $2C
+;.db $23 $00 $01 $33 $23 $00 $01 $30 $17 $00 $01 $2B $5F $00 $01 $2E
+;.db $2F $00 $01 $32 $29 $00 $00 $FF
+;
+;; 4th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 6153E to 6190F (978 bytes)
+;_DATA_6153E_:
+;.db $82 $33 $00 $30 $3C $00 $31 $00 $74 $2E $08 $32 $07 $00 $00 $00
+;.db $01 $33 $00 $30 $3F $00 $0B $00 $A5 $30 $07 $00 $08 $37 $07 $00
+;.db $01 $35 $07 $00 $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00
+;.db $0F $33 $07 $00 $01 $30 $07 $00 $01 $2C $12 $00 $04 $33 $25 $00
+;.db $01 $32 $1D $00 $0F $2F $0F $00 $01 $30 $00 $41 $06 $00 $08 $37
+;.db $04 $00 $03 $00 $01 $35 $00 $3F $07 $00 $0B $00 $04 $3E $0B $00
+;.db $05 $30 $00 $3F $06 $00 $08 $35 $04 $00 $03 $00 $01 $33 $00 $3E
+;.db $07 $00 $0B $00 $04 $33 $00 $3C $07 $00 $01 $30 $07 $00 $00 $00
+;.db $01 $2C $00 $43 $12 $00 $03 $00 $01 $33 $00 $41 $16 $00 $01 $3F
+;.db $06 $00 $08 $00 $01 $32 $00 $3E $12 $00 $04 $3B $07 $00 $0F $00
+;.db $01 $2F $00 $3E $0E $00 $00 $00 $01 $30 $00 $30 $0E $00 $01 $3C
+;.db $07 $3A $03 $00 $05 $37 $03 $00 $04 $35 $03 $00 $04 $37 $04 $00
+;.db $00 $00 $03 $00 $01 $3A $00 $30 $07 $00 $01 $3C $00 $2E $03 $00
+;.db $0B $00 $01 $3F $07 $3C $03 $00 $04 $00 $08 $3C $07 $3F $04 $00
+;.db $00 $00 $00 $00 $04 $41 $07 $2B $0F $00 $01 $3F $06 $00 $01 $3C
+;.db $07 $00 $01 $3A $06 $00 $01 $3C $03 $00 $04 $00 $01 $3A $00 $2B
+;.db $06 $00 $01 $37 $07 $00 $01 $29 $06 $00 $01 $35 $07 $00 $01 $33
+;.db $07 $35 $03 $00 $05 $37 $03 $00 $03 $00 $01 $3A $07 $00 $01 $37
+;.db $03 $00 $03 $00 $01 $3C $07 $00 $01 $3A $00 $30 $06 $00 $01 $30
+;.db $07 $00 $01 $3C $06 $00 $01 $3A $07 $00 $01 $37 $06 $00 $01 $3C
+;.db $07 $00 $01 $3A $03 $00 $03 $00 $01 $37 $00 $30 $07 $00 $00 $00
+;.db $01 $3C $00 $2E $07 $3F $03 $00 $04 $00 $01 $41 $06 $00 $01 $3F
+;.db $08 $3C $03 $00 $03 $00 $01 $3F $07 $00 $01 $41 $03 $00 $00 $00
+;.db $04 $43 $07 $2B $07 $00 $01 $41 $07 $00 $01 $3F $07 $41 $03 $00
+;.db $04 $00 $01 $43 $03 $00 $07 $00 $04 $46 $00 $2B $08 $48 $03 $00
+;.db $04 $00 $01 $46 $00 $29 $03 $00 $03 $00 $01 $43 $07 $00 $01 $41
+;.db $06 $00 $01 $3F $03 $00 $05 $3C $06 $00 $01 $3A $07 $00 $00 $00
+;.db $01 $3C $0A $00 $05 $30 $06 $00 $08 $37 $07 $00 $01 $35 $07 $00
+;.db $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00 $0F $33 $07 $00
+;.db $01 $30 $07 $00 $01 $2C $12 $00 $04 $33 $25 $00 $01 $32 $1D $00
+;.db $0F $2F $0F $00 $01 $30 $06 $00 $08 $37 $07 $00 $01 $35 $07 $00
+;.db $1F $30 $06 $00 $08 $35 $07 $00 $01 $33 $07 $00 $0F $33 $07 $00
+;.db $01 $30 $07 $00 $01 $2C $12 $00 $04 $33 $25 $00 $01 $32 $1D $00
+;.db $0F $2F $0F $00 $01 $30 $1D $00 $01 $33 $1D $00 $01 $32 $2C $00
+;.db $0F $33 $2D $37 $04 $00 $0B $35 $04 $00 $1A $00 $01 $38 $19 $00
+;.db $04 $2C $1E $2B $04 $00 $0B $2C $04 $00 $0B $00 $01 $30 $1D $2C
+;.db $04 $00 $0B $30 $04 $00 $0B $00 $01 $38 $00 $35 $15 $00 $08 $00
+;.db $01 $37 $00 $33 $0E $00 $01 $38 $00 $32 $03 $00 $0B $00 $00 $00
+;.db $01 $37 $00 $33 $19 $00 $13 $00 $01 $32 $00 $3A $0A $00 $04 $00
+;.db $01 $30 $06 $00 $08 $37 $07 $00 $01 $35 $07 $00 $1F $30 $06 $00
+;.db $08 $35 $07 $00 $01 $33 $07 $00 $0F $33 $07 $00 $01 $30 $07 $00
+;.db $01 $2C $12 $00 $04 $33 $25 $00 $01 $32 $1D $00 $0F $2F $0F $00
+;.db $01 $29 $0F $2C $03 $00 $04 $30 $03 $00 $04 $00 $01 $35 $07 $30
+;.db $03 $00 $04 $00 $01 $35 $07 $30 $03 $00 $04 $00 $01 $35 $07 $38
+;.db $03 $00 $05 $3C $03 $00 $04 $41 $03 $00 $22 $00 $01 $38 $06 $00
+;.db $01 $3C $08 $3F $03 $00 $03 $00 $01 $41 $0F $3F $07 $00 $01 $3C
+;.db $03 $00 $04 $38 $03 $00 $04 $00 $01 $3A $07 $3E $03 $00 $04 $3F
+;.db $04 $00 $03 $00 $01 $41 $07 $3F $07 $00 $01 $3E $03 $00 $05 $3A
+;.db $03 $00 $07 $00 $04 $29 $10 $2C $03 $00 $04 $30 $03 $00 $04 $00
+;.db $01 $35 $07 $30 $03 $00 $04 $00 $01 $35 $07 $30 $03 $00 $04 $00
+;.db $01 $35 $07 $38 $03 $00 $05 $3C $03 $00 $04 $41 $03 $00 $22 $00
+;.db $01 $38 $06 $00 $01 $3C $08 $3F $03 $00 $03 $00 $01 $41 $0F $3F
+;.db $07 $00 $01 $3C $03 $00 $04 $38 $03 $00 $04 $00 $01 $3A $07 $3E
+;.db $03 $00 $04 $3F $04 $00 $03 $00 $01 $41 $07 $3F $07 $00 $01 $3E
+;.db $03 $00 $05 $3A $03 $00 $07 $00 $04 $2C $16 $00 $01 $30 $16 $00
+;.db $01 $2C $0E $00 $01 $33 $15 $00 $01 $30 $16 $00 $01 $2C $06 $00
+;.db $01 $30 $07 $00 $01 $33 $15 $00 $01 $35 $16 $37 $04 $00 $0B $00
+;.db $01 $3B $16 $3E $03 $00 $13 $00 $01 $3B $0E $00 $01 $2C $15 $00
+;.db $01 $30 $16 $00 $01 $2C $0E $00 $01 $33 $15 $00 $01 $30 $16 $00
+;.db $01 $2C $06 $00 $01 $30 $07 $00 $01 $33 $15 $00 $01 $35 $16 $37
+;.db $04 $00 $0B $00 $01 $3B $16 $3E $03 $00 $13 $00 $01 $3B $0E $00
+;.db $00 $FF
+;
+;; 5th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 61910 to 61CC1 (946 bytes)
+;_DATA_61910_:
+;.db $82 $24 $07 $00 $08 $24 $07 $00 $08 $24 $07 $00 $08 $24 $07 $00
+;.db $01 $22 $07 $00 $01 $24 $06 $00 $08 $24 $07 $00 $08 $24 $07 $00
+;.db $08 $24 $0F $00 $01 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00
+;.db $08 $20 $07 $00 $08 $1F $07 $00 $08 $1F $07 $00 $08 $1F $07 $00
+;.db $08 $1F $07 $00 $09 $24 $06 $00 $08 $24 $07 $00 $08 $24 $07 $00
+;.db $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00 $09 $24 $06 $00
+;.db $08 $24 $07 $00 $08 $24 $0F $00 $01 $20 $06 $00 $08 $20 $07 $00
+;.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $1F $07 $00 $08 $1F $07 $00
+;.db $08 $1F $07 $00 $08 $1F $07 $00 $08 $24 $07 $00 $08 $24 $07 $00
+;.db $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00
+;.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00 $01 $20 $06 $00
+;.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00 $09 $1F $06 $00
+;.db $08 $1F $07 $00 $09 $1F $06 $00 $08 $1F $07 $00 $09 $24 $06 $00
+;.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00
+;.db $01 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00
+;.db $01 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00 $09 $20 $06 $00
+;.db $09 $1F $06 $00 $08 $1F $07 $00 $09 $1F $06 $00 $09 $1F $06 $00
+;.db $09 $1D $12 $00 $04 $1D $07 $00 $0F $1D $07 $00 $01 $1B $08 $1F
+;.db $03 $00 $0B $00 $08 $1F $07 $00 $0F $1F $07 $00 $08 $20 $13 $00
+;.db $04 $20 $07 $00 $10 $20 $06 $00 $09 $1F $0E $00 $08 $1F $07 $00
+;.db $10 $1F $0E $00 $01 $1D $12 $00 $04 $1D $07 $00 $10 $1D $06 $00
+;.db $01 $1B $08 $1F $03 $00 $0B $00 $08 $1F $07 $00 $10 $1F $06 $00
+;.db $08 $20 $13 $00 $04 $20 $07 $00 $0F $20 $07 $00 $09 $1F $0E $00
+;.db $08 $1F $07 $00 $10 $1F $0E $00 $01 $24 $06 $00 $08 $24 $07 $00
+;.db $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00
+;.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00 $01 $20 $06 $00
+;.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00 $09 $1F $06 $00
+;.db $08 $1F $07 $00 $09 $1F $06 $00 $08 $1F $07 $00 $09 $24 $06 $00
+;.db $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $07 $00 $01 $22 $07 $00
+;.db $01 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $0F $00
+;.db $01 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00
+;.db $09 $1F $06 $00 $08 $1F $07 $00 $09 $1F $06 $00 $08 $1F $07 $00
+;.db $09 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00 $08 $24 $07 $00
+;.db $09 $22 $06 $00 $08 $22 $07 $00 $08 $22 $07 $00 $09 $22 $06 $00
+;.db $08 $27 $07 $00 $08 $27 $07 $00 $08 $27 $07 $00 $08 $27 $07 $00
+;.db $08 $29 $07 $00 $08 $29 $07 $00 $09 $29 $06 $00 $08 $29 $07 $00
+;.db $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00
+;.db $09 $20 $06 $00 $08 $20 $07 $00 $08 $20 $07 $00 $08 $20 $07 $00
+;.db $01 $24 $07 $00 $01 $1F $06 $00 $08 $1F $07 $00 $09 $1F $06 $00
+;.db $09 $1F $06 $00 $09 $1D $06 $00 $08 $1D $07 $00 $08 $1D $07 $00
+;.db $09 $22 $06 $00 $09 $24 $06 $00 $08 $24 $07 $00 $09 $24 $06 $00
+;.db $08 $24 $07 $00 $01 $22 $07 $00 $01 $24 $06 $00 $08 $24 $07 $00
+;.db $09 $24 $06 $00 $08 $24 $0F $00 $01 $20 $06 $00 $08 $20 $07 $00
+;.db $08 $20 $07 $00 $08 $20 $07 $00 $09 $1F $06 $00 $08 $1F $07 $00
+;.db $09 $1F $06 $00 $08 $1F $07 $00 $09 $29 $03 $00 $04 $29 $07 $00
+;.db $01 $27 $06 $00 $01 $29 $07 $00 $1F $29 $03 $00 $04 $29 $07 $00
+;.db $01 $27 $06 $00 $01 $29 $03 $00 $13 $29 $07 $00 $01 $27 $07 $00
+;.db $01 $2C $03 $00 $04 $2C $07 $00 $01 $2B $06 $00 $01 $2C $07 $00
+;.db $10 $2C $06 $00 $01 $2B $07 $00 $01 $2E $06 $00 $08 $2E $07 $00
+;.db $08 $2E $07 $00 $01 $2C $07 $00 $01 $2B $0A $00 $04 $29 $04 $00
+;.db $04 $29 $07 $00 $01 $27 $06 $00 $01 $29 $07 $00 $1F $29 $03 $00
+;.db $04 $29 $07 $00 $01 $27 $06 $00 $01 $29 $03 $00 $13 $29 $07 $00
+;.db $01 $27 $07 $00 $01 $2C $03 $00 $04 $2C $07 $00 $01 $2B $06 $00
+;.db $01 $2C $07 $00 $10 $2C $06 $00 $01 $2B $07 $00 $01 $2E $06 $00
+;.db $08 $2E $07 $00 $08 $2E $07 $00 $01 $2C $07 $00 $01 $2B $0A $00
+;.db $04 $29 $31 $00 $04 $27 $07 $00 $01 $29 $30 $00 $04 $27 $08 $29
+;.db $03 $00 $21 $00 $08 $27 $0F $00 $01 $1F $28 $00 $05 $1F $06 $00
+;.db $09 $29 $30 $00 $04 $27 $07 $00 $01 $29 $30 $00 $04 $27 $08 $29
+;.db $03 $00 $21 $00 $08 $27 $0F $00 $01 $1F $28 $00 $05 $1F $06 $00
+;.db $08 $FF
+;
+;; 8th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 61CC2 to 61D0C (75 bytes)
+;_DATA_61CC2_:
+;.db $95 $01 $F4 $C7 $9C $87 $39 $87 $38 $9A $35 $9B $34 $74 $32 $09
+;.db $34 $0A $35 $0A $34 $09 $32 $0A $31 $0A $39 $3A $35 $4D $31 $4D
+;.db $34 $4E $32 $4D $34 $4D $35 $4D $37 $14 $3A $43 $00 $0A $3E $3A
+;.db $40 $3A $3E $13 $40 $14 $41 $13 $40 $13 $3E $14 $39 $3A $39 $13
+;.db $37 $3A $3C $13 $39 $3A $37 $27 $39 $9B $FF
+;
+;; 9th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 61D0D to 61D79 (109 bytes)
+;_DATA_61D0D_:
+;.db $95 $01 $F4 $12 $9D $88 $35 $13 $3C $13 $3B $61 $3F $AE $37 $13
+;.db $3E $13 $3A $61 $3D $60 $3A $27 $39 $27 $32 $09 $31 $0A $32 $0A
+;.db $34 $09 $35 $14 $32 $09 $31 $0A $32 $0A $34 $09 $35 $14 $37 $13
+;.db $34 $4D $37 $61 $32 $0A $31 $09 $32 $0A $34 $0A $35 $13 $32 $0A
+;.db $31 $09 $32 $0A $34 $09 $35 $14 $37 $13 $39 $4D $3A $14 $3D $4D
+;.db $35 $3A $37 $3A $35 $13 $37 $14 $39 $13 $37 $13 $35 $14 $32 $3A
+;.db $32 $13 $30 $3A $35 $13 $32 $3A $30 $27 $34 $9B $FF
+;
+;; 10th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 61D7A to 61E10 (151 bytes)
+;_DATA_61D7A_:
+;.db $95 $01 $F4 $7F $9D $89 $26 $26 $26 $13 $26 $14 $26 $26 $26 $14
+;.db $26 $13 $26 $27 $26 $13 $26 $13 $26 $27 $26 $13 $26 $14 $26 $26
+;.db $26 $14 $26 $13 $26 $27 $26 $13 $26 $13 $26 $27 $26 $13 $26 $13
+;.db $26 $27 $26 $13 $26 $14 $26 $26 $26 $14 $26 $13 $26 $27 $26 $13
+;.db $26 $13 $22 $27 $22 $13 $22 $14 $22 $26 $22 $14 $22 $13 $26 $27
+;.db $26 $13 $26 $13 $26 $27 $26 $13 $26 $13 $22 $27 $22 $13 $22 $14
+;.db $22 $26 $22 $14 $22 $13 $26 $27 $26 $13 $26 $13 $24 $27 $24 $13
+;.db $24 $14 $22 $27 $22 $14 $22 $13 $21 $27 $21 $13 $21 $13 $1F $27
+;.db $1F $13 $1F $13 $1D $27 $1D $13 $1D $14 $1C $27 $1C $14 $1C $13
+;.db $21 $27 $21 $13 $21 $78 $94
+;
+;; 12th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 61E11 to 62039 (553 bytes)
+;_DATA_61E11_:
+;.db $95 $01 $F7 $16 $9E $89 $1A $09 $26 $0A $1A $0A $26 $0A $1A $0A
+;.db $26 $0A $1A $0A $26 $0A $18 $0A $24 $0A $18 $0A $24 $0A $18 $0A
+;.db $24 $0A $18 $0A $24 $0A $22 $0A $2E $09 $22 $0A $2E $0A $22 $0A
+;.db $2E $0A $22 $0A $2E $0A $1F $0A $2B $0A $1F $0A $2B $0A $21 $0A
+;.db $2D $0A $21 $0A $2D $0A $1A $0A $26 $0A $1A $09 $26 $0A $1A $0A
+;.db $26 $0A $1A $0A $26 $0A $1A $0A $26 $0A $1A $0A $26 $0A $1A $0A
+;.db $26 $0A $1A $0A $26 $0A $18 $0A $24 $0A $18 $0A $24 $09 $18 $0A
+;.db $24 $0A $18 $0A $24 $0A $18 $0A $24 $0A $18 $0A $24 $0A $18 $0A
+;.db $24 $0A $18 $0A $24 $0A $22 $0A $2E $0A $22 $0A $2E $0A $22 $09
+;.db $2E $0A $22 $0A $2E $0A $1F $0A $2B $0A $1F $0A $2B $0A $1F $0A
+;.db $2B $0A $1F $0A $2B $0A $21 $0A $2D $0A $21 $0A $2D $0A $21 $0A
+;.db $2D $09 $21 $0A $2D $0A $21 $0A $2D $0A $1F $0A $2B $0A $1D $0A
+;.db $29 $0A $1C $0A $28 $0A $1A $0A $1A $0A $1A $0A $1A $0A $1A $0A
+;.db $1A $0A $1A $09 $1A $0A $1D $0A $1D $0A $1D $0A $1D $0A $1D $0A
+;.db $1D $0A $1D $0A $1D $0A $22 $0A $22 $0A $22 $0A $22 $0A $22 $0A
+;.db $22 $0A $22 $0A $22 $0A $21 $09 $21 $0A $21 $0A $21 $0A $21 $0A
+;.db $21 $0A $21 $0A $21 $0A $26 $0A $26 $0A $26 $0A $26 $0A $24 $0A
+;.db $24 $0A $24 $0A $24 $0A $22 $0A $22 $09 $22 $0A $22 $0A $1F $0A
+;.db $1F $0A $1F $0A $1F $0A $21 $0A $21 $0A $21 $0A $21 $0A $1F $0A
+;.db $1F $0A $1F $0A $1F $0A $1D $0A $1D $0A $1D $09 $1D $0A $1C $0A
+;.db $1C $0A $1C $0A $1C $0A $1A $14 $1A $0A $1A $0A $1A $14 $1A $0A
+;.db $1A $0A $1A $14 $1A $0A $1A $09 $1A $14 $1A $0A $1A $0A $1A $14
+;.db $1A $0A $1A $0A $1A $14 $1A $0A $1A $0A $1A $14 $1A $0A $1A $0A
+;.db $1A $13 $1A $0A $1A $0A $1F $14 $1F $14 $1F $14 $1F $0A $1F $05
+;.db $21 $05 $22 $0A $21 $0A $1F $0A $1D $0A $1F $13 $1A $14 $1D $14
+;.db $1D $14 $1D $14 $1D $0A $1D $05 $1F $05 $21 $0A $1F $0A $1D $0A
+;.db $21 $0A $1F $27 $1F $05 $21 $05 $22 $0A $1F $14 $21 $05 $22 $05
+;.db $24 $0A $21 $14 $22 $05 $24 $05 $26 $0A $24 $05 $26 $05 $27 $0A
+;.db $26 $14 $2A $14 $2B $13 $29 $0F $27 $05 $26 $0A $24 $0A $22 $14
+;.db $21 $14 $22 $0A $21 $0A $1F $28 $1F $0A $1F $09 $1F $0A $1F $0A
+;.db $1D $0A $1D $0A $1D $0A $1D $0A $1C $0A $1C $0A $1C $0A $1C $0A
+;.db $1B $0A $1B $0A $1B $0A $1B $0A $1A $0A $1A $0A $1A $13 $1A $0A
+;.db $1A $0A $1A $14 $21 $0A $21 $0A $21 $14 $21 $0A $21 $0A $21 $14
+;.db $21 $14 $21 $0A $21 $09 $21 $14 $21 $0A $21 $0A $21 $14 $21 $0A
+;.db $21 $0A $21 $14 $21 $0A $21 $0B $94
+;
+;; 13th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 6203A to 6224E (533 bytes)
+;_DATA_6203A_:
+;.db $95 $01 $F7 $3F $A0 $8A $39 $09 $39 $05 $39 $05 $39 $14 $39 $0A
+;.db $39 $05 $39 $05 $39 $14 $3C $0A $3C $05 $3C $05 $3C $3C $39 $0A
+;.db $39 $04 $39 $05 $39 $14 $39 $0A $39 $05 $39 $05 $39 $14 $3E $0A
+;.db $3E $05 $3E $05 $3E $14 $40 $0A $40 $05 $40 $05 $40 $14 $32 $05
+;.db $34 $05 $35 $05 $34 $05 $35 $04 $37 $05 $35 $05 $37 $05 $39 $28
+;.db $32 $05 $34 $05 $35 $05 $34 $05 $35 $05 $37 $05 $35 $05 $37 $05
+;.db $39 $28 $32 $05 $34 $05 $35 $05 $34 $05 $35 $05 $37 $05 $35 $04
+;.db $37 $05 $39 $28 $32 $05 $34 $05 $35 $05 $34 $05 $35 $05 $37 $05
+;.db $35 $05 $37 $05 $39 $28 $3E $1E $3C $1D $3A $14 $3E $1E $3C $1E
+;.db $3E $14 $40 $1E $41 $1D $3E $14 $40 $5A $39 $03 $37 $03 $35 $04
+;.db $32 $45 $45 $04 $43 $03 $41 $03 $3E $0A $45 $04 $43 $03 $41 $03
+;.db $3E $32 $39 $03 $37 $04 $35 $03 $32 $45 $45 $04 $43 $03 $41 $03
+;.db $3E $0A $45 $04 $43 $03 $41 $03 $3E $28 $43 $03 $44 $02 $45 $05
+;.db $48 $07 $43 $03 $44 $05 $45 $05 $48 $02 $43 $03 $44 $05 $45 $02
+;.db $48 $03 $45 $02 $44 $03 $43 $05 $41 $05 $3E $1E $39 $05 $3C $05
+;.db $3E $05 $41 $06 $3E $04 $3C $05 $3E $02 $3C $04 $39 $05 $37 $0A
+;.db $39 $17 $40 $05 $41 $0A $40 $0A $3E $0A $40 $0A $41 $0A $40 $0A
+;.db $3E $0A $40 $0A $41 $0A $40 $09 $41 $0A $43 $0A $41 $0A $43 $0A
+;.db $45 $0A $2D $1E $2B $1E $29 $14 $28 $1E $26 $1D $24 $14 $26 $1E
+;.db $28 $1E $29 $14 $2B $4F $3A $0A $41 $0A $41 $0A $41 $0A $3A $0A
+;.db $41 $0A $41 $0A $41 $0A $37 $0A $3E $0A $3E $0A $3E $0A $37 $0A
+;.db $3E $09 $3E $0A $3E $0A $35 $0A $3C $0A $3C $0A $3C $0A $35 $0A
+;.db $3C $0A $3C $0A $3C $0A $35 $0A $3C $0A $3C $0A $3C $0A $37 $0A
+;.db $3E $0A $3E $0A $3E $09 $37 $05 $3A $05 $3E $05 $3A $05 $37 $14
+;.db $37 $05 $3A $05 $3E $05 $3A $05 $39 $14 $37 $05 $3A $05 $3E $05
+;.db $3A $05 $37 $14 $37 $05 $3A $05 $3E $05 $3A $05 $39 $14 $3A $13
+;.db $39 $0F $37 $05 $35 $0A $33 $0A $32 $0A $30 $0A $2D $14 $2E $0A
+;.db $2D $0A $2B $28 $37 $05 $3A $05 $3E $04 $3A $05 $37 $14 $37 $05
+;.db $3A $05 $3E $05 $3A $05 $37 $14 $37 $05 $3A $05 $3E $05 $3A $05
+;.db $37 $14 $37 $05 $3A $05 $3E $05 $3A $05 $3D $14 $36 $0A $36 $0A
+;.db $36 $13 $36 $0A $36 $0A $36 $14 $37 $0A $37 $0A $37 $14 $37 $0A
+;.db $37 $0A $37 $14 $37 $0A $37 $0A $34 $0A $34 $09 $31 $0A $31 $0A
+;.db $34 $0A $34 $0A $37 $0A $37 $0A $34 $0A $34 $0A $31 $0A $31 $0A
+;.db $34 $0A $34 $0B $FF
+;
+;; 14th entry of Pointer Table from 6062E (indexed by _RAM_DD13_MUSIC_NR)
+;; Data from 6224F to 623E7 (409 bytes)
+;_DATA_6224F_:
+;.db $95 $01 $F7 $54 $A2 $8A $32 $09 $32 $05 $32 $05 $32 $14 $32 $0A
+;.db $32 $05 $32 $05 $32 $14 $35 $0A $35 $05 $35 $05 $35 $3C $32 $0A
+;.db $32 $04 $32 $05 $32 $14 $32 $0A $32 $05 $32 $05 $32 $14 $37 $0A
+;.db $37 $05 $37 $05 $37 $14 $39 $0A $39 $05 $39 $05 $39 $14 $32 $3B
+;.db $30 $0A $32 $0A $2D $50 $32 $3B $32 $05 $34 $05 $35 $0A $34 $1E
+;.db $32 $1E $34 $14 $35 $1E $34 $1D $32 $14 $37 $1E $35 $1E $37 $14
+;.db $39 $1E $3A $1D $37 $14 $39 $0A $3A $0A $37 $0A $39 $0A $35 $0A
+;.db $37 $0A $34 $0A $35 $14 $3C $03 $3B $03 $39 $04 $35 $45 $48 $04
+;.db $47 $03 $45 $03 $41 $0A $48 $04 $47 $03 $45 $03 $41 $32 $3C $03
+;.db $3B $04 $39 $03 $35 $45 $48 $04 $47 $03 $45 $03 $41 $0A $48 $04
+;.db $47 $03 $45 $03 $41 $28 $32 $28 $34 $28 $35 $27 $37 $28 $39 $28
+;.db $3A $14 $37 $14 $39 $27 $3D $28 $26 $1E $24 $1E $22 $14 $21 $1E
+;.db $1F $1D $1D $14 $1F $1E $21 $1E $22 $14 $24 $4F $2B $0A $32 $0A
+;.db $32 $0A $32 $0A $33 $0A $32 $0A $32 $0A $32 $0A $37 $0A $32 $0A
+;.db $37 $0A $39 $0A $3A $0A $39 $09 $37 $0A $37 $0A $39 $14 $39 $14
+;.db $39 $14 $39 $0A $39 $05 $3A $05 $3C $0A $3A $0A $39 $0A $3C $0A
+;.db $3A $27 $3E $05 $3C $05 $3A $0A $3A $14 $3C $05 $3A $05 $39 $0A
+;.db $36 $14 $37 $0A $3E $14 $3E $14 $3E $0A $3F $14 $3E $13 $3C $0F
+;.db $3A $05 $39 $0A $37 $0A $35 $14 $33 $14 $35 $0A $33 $0A $32 $28
+;.db $3D $05 $3E $05 $43 $04 $3D $05 $3C $05 $3A $05 $37 $05 $39 $05
+;.db $3A $05 $39 $05 $37 $05 $35 $05 $32 $05 $35 $05 $37 $0A $39 $05
+;.db $3A $05 $39 $05 $37 $05 $39 $05 $37 $05 $35 $05 $32 $19 $39 $14
+;.db $39 $0A $39 $0A $39 $13 $39 $0A $39 $0A $39 $14 $3D $0A $3D $0A
+;.db $3D $14 $40 $0A $40 $0A $40 $14 $2D $0A $2D $0A $31 $0A $31 $09
+;.db $34 $0A $34 $0A $39 $0A $39 $0A $3D $0A $3D $0A $40 $0A $40 $0A
+;.db $45 $0A $45 $0A $49 $0A $49 $0B $FF
+;
+;_LABEL_623E8_PREP_MUS_BANK:
+;	ld hl, _RAM_DD12_MUS_ENA
+;	ld de, _RAM_DD12_MUS_ENA + 1
+;	ld (hl), $00
+;	ld bc, $010F
+;	ldir
+;	ld ix, _RAM_DD42_SOUND
+;	ld de, $001C
+;	ld (ix+0), $00
+;	add ix, de
+;	ld (ix+0), $01
+;	add ix, de
+;	ld (ix+0), $02
+;	add ix, de
+;	ld (ix+0), $03
+;	add ix, de
+;	ld (ix+0), $00
+;	add ix, de
+;	ld (ix+0), $01
+;	add ix, de
+;	ld (ix+0), $02
+;	add ix, de
+;	ld (ix+0), $03
+;	ret
+;
+;_LABEL_6242B_SET_MUS:
+;	push de
+;	push bc
+;	push hl
+;	push ix
+;	push iy
+;	call +
+;	pop iy
+;	pop ix
+;	pop hl
+;	pop bc
+;	pop de
+;	ret
+;
+;+:
+;	ld (_RAM_DD13_MUSIC_NR), a
+;	ld a, (_RAM_DD13_MUSIC_NR)
+;	ld iy, _RAM_DD32_SOUND;$DD32
+;	cp $FF
+;	jp z, _LABEL_62549_
+;	dec a
+;		jp m, _LABEL_624D0_
+;	
+;	call _LABEL_624D0_
+;	ld a, $01
+;	ld (_RAM_DD12_MUS_ENA), a
+;	ld a, (_RAM_DD13_MUSIC_NR)
+;	dec a
+;	add a, a
+;	add a, a
+;	add a, a
+;	ld e, a
+;	ld d, $00
+;	ld hl, _DATA_6062C_
+;	add hl, de
+;	ex de, hl
+;	ld hl, $864A
+;	sbc hl, de
+;	jp c, _LABEL_624D0_
+;	ex de, hl
+;	ld ix, _RAM_DD42_SOUND
+;	ld b, $04
+;-:
+;	ld e, (hl)
+;	inc hl
+;	ld d, (hl)
+;	inc hl
+;	ld (ix+12), e
+;	ld (ix+13), d
+;	ld (ix+10), $01
+;	ld de, $001C
+;	add ix, de
+;	djnz -
+;	ret
+;
+;_LABEL_62489_PLAYSFX:	;This is the same, just saving more registers.
+;	push bc
+;	push de
+;	push hl
+;_LABEL_6248C_PLAYSFX:	;We come here from the pretty convincing sound effect init part.
+;	push ix
+;	push iy
+;	call +
+;	pop iy
+;	pop ix
+;	pop hl
+;	pop de
+;	pop bc
+;	ret
+;
+;+:
+;	ld iy, _RAM_DD22_;$DD22
+;	ld ix, _RAM_DDB2_ ;$DDB2	;Fixed some RAM stuff here. If the vals are changed, this would look bad. Also: CHANGED!
+;	ld (_RAM_DD15_), a
+;	dec a
+;	bit 7, a
+;	jp nz, _LABEL_62502_
+;	add a, a
+;	ld e, a
+;	ld d, $00	;DE will be the sound nr.
+;	ld hl, _DATA_60732_SOUNDFX_TABLE	;Load the source of the sound effects.
+;	add hl, de	;Yup, add the 'index' to the HL source.
+;	ex de, hl
+;	ld hl, $873B
+;	sbc hl, de
+;	ret c
+;	ex de, hl
+;	ld e, (hl)
+;	inc hl
+;	ld d, (hl)
+;	ex de, hl
+;	ld ix, _RAM_DDEA_
+;	bit 2, (hl)
+;	jp z, _LABEL_62520_
+;	ld ix, _RAM_DE06_
+;	jp _LABEL_62520_
+;
+;_LABEL_624D0_:
+;	ld ix, _RAM_DD42_SOUND
+;	ld b, $04
+;	ld hl, _RAM_DD3A_
+;	ld de, $001C
+;	xor a
+;-:
+;	ld (hl), a
+;	inc hl
+;	ld (ix+5), a
+;	ld (ix+14), a
+;	ld (ix+18), a
+;	ld (ix+15), a
+;	ld (ix+21), a
+;	ld (ix+22), a
+;	ld (ix+26), a
+;	ld (ix+6), a
+;	add ix, de
+;	djnz -
+;	ld (_RAM_DD16_), a
+;	ld (_RAM_DD12_MUS_ENA), a
+;	ret
+;
+;_LABEL_62502_:
+;	ld b, $04
+;	ld ix, _RAM_DDB2_
+;	ld hl, _RAM_DD2A_
+;	ld de, $001C
+;-:
+;	ld (hl), $00
+;	inc hl
+;	ld a, (ix+5)
+;	inc a
+;	jr z, +
+;	ld (ix+5), $00
+;+:
+;	add ix, de
+;	djnz -
+;	ret
+;
+;_LABEL_62520_:
+;	ld (ix+6), $00
+;	ld (ix+3), l
+;	ld (ix+4), h
+;	ld a, (hl)
+;	inc hl
+;	ld (ix+7), a
+;	ld a, (hl)
+;	inc hl
+;	ld (ix+8), a
+;	ld a, (hl)
+;	inc hl
+;	ld (ix+1), a
+;	ld a, (hl)
+;	inc hl
+;	ld (ix+2), a
+;	ld a, (hl)
+;	ld (ix+5), a
+;	ld a, (_RAM_DD15_)
+;	ld (ix+9), a
+;	ret
+;
+;_LABEL_62549_:	;This is also controls the volumes of the channels, but more things are needed to be checked. Whatever values are given, the routine does not really do anything differently.
+;	ld a, $10
+;	ld (_RAM_DD16_), a
+;	ld a, c
+;	ld (_RAM_DD19_), a
+;	ld a, $00
+;	ld (_RAM_DD17_), a
+;	ret
+;
+;_LABEL_62558_MUSIC_VOL_ADJST:	;This will change volume levels, and fade the sound out as well. If this is not running, then for example the title screen music will also play on the character description screens as well.
+;	ld a, (_RAM_DD16_)
+;	and a
+;	ret z
+;	ld a, (_RAM_DD17_)
+;	dec a
+;	ld (_RAM_DD17_), a
+;	jp p, +
+;	ld a, (_RAM_DD19_)
+;	ld (_RAM_DD17_), a
+;	ld a, (_RAM_DD16_)
+;	dec a
+;	ld (_RAM_DD16_), a
+;	jr nz, +
+;	xor a
+;	ld c, a
+;	jp _LABEL_6242B_SET_MUS
+;
+;+:
+;	ld hl, _RAM_DD3A_
+;	ld b, $03
+;--:
+;	ld d, (hl)
+;	ld a, (_RAM_DD16_)
+;	ld e, a
+;	xor a
+;	dec e
+;	jp m, +
+;-:
+;	add a, d
+;	dec e
+;	jp p, -
+;+:
+;	srl a
+;	srl a
+;	srl a
+;	srl a
+;	ld (hl), a
+;	inc hl
+;	djnz --
+;	ret
+;
+;_LABEL_6259C_PREPSOUND_VALS:
+;	ld a, (ix+5)
+;	and a
+;	jp z, _LABEL_6263B_
+;	inc a
+;	jp z, _LABEL_6263B_
+;	ld l, (ix+3)
+;	ld h, (ix+4)
+;	ld a, (ix+6)
+;	add a, $05
+;	ld e, a
+;	ld d, $00
+;	add hl, de
+;	ld a, (hl)
+;	cp $FE
+;	jr nz, +
+;	inc (ix+6)
+;	inc (ix+6)
+;	inc hl
+;	ld a, (hl)
+;	push ix
+;	push bc
+;	call _LABEL_62489_PLAYSFX
+;	pop bc
+;	pop ix
+;	jr _LABEL_6259C_PREPSOUND_VALS
+;
+;+:
+;	cp $FF
+;	jr nz, +
+;	ld (ix+6), $00
+;	jr _LABEL_6259C_PREPSOUND_VALS
+;
+;+:
+;	ld c, a
+;	ld e, (ix+0)
+;	ld d, $00
+;	push iy
+;	add iy, de
+;	ld (iy+8), c
+;	pop iy
+;	ld a, c
+;	and a
+;	jr nz, +
+;	ld (ix+5), $00
+;	jr _LABEL_6263B_
+;
+;+:
+;	ld e, (ix+8)
+;	ld d, $00
+;	add hl, de
+;	ld a, (ix+0)
+;	cp $03
+;	jr z, ++
+;	ld e, (hl)
+;	ld d, $00
+;	bit 7, e
+;	jr z, +
+;	dec d
+;+:
+;	push hl
+;	ld l, (ix+1)
+;	ld h, (ix+2)
+;	ld a, l
+;	or h
+;	jr z, +
+;	add hl, de
+;	ld (ix+1), l
+;	ld (ix+2), h
+;+:
+;	pop hl
+;	ld e, (ix+0)
+;	sla e
+;	ld d, $00
+;	push iy
+;	add iy, de
+;	ld a, (ix+1)
+;	ld (iy+0), a
+;	ld a, (ix+2)
+;	ld (iy+1), a
+;	pop iy
+;	jr +++
+;
+;++:
+;	ld a, (hl)
+;	ld (iy+6), a
+;+++:
+;	inc (ix+6)
+;_LABEL_6263B_:
+;	ld de, $001C
+;	add ix, de
+;	dec b
+;	jp nz, _LABEL_6259C_PREPSOUND_VALS
+;	ret
+;
+;_LABEL_62645_SOUND_ENGINE:
+;	push af
+;	push bc
+;	push de
+;	push hl
+;	push ix
+;	push iy				;SAVE ALL REGISTERS ON STACK.
+;	ld a, $00;(_RAM_DE23_CONSOLE_REGION)	;CHECK THE CONSOLE REGION. disabled check, there's no need for this now.
+;	and a
+;	jr nz, _LABEL_62660_SOUND_MAIN			;JUMP THERE IF CONSOLE IS PAL REGION.
+;	ld hl, _RAM_DE24_NTSC_COMP			;OTHERWISE IT'S NTSC.
+;	inc (hl)
+;	ld a, (hl)
+;	cp $06				;SO, IT SEEMS WE COMPENSATE FOR EVERY SIXT FRAME, SINCE PAL IS 50HZ.
+;	jr nz, _LABEL_62660_SOUND_MAIN		;IF WE ARE NOT IN THE SIXTH FRAME, THEN WE NEED TO DO THE OTHER FIVE.
+;	ld (hl), $00			;WE WERE IN THE SIXTH, RESET THE EXTRA COUNTER.
+;	jr +				;AND EXIT THE ROUTINE THERE.
+;
+;_LABEL_62660_SOUND_MAIN:		;MAIN PART OF THE SOUND ENGINE.
+;	call _LABEL_6286E_INIT_SOUND	;We have to init the sound engine first.
+;	ld iy, _RAM_DD32_SOUND
+;	ld ix, _RAM_DD42_SOUND		;These are used for playback.
+;	ld b, $04			;How many channels are we going to use.	;nodified 24.09.08
+;	call _LABEL_6259C_PREPSOUND_VALS		;This silences the music, if commented out.
+;	ld iy, _RAM_DD22_	;$DD22		
+;	ld ix, _RAM_DDEA_		
+;	ld b, $02			;Sound channels for the sound fx.
+;	call _LABEL_6259C_PREPSOUND_VALS		;This silences out the sound effect, if commented out.
+;	call _LABEL_62558_MUSIC_VOL_ADJST ;So, you give two index values, then shoot these, and the code will play them later.
+;	call ++
+;+:
+;	pop iy
+;	pop ix
+;	pop hl
+;	pop de
+;	pop bc
+;	pop af
+;	ret				;RESTORE THE REGISTER VALUES, AND GO ON.
+;
+;++:	;This is some sound output part, but i'm not yet ready to dissect this. Yet I have a faint clue what this is.
+;	ld iy, _RAM_DD22_
+;	ld ix, $DD42
+;	ld a, (iy+16)
+;	ld (_RAM_DD18_SOUND_NOTE), a
+;	ld a, (iy+17)
+;	ld e, $80
+;	call _LABEL_6270C_OUTPUT_SOUND
+;	ld a, (iy+24)
+;	and $0F
+;	xor $9F
+;	out (Port_PSG), a
+;	ld bc, $001C
+;	add ix, bc
+;	ld a, (iy+18)
+;	ld (_RAM_DD18_SOUND_NOTE), a
+;	ld a, (iy+19)
+;	ld e, $A0
+;	call _LABEL_6270C_OUTPUT_SOUND
+;	ld a, (iy+25)
+;	and $0F
+;	xor $BF
+;	out (Port_PSG), a
+;	add ix, bc
+;	ld e, $04
+;	call _LABEL_6272F_3RDCHANNEL
+;	ld (_RAM_DD18_SOUND_NOTE), a
+;	ld e, $05
+;	call _LABEL_6272F_3RDCHANNEL
+;	ld e, $C0
+;	call _LABEL_6270C_OUTPUT_SOUND
+;	ld e, $0A
+;	call _LABEL_6272F_3RDCHANNEL
+;	and $0F
+;	xor $DF
+;	out (Port_PSG), a
+;	add ix, bc
+;	ld e, $06
+;	call _LABEL_6272F_3RDCHANNEL
+;	and $07
+;	or $E0
+;	ld e, a
+;	ld a, (_RAM_DD14_SFX_PLAY)
+;	cp e
+;	jr z, +		;Oh! This part is actually controls the sound effects, and whenever this equals, the sound effect is not playing. Otherwise we have to load and play a sound effect.
+;	ld a, e
+;	ld (_RAM_DD14_SFX_PLAY), a
+;	out (Port_PSG), a
+;+:
+;
+;	ld e, $0B
+;	call _LABEL_6272F_3RDCHANNEL
+;	and $0F
+;	xor $0F
+;	or $F0
+;	out (Port_PSG), a
+;	ret
+;
+;_LABEL_6270C_OUTPUT_SOUND:
+;	ld h, a
+;	ld a, (_RAM_DD18_SOUND_NOTE)
+;	ld l, a
+;	srl h
+;	rr l
+;	srl h
+;	rr l
+;	ld a, l
+;	and $0F
+;	or e
+;	out (Port_PSG), a
+;	srl h
+;	rr l
+;	srl h
+;	rr l
+;	srl l
+;	srl l
+;	ld a, l
+;	out (Port_PSG), a
+;	ret
+;
+;_LABEL_6272F_3RDCHANNEL:	;Messes with the music channels, that's what I can see.
+;	push iy
+;	ld d, $00
+;	add iy, de
+;	ld d, (iy+16)		;This looks like the third channel's frequency.
+;	ld a, (ix+117)		;This messes with the third channel's time for how long an instrument is playing.
+;	;Wtf with these indexes? 117 really this was necessary?
+;	and a
+;	jr z, +
+;	inc a
+;	jr z, +
+;	ld d, (iy+0)
+;+:
+;	pop iy
+;	ld a, d
+;	ret
+;
+;_LABEL_62748_LOAD_NOTES:	;THIS LOOKS LIKE IT LOADS THE NOTES TO EACH CHANNEL, AND THEY RUN BEFORE A LEVER ACTAUALLY LOADS.
+;	push ix
+;	pop iy	;THESE NEEDED TO BE SAVED, THAT'S TRUE.
+;	ld a, (ix+21)	;THIS IS DD42+21=DD57
+;	and a
+;	jr z, +
+;	ld de, $0008
+;	add iy, de
+;+:
+;	ld l, (iy+12)
+;	ld h, (iy+13)
+;	ld e, (iy+14)
+;	ld d, (iy+18)
+;	add hl, de
+;	bit 7, (hl)
+;	jr Nz, +
+;	inc de
+;	inc de
+;	ld (iy+14), e
+;	ld (iy+18), d
+;	ret
+;
+;+:	;THIS IS SOME NOTE HANDLING, I'M SURE. lATER ON, THE MUSIC FORMAT MIGHT BE ALSO DISASSEMBLED, BUT NOT FOR NOW.
+;	ld a, (hl)
+;	cp $94
+;
+;	jp z, _LABEL_627CC_
+;	cp $95
+;	jp z, _LABEL_627E1_LOAD_NOTE_LEN
+;	cp $9D
+;	jp z, _LABEL_62810_LOAD_NEXT__MUS_SEGMENT
+;	cp $9E
+;	jp z, _LABEL_62837_LOAD_INSTR
+;	cp $FF
+;	jp z, _LABEL_6285B_LOOP_MUSIC
+;	cp $FE
+;	jp z, _LABEL_62866_
+;	add a, a
+;	ld e, a
+;	ld d, $00
+;	ld hl, _DATA_6064E_
+;	add hl, de
+;	ex de, hl
+;	ld hl, $8662
+;	sbc hl, de
+;	jr nc, +
+;	ld de, _DATA_6064E_
+;+:
+;	ex de, hl
+;	ld e, (hl)
+;	inc hl
+;	ld d, (hl)
+;	ex de, hl
+;	push bc
+;	push iy
+;	ld iy, $DD32
+;	call _LABEL_62520_
+;	ld (ix+9), $FF
+;	pop iy
+;	pop bc
+;	ld a, (iy+14)
+;	add a, $01
+;	ld (iy+14), a
+;	ld a, (iy+18)
+;	adc a, $00
+;	ld (iy+18), a
+;	jp _LABEL_62748_LOAD_NOTES
+;
+;_LABEL_627CC_:	;Decreases ome RAM value, maybe this loads the song lenghts or something. I don't see to be used in normal gameplay so far, but since this is decoded, i'm sure the code reaches it sometimes.
+;	ld (iy+14), $00
+;	ld (iy+18), $00
+;	dec (ix+11) ;dec
+;	jp nz, _LABEL_62748_LOAD_NOTES
+;	ld (ix+21), $00
+;	jp _LABEL_62748_LOAD_NOTES
+;
+;_LABEL_627E1_LOAD_NOTE_LEN:	;Note lenghts and things are getting this way from the song data.
+;	inc hl
+;	ld a, (hl)
+;	ld (ix+11), a
+;	inc hl
+;	ld a, (hl)
+;	ld (ix+25), a
+;	inc hl
+;	ld a, (hl)
+;	ld (ix+20), a
+;	inc hl
+;	ld a, (hl)
+;	ld (ix+21), a
+;	ld a, (ix+14)
+;	add a, $05
+;	ld (ix+14), a
+;	ld a, (ix+18)
+;	adc a, $00
+;	ld (ix+18), a
+;	ld (ix+22), $00
+;	ld (ix+26), $00
+;	jp _LABEL_62748_LOAD_NOTES
+;
+;_LABEL_62810_LOAD_NEXT__MUS_SEGMENT:	;This loads the next segment in the song.
+;	dec (iy+15)
+;	jr nz, +
+;	ld a, (iy+14)
+;	add a, $01
+;	ld (iy+14), a
+;	ld a, (iy+18)
+;	adc a, $00
+;	ld (iy+18), a
+;	jp _LABEL_62748_LOAD_NOTES
+;
+;+:
+;	ld a, (iy+16)
+;	ld (iy+14), a
+;	ld a, (iy+19)
+;	ld (iy+18), a
+;	jp _LABEL_62748_LOAD_NOTES
+;
+;_LABEL_62837_LOAD_INSTR:	;This seems like a "note prepare" for the next song.
+;
+;	ld a, (iy+14)
+;	add a, $02
+;	ld (iy+14), a
+;	ld a, (iy+18)
+;	adc a, $00
+;	ld (iy+18), a
+;	ld a, (iy+14)
+;	ld (iy+16), a
+;	ld a, (iy+18)
+;	ld (iy+19), a
+;	inc hl
+;	ld a, (hl)
+;	ld (iy+15), a
+;	jp _LABEL_62748_LOAD_NOTES
+;
+;_LABEL_6285B_LOOP_MUSIC:		;This restarts the music, once it loops.
+;	pop bc
+;	pop bc
+;	ld a, (_RAM_DD13_MUSIC_NR)
+;	call _LABEL_6242B_SET_MUS
+;	jp _LABEL_62660_SOUND_MAIN
+;
+;_LABEL_62866_:
+;	pop bc
+;	pop bc
+;	call _LABEL_624D0_
+;	jp _LABEL_62660_SOUND_MAIN
+;
+;_LABEL_6286E_INIT_SOUND:	;THIS IS THE FIRST THING WE DO AFTER THE MAIN SOUND ROUTINE IS ON.
+;	ld a, (_RAM_DD12_MUS_ENA)
+;	and a
+;	ret z	;IF WE HAVE NOT ENABLED MUSIC\SOUND, THEN JUST RETURN.
+;	ld ix, _RAM_DD42_SOUND	;THIS LOOKS LIKE THE BEGINNING OF THE SOUND VARIABLES.
+;	ld b, $04		;HOW MANY SOUND CHANNELS WE HAVE.
+;--:		;WE DECREMENT THE MUSIC TIMERS HERE.
+;	dec (ix+10)	;THIS IS DD4C, THE FIRST CHANNEL'S TIMER.
+;	jr nz, _LABEL_628B2_CALC_CH_ADDRESS	;IF THE TIMER IS NOT EXPIRED, JUMP AHEAD AND GET THE OTHER CHANNEL'S ADDRESSES, AND DECREASE THEIR TIMER AS WELL WHEN THE LOOP IS BACK.
+;-:
+;	call _LABEL_62748_LOAD_NOTES	;LOAD THE INIT. NOTES. THIS IS ALSO USED AT THE BEGINNING OF LEVELS, AS FAR AS I'VE NOTICED.
+;	ld a, (hl)
+;	and a
+;	jr z, +	;EITHER Z OR NZ, DOES NOT REALLY MATTER FROM THE ENGINE'S STANDPOINT.
+;	cp $7F
+;	jr z, ++
+;	add a, (iy+17)
+;+:	;DOES NOT MATTER, BUT THE BELOW IS STILL USED.
+;	add a, a
+;	ld e, a
+;	ld d, $00
+;	ld iy, _DATA_60000_	;MY GUESS FOR THIS IS THAT IT'S THE INSTRUMENTS THE MUSIC USES. AT THE MOMENT, I DON'T WANT TO 
+;	add iy, de
+;	ld e, (iy+0)
+;	ld d, (iy+1)
+;	ld (ix+2), d
+;	ld (ix+1), e
+;	inc hl
+;	ld a, (hl)
+;	and a
+;	jr z, -
+;	ld (ix+10), a
+;	ld (ix+6), $00
+;	ld (ix+5), $01
+;_LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
+;	ld de, $001C	;I LIKE HOW THE ADDRESSES ARE SCATTERED AROUND, LIKE THESE.
+;	add ix, de	;DD4C+1C=DD68, THIS IS THE SECOND CHANNEL'S TIMER.
+;			;DD84 IS THE THIRD.
+;			;DDA0 IS THE NOISE.
+;	djnz --
+;	ret
+;
+;++:
+;	inc hl
+;	ld a, (hl)
+;	and a
+;	jr z, -
+;	ld (ix+10), a
+;	jr _LABEL_628B2_CALC_CH_ADDRESS
 ;.org $628c4
 ; Data from 628C4 to 63FFF (5948 bytes)
-.incbin "HOTL_mod_DATA_628C4_.inc"	;NO IDEA WHAT THIS IS. THE FIRST LEVEL DOES NOT USE IT, AND ITS NOT MUSIC EITHER, DESPITE BEING IN THAT BANK.
+;.incbin "HOTL_mod_DATA_628C4_.inc"	;NO IDEA WHAT THIS IS. THE FIRST LEVEL DOES NOT USE IT, AND ITS NOT MUSIC EITHER, DESPITE BEING IN THAT BANK.
 
 ;So, the below banks are used for the compressed intro tilemaps, tiles and all that jazz. The very last bank is halfway used so far, because the letter tiles are stored in it. The rest, I have no idea yet what is used for. If you want to get rid of the intro, and the legal screens, this is where you want to start. The initial game is likely not using any of this at all. Almost a 100kb can be freed this way. Also, the second to last bank is almost empty, so code, and other things can go there, the software does not check. Additionally, I'll mark the offsets where the individual screens are loaded, but it's likely that i'll just rip these off, and use the free space for something else.
 
@@ -14683,13 +14797,13 @@ _LABEL_628B2_CALC_CH_ADDRESS:	;WE JUMP HERE FROM --.
 
 ; Data from 64000 to 67FFF (16384 bytes)
 _DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. IF COMMENTED OUT, OBVIOUSLY THE COMPRESSED STUFF AT THE BEGINNING WON'T SHOW.
-.incbin "HOTL_mod_DATA_64000_.inc"
+;.incbin "HOTL_mod_DATA_64000_.inc"	;removed 24.09.08
 
 .BANK 26	;The US Gold Logo's compressed tilemap and stuff is here. Also the Title Screen with the Dragon Logo is also stored here, and Goldmoon's, Sturm's  tilemap and tiles as well.
 .ORG $0000
 
 ; Data from 68000 to 6BFFF (16384 bytes)
-.incbin "HOTL_mod_DATA_68000_.inc"
+;.incbin "HOTL_mod_DATA_68000_.inc"	;disabled 24.09.08
 
 .BANK 27	;Compressed intro tilemaps and tile data.
 .ORG $0000
@@ -14714,9 +14828,16 @@ _DATA_64000_COMP_GFX:	;THIS SEEMS TO BE THE GRAPHICS FOR THE COMPRESSED IMAGES. 
 .ORG $0000
 
 ; Data from 78000 to 7BFFF (16384 bytes)
-.incbin "HOTL_mod_DATA_78000_.inc"	;This bank is called, when the legal screen's things have to be decompressed, but the bottom part of the screen. Strange.
+;.incbin "HOTL_mod_DATA_78000_.inc"	;This bank is called, when the legal screen's things have to be decompressed, but the bottom part of the screen. Strange.
 ;The "Based on the module DL1" part and the bottom of the screen. Why the game does it like this is beyond me.
-
+;disabled 24.09.08 this does not seem to be used anymore, since many pictures will be reprocessed, and readded.
+titleTiles:
+.incbin "titletile.aPLib"
+titleTileMap:
+.incbin "titlemap.aPLib"
+titlePal:
+.inc "titlepal.inc"
+.db $FF,16	;Add extra 16 colors.
 .BANK 31
 .ORG $0000
 
@@ -14985,6 +15106,53 @@ _DATA_7B16_ITEMNTRAP: ;It seems every item and trap is five bytes in size, i'll 
 .db $00 $2E $41 $6E $00 $00 $44 $44 $1E $00 $80 $11 $44 $20 $00 $40
 .db $1F $46 $42 $00 $00 $44 $4B $5C $00 $80 $44 $4B $6B $00 $80 $31
 .db $50 $2C $00 $00 $00
+; Data from 72D1 to 7564 (660 bytes)
+_DATA_72D1_NME_ARRAY:	
+;See the RAM value where these are documented, whyt most of these bytes do, but only a few of them are inportant for modifications.
+;Basically every monster is a six byte entry.
+;I wonder if this could be relocated...
+.db $01 $01 $90 $01 $00 $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03;$05 $02 $0f $01 $0f $00 $02 $01 $20 $03 $00 $00 $08 $01 $E8 $03  ;.
+.db $00 $00 $08 $02 $A4 $00 $00 $00 $02 $02 $C8 $00 $00 $00 $06 $02
+.db $18 $01 $00 $00 $07 $03 $2C $01 $00 $00 $01 $03 $26 $02 $00 $00
+.db $08 $03 $B2 $02 $00 $00 $08 $04 $40 $00 $00 $00 $01 $04 $58 $02
+.db $00 $00 $07 $05 $A4 $00 $00 $00 $06 $05 $90 $01 $00 $00 $07 $06
+.db $C8 $00 $00 $00 $06 $06 $2C $01 $00 $00 $01 $07 $C2 $01 $00 $00
+.db $08 $07 $C8 $00 $00 $00 $02 $08 $B0 $00 $00 $00 $01 $09 $8C $00
+.db $00 $00 $01 $09 $BC $02 $00 $00 $08 $09 $B8 $06 $00 $00 $01 $0B
+.db $50 $00 $00 $00 $06 $0B $B8 $01 $00 $00 $0A $0C $50 $00 $00 $00
+.db $05 $0C $D0 $00 $00 $00 $09 $0C $50 $01 $00 $00 $04 $0D $34 $00
+.db $00 $00 $05 $0D $FA $00 $00 $00 $02 $0D $58 $02 $00 $00 $0A $0D
+.db $E8 $03 $00 $00 $05 $0E $64 $00 $00 $00 $0A $0E $2C $01 $00 $00
+.db $09 $0E $F4 $01 $00 $00 $03 $0E $84 $03 $00 $00 $04 $0E $4C $04
+.db $00 $00 $07 $0F $32 $00 $00 $00 $06 $0F $50 $00 $00 $00 $09 $12
+.db $A0 $00 $00 $00 $07 $12 $82 $00 $00 $00 $01 $15 $A0 $00 $00 $00
+.db $07 $16 $C0 $00 $00 $00 $0A $18 $5E $01 $00 $00 $07 $19 $38 $00
+.db $00 $00 $07 $19 $46 $00 $00 $00 $06 $19 $54 $00 $00 $00 $07 $19
+.db $60 $00 $00 $00 $09 $1A $C8 $00 $00 $00 $09 $1B $1C $02 $00 $00
+.db $03 $1C $50 $00 $00 $00 $09 $1E $20 $03 $00 $00 $09 $1E $40 $06
+.db $00 $00 $03 $23 $96 $00 $00 $00 $09 $24 $E0 $01 $00 $00 $01 $26
+.db $A0 $00 $00 $00 $02 $26 $40 $01 $00 $00 $08 $26 $E0 $01 $00 $00
+.db $0B $28 $A0 $02 $00 $00 $09 $29 $A0 $00 $00 $00 $09 $2B $40 $01
+.db $00 $00 $03 $2D $A0 $00 $00 $00 $09 $2F $20 $03 $00 $00 $01 $32
+.db $40 $01 $00 $00 $07 $33 $96 $00 $00 $00 $07 $33 $C8 $00 $00 $00
+.db $01 $34 $A0 $00 $00 $00 $07 $34 $FA $00 $00 $00 $07 $34 $5E $01
+.db $00 $00 $01 $36 $C2 $01 $00 $00 $08 $36 $04 $01 $00 $00 $05 $37
+.db $40 $01 $00 $00 $09 $37 $80 $02 $00 $00 $05 $37 $40 $06 $00 $00
+.db $09 $38 $E0 $01 $00 $00 $05 $38 $C0 $04 $00 $00 $03 $39 $40 $01
+.db $00 $00 $05 $39 $40 $04 $00 $00 $03 $39 $C0 $06 $00 $00 $09 $3A
+.db $00 $01 $00 $00 $0A $3A $20 $03 $00 $00 $04 $3A $80 $04 $00 $00
+.db $05 $3A $40 $06 $00 $00 $09 $3B $00 $01 $00 $00 $05 $3B $C0 $02
+.db $00 $00 $09 $3B $C0 $04 $00 $00 $09 $3B $DC $05 $00 $00 $03 $3B
+.db $40 $06 $00 $00 $03 $3C $40 $01 $00 $00 $04 $3D $40 $01 $00 $00
+.db $03 $3D $E0 $01 $00 $00 $09 $3D $80 $02 $00 $00 $0A $3D $20 $03
+.db $00 $00 $05 $3D $60 $04 $00 $00 $09 $3F $80 $01 $00 $00 $05 $3F
+.db $40 $04 $00 $00 $09 $40 $40 $01 $00 $00 $03 $40 $00 $04 $00 $00
+.db $05 $41 $C0 $00 $00 $00 $03 $41 $40 $05 $00 $00 $09 $44 $C0 $04
+.db $00 $00 $0A $45 $C0 $01 $00 $00 $09 $45 $C0 $02 $00 $00 $04 $45
+.db $40 $04 $00 $00 $05 $45 $C0 $05 $00 $00 $05 $48 $80 $06 $00 $00
+.db $09 $4B $80 $05 $00 $00 $09 $4C $80 $05 $00 $00 $05 $51 $00 $03
+.db $00 $00 $04 $52 $00 $06
+.dsb 14, $00
 _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	;TODO: This code can be also moved elsewhere, since it does not include any other bankswitching, therefore it should be good for relocation.
 	xor a
@@ -15085,5 +15253,20 @@ _LABEL_5819_MARKDEAD_PERMADEAD:	;When you leave the level\screen, the dead chara
 	ld bc, $001F
 	ldir			
 	ret
-
+program_reset:
+	in a, (Port_IOPort2)	;THE RESET IS MAPPED TO THE SECOND JOYPAD'S PORT.
+	and $10			;MASK OUT ALL OTHER BUTTONS.
+	ld c, a
+	ld a, (_RAM_DE22_RESET)
+	sub c
+	ret z			;If the button is not pressed, then we should just return.
+	ld a, c
+	ld (_RAM_DE22_RESET), a
+	bit 4, a
+	ret nz
+	xor a
+	ld (_RAM_DE9E_), a		;THIS IS YET TO BE CHECKED OUT.
+	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
+	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
+	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
 
