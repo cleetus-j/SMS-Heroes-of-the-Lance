@@ -493,6 +493,7 @@ lastbank	db
 .enum $DF00
 menu_arrow dsb 4	;This is a small array, to store the arrow used for the menu.
 arrow_pos	db		;As the name implies.
+menu_pos	db	
 .ende
 ;.emptyfill $FF
 .enum $FFFF export
@@ -1611,6 +1612,8 @@ _LABEL_924_UPDATE_GAME_SCRN:
 ++:	;Stop.
 	call _LABEL_31DF_FINEMOTION	;If this is commented out, then the character fine movement is disabled, and movements become very chunky.
 	call _LABEL_A10_ANIM_SPRITES
+
+
 	jp _LABEL_757_GAME_MAIN
 
 _LABEL_A10_ANIM_SPRITES:			;This runs a few times a frame, so let's see if this is anything legible to me. Yes, this is some sprite move\copy thing.
@@ -8492,7 +8495,13 @@ _LABEL_5BBE_CHECKWTRFALL:	;This seems to check the waterfall, and apply healing 
 	jr _LABEL_5BB5_WATERFALL_NOFXCONT
 ;todo: rewrite this not as a waterfall, but something else, like a temple, shrine or something like that. multiple effects may also applied with some random effect.
 _LABEL_5C07_:
-	call _LABEL_5C0C_PREPSCRN_4_MSG
+	ld a,(_RAM_FFFF_)
+	ld (lastbank),a
+	ld a,31
+	ld (_RAM_FFFF_),a
+	call PREPSCRN_4_MSG_withSprite;_LABEL_5C0C_PREPSCRN_4_MSG;This draws the menu with the arrow sprite.
+	ld a,(lastbank)
+	ld (_RAM_FFFF_),a
 	jr _LABEL_5C65_ENTER_INGAME_MENU
 
 _LABEL_5C0C_PREPSCRN_4_MSG:
@@ -8504,14 +8513,12 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 	ld (_RAM_DEE5_MENUORGAME), a	;THIS VARIABLE IS STILL NOT CLEAR WHAT DOES IT DO.
 	ld a, (_RAM_DE9F_TIMER)
 	ld (_RAM_DEA0_TIMER_TEMP), a	;SAVE THE MAIN TIMER'S VALUE.
-
-
 	xor a
 	ld (_RAM_DE9F_TIMER), a	;RESET THIS TIMER. IF THIS IS COMMENTED OUT, THE SCREEN WILL GLITCH OUT.
 	ld (_RAM_DE9E_), a	;DOES NOTHING YET.
 	;call _LABEL_59B_MAIN	;IT EVEN WORKS WITHOUT THIS ONE.
 	call _LABEL_63B_CLEAR_SAT	;EVEN THIS ONE CAN YOU COMMENT OUT.
-	call menu_sprite
+	;call menu_sprite
 	;call _LABEL_BB7_CLR_SCREEN	;THIS DOES SOME TILEMAP THINGS, I'LL CHECK THIS NOW.
 	;disabled on 24.09.17
 	ld hl, $2960
@@ -8542,46 +8549,51 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 _LABEL_5C65_ENTER_INGAME_MENU:	;This is the entry point for the ingame menu, at least the draw part for now.
 ;This has to be reprogrammed extensively, as there's a bug somewhere which prevents text to be drawn properly. Many menus
 ;are simply not needed anymore.
-	ld hl, $3888	;This is a screen coordinate.
-	ld de, _DATA_A871_MENUTXT
-	call _LABEL_35A6_RANDOM
-	
+	ld hl, $3888	;This is a screen coordinate, where the text was going to.
+	ld de, _DATA_A871_MENUTXT ;Tilemap is my guess.
+	call _LABEL_35A6_RANDOM	  ;Draw stuff.
+	;Disabling the above will not draw any text on the empty screen.
 	ld hl, $3888	;Why is this loaded two times? You do need it though. Strange.
 	ld de, $016C
 	ld b, $0B
 	ld c, $97
 	ld ix, _RAM_C000_RAM_START	;Loads tilemap data here.
 	call _LABEL_6AE6_MENU_TXTDRAW		;Draw the text.
-	ld a, (_RAM_C04E_ACTIVE_MENUITEM);(_RAM_C04F_LAST_ENTERED_MENU)		;Menu position we last entered.
-	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Copy it to the active menupoint ram value, so the game remembers where it came from.
-	ld iy, _DATA_6CAD_PALETTES	;We do some palette loading as well, i'm not sure how many bytes in that array is actially used. There are some text near it, the name of the Companions, but I can't be sure yet.
+	;; ld a, (_RAM_C04E_ACTIVE_MENUITEM);(_RAM_C04F_LAST_ENTERED_MENU)		;Menu position we last entered.
+	;; ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Copy it to the active menupoint ram value, so the ga
+	;; me remembers where it came from.
+	;; ld iy, _DATA_6CAD_PALETTES	;We do some palette loading as well, i'm not sure how many bytes in that array is actially used. There are some text near it, the name of the Companions, but I can't be sure yet.
 _LABEL_5C89_:		;We use some fellthrough stuff.
-	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
-	push iy
-	pop hl
-	add a, a
-	add a, a
-	ld e, a
-	ld d, $00
-	add hl, de
-	ld e, (hl)
-	inc hl
-	ld d, (hl)
-	inc hl
-	ld c, (hl)
-	inc hl
-	ld b, (hl)
-	push bc
-	ld l, e
-	ld h, d
-	ld de, $018C
-	ld b, $15
-	ld c, $37
-	ld ix, _RAM_C000_RAM_START
-	push iy
-	call _LABEL_6AE6_MENU_TXTDRAW	;I may be say this is getting the menu item number, and draws the white txt as well. The 'MAIN MENU' txt is also recolored to yellow. I don't know if this is intended.
-	pop iy
-	pop bc
+	 ;; ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
+	 ;; push iy
+	 ;; pop hl
+	 ;; add a, a
+	 ;; add a, a
+	 ;; ld e, a
+	 ;; ld d, $00
+	 ;; add hl, de
+	 ;; ld e, (hl)
+ ;; inc hl
+	 ;; ld d, (hl)
+	 ;; inc hl
+	 ;; ld c, (hl)
+	 ;; inc hl
+	 ;; ld b, (hl)
+	 ;; push bc
+	 ;; ld l, e
+	 ;; ld h, d
+	 ;; ld de, $018C
+	 ;; ld b, $15
+	 ;; ld c, $37
+	 ;; ld ix, _RAM_C000_RAM_START
+	 ;; push iy
+	 ;; call _LABEL_6AE6_MENU_TXTDRAW	;I may be say this is getting the menu item number, and draws the white txt as well. The 'MAIN MENU' txt is also recolored to yellow. I don't know if this is intended.
+	 ;; pop iy
+	 ;; pop bc
+	 ;; ld a, (_RAM_DE90_GAMEPAD)
+	 ;; bit 2, a			;This is the DOWN button.
+	 ;; jp z, _LABEL_5CB2_PROCESSMNU_SELECT		;Jump if we've pushed it, and the menu selector has t
+	;; o go w
 _LABEL_5CB2_PROCESSMNU_SELECT:
 	push bc
 	push iy
@@ -8589,100 +8601,123 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 	call _LABEL_552_CHECK_AB_BUTTONS	;We have drawn the menu, and now running the main loop, and will wait for the player to push a button.
 	pop iy
 	pop bc
-	ld a, (_RAM_DE94_GAMEPAD)
-	and a
-	jr z, +
-	ld h, b
-	ld l, c
-	jp (hl)
-
-+:
-	ld a, (_RAM_DE95_GAMEPAD)
-	and a
-	jr z, ++
-	push iy
-	pop hl
--:		;We go back a menu item.
-	ld a, (hl)
-	inc hl
-	ld d, (hl)
-	or d
-	jr z, +
-	ld de, $0003
-	add hl, de
-	jr -
-
-+:
-	ld de, $FFFD
-	add hl, de
-	ld a, (hl)
-	inc hl
-	ld h, (hl)
-	ld l, a
-	jp (hl)
-
-++:
-	ld a, (_RAM_DE90_GAMEPAD)
-	bit 3, a	;Test if bit 3 is set. This is for the UP Button.
-	jr z, +		;Jump if it is.
-	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
-	and a
-	jp z, +
-	dec a
-	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a
-	inc a
-	jr ++
-
-+:
+	;; Added on 25/10/2024 Gamepad reading, and some sprite that marks where are we in the menu exactly.
+	ld a,(_RAM_DE90_GAMEPAD) ;This is the second button. This is how we exit from this altogether.
+	bit 5,a
+	jp nz, back
 	ld a, (_RAM_DE90_GAMEPAD)
 	bit 2, a			;This is the DOWN button.
-	jp z, _LABEL_5CB2_PROCESSMNU_SELECT		;Jump if we've pushed it, and the menu selector has to go where we wanted to.
-	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
-	inc a
-	ld d, a
-	add a, a
-	add a, a
-	push iy
-	pop hl
-	ld e, a
-	ld a, d
-	ld d, $00
-	add hl, de
-	ld d, a
-	ld e, (hl)
-	inc hl
-	ld a, (hl)
-	or e
-	jp z, _LABEL_5CB2_PROCESSMNU_SELECT	;We've pressed up, so we process the above, get the previous menu item, and go to it.
-	ld a, d
-	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Moving up and down in the menu executes this part.
-	dec a
-++:
-	add a, a
-	add a, a
-	push iy
-	pop hl
-	ld e, a
-	ld d, $00
-	add hl, de
-	ld a, (hl)
-	inc hl
-	ld h, (hl)
-	ld l, a
-	di
-	call _LABEL_4BB_VDP_RAM_WRITESETUP
-	ei
-	ld hl, _RAM_C000_RAM_START
-	ld b, $2A
--:
-	ld a, (hl)
-	inc hl
-	out (Port_VDPData), a
-	djnz -
-	ld b, $04
+	;; Works with nz only, I probably would need to invert this, but not strictly necessary.
+	jp nz, down
+	ld a, (_RAM_DE90_GAMEPAD)
+	bit 3, a			;This is the UP button.
+	jp nz, up		;Jump if we've pushed it, and the menu selector has to go w
+	jp cont			;Nothing was pushed, skip the code below.
+up:
+	call arrow_up
+	jp cont
+down:
+	call arrow_down
+	jp cont
+back:	
+	jp _LABEL_6A6C_AFTERMSG_SCR_LOADLVLBCK ;This would exit from the menu, and go back gracefully or something.
+cont:	
+ 	ld a, (_RAM_DE94_GAMEPAD)
+ 	and a
+ 	jr z, +
+ 	ld h, b
+ 	ld l, c
+ 	jp (hl)
+
+ +:
+ 	ld a, (_RAM_DE95_GAMEPAD)
+ 	and a
+ 	jr z, ++
+ 	push iy
+ 	pop hl
+ -:		;We go back a menu item.
+ 	ld a, (hl)
+ 	inc hl
+ 	ld d, (hl)
+ 	or d
+ 	jr z, +
+ 	ld de, $0003
+ 	add hl, de
+ 	jr -
+
+ +:
+ 	ld de, $FFFD
+ 	add hl, de
+ 	ld a, (hl)
+ 	inc hl
+ 	ld h, (hl)
+ 	ld l, a
+ 	jp (hl)
+
+ ++:
+ 	ld a, (_RAM_DE90_GAMEPAD)
+ 	bit 3, a	;Test if bit 3 is set. This is for the UP Button.
+ 	jr z, +		;Jump if it is.
+ 	ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
+ 	and a
+ 	jp z, +
+ 	dec a
+ 	ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a
+ 	inc a
+ 	jr ++
+
+ +:
+ 	ld a, (_RAM_DE90_GAMEPAD)
+ 	bit 2, a			;This is the DOWN button.
+ 	jp z, _LABEL_5CB2_PROCESSMNU_SELECT		;Jump if we've pushed it, and the menu selector has to go w
+	;; here we wanted to.
+ ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
+	 inc a
+	 ld d, a
+	 add a, a
+	 add a, a
+	 push iy
+	 pop hl
+	 ld e, a
+	 ld a, d
+	 ld d, $00
+	 add hl, de
+	 ld d, a
+	 ld e, (hl)
+	 inc hl
+	 ld a, (hl)
+	 or e
+	 jp z, _LABEL_5CB2_PROCESSMNU_SELECT	;We've pressed up, so we process the above, get the previous menu i
+	;; tem, and go to it.	
+ 	;; ld a, d
+ 	;; ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Moving up and down in the menu executes this part.
+ 	;; dec a
+ ++:
+  	add a, a
+  	add a, a
+  	push iy
+  	pop hl
+  	ld e, a
+  	ld d, $00
+  	add hl, de
+  	ld a, (hl)
+  	inc hl
+  	ld h, (hl)
+  	ld l, a
+ 	di
+ 	call _LABEL_4BB_VDP_RAM_WRITESETUP
+ 	ei
+ 	ld hl, _RAM_C000_RAM_START
+ 	ld b, $2A
+ -:
+ 	ld a, (hl)
+ 	inc hl
+ 	out (Port_VDPData), a
+ 	djnz -
+ 	ld b,$02 ;; $04		;This is the delay's amount, which we definetly need.
 	call _LABEL_5E58_DELAYBYB
 	jp _LABEL_5C89_
-
+	;; This will be okay for the menu as is. I just have to make it react to the action buttons.
 
 _LABEL_5D43_HERO_SELECT_MENU:	
 ret
@@ -10897,6 +10932,16 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 	ld a, (_RAM_DEBB_DEBUG)
 	and a
 	jp z, _LABEL_714D_DRAW_DEBUGHUD	;IF THE DEBUG IS ON, WE WILL SEE THE VALUES, AND SOME SEMI-FUNCTIONAL HUD, AND A WORKING MENU.
+	push af
+	ld a,(_RAM_FFFF_)
+	ld (lastbank),a
+	ld a,31
+	ld (_RAM_FFFF_),a
+	call ClearHUD
+	ld a,(lastbank)
+	ld (_RAM_FFFF_),a
+	pop af
+	;; added 10/25/24
 	;ld a, $04
 	;ld (_RAM_FFFF_), a
 	;ld hl, (_RAM_DE5B_COMBAT_MARK)
@@ -10919,7 +10964,8 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 ;	out (Port_VDPData), a
 ;	djnz -		;WRITE DATA INTO VRAM.
 ;The combat tile won't even go into VRAM, which is nice. We don't need to know it at all.
-;The HUD would be rewritten to use different tiles, and show things differently.
+				;The HUD would be rewritten to use different tiles, and show things differently.
+
 	ld hl, (_RAM_D900_CHARA_COORD)	;IN RAM DETAILS FOR THE PLAYER, DIRECTION AND SUCH.
 	srl h
 	rr l
@@ -10992,7 +11038,8 @@ _LABEL_6F3B__UPD_HUD:	;UPDATE THE INFORMATION ON THE HUD ITSELF.
 ;	ld b, $08	;COPY THE DEFAULT PORTRAIT ORDER FROM ROM TO RAM.
 	;HOW MANY COMPANIONS WE HAVE TO DRAW.
 _LABEL_6FE1_:	;DRAWING ON THE HUD, PLAYER HEALTH AND SO ON.
-ret
+
+	ret
 ;	ld b, $03	;We draw four tiles, since that's how many are in a standard lifebar. This is just to draw then on the screen.
 ;-:
 ;	call _LABEL_4BB_VDP_RAM_WRITESETUP
@@ -12739,7 +12786,9 @@ menu_sprite:
 	push hl
 	push de
 	push bc
-	push af						;Save registers we will use here.
+	push af	;Save registers we will use here.
+	xor a
+	ld (menu_pos),a		;Clear the menu position as well. Otherwise we would get strange results.
 	ld a,(_RAM_FFFF_)
 	ld (lastbank),a				;save the last used bank for later, to return to it.
 	ld a, 31					;Load the last bank.
@@ -12782,6 +12831,7 @@ menu_sprite:
 	pop bc
 	pop de
 	pop hl						;Restore regs.
+-:	;We will use this point a lot to go back where we came from.
 	ret
 	arrow_base:					;This is the basic Arrow position, that will be shown on the options screen.
 	.db $17,$D0,$10,$00
@@ -12790,10 +12840,65 @@ menu_sprite:
 	;$10-Horizontal Sprite position.
 	;$00-Tile number used for this sprite. Since the arrow sprite is loaded to the very first tile slot, this is why zero is written here.
 arrow_up:
-
-	ret
+	ld a,(menu_pos)	;Get the current arrow position.
+	and a
+	jr z, -				;If we are at the top, just leave.
+	ld de,menu_arrow	;Not zero, we have some work to do. Get the pos from RAM, the very first byte.
+	ld a,(de)
+	sub $08				;Subtract eight, a tile from the position.
+	ld (de),a			;Put it back.
+	ld a,(menu_pos)
+	dec a
+	ld (menu_pos),a	;Get the position again, and decrease it. This is the menu number, that we will use later.
+	call move_arrow
+	ret				;We finished with out business, head back.
 arrow_down:
+	ld a,(menu_pos)	;Get the current arrow position.
+	and a
+	cp	$05
+	jr z, -				;If we are at the maximum, we don't need to go lower. Go back.
+						;Clerical		0
+						;Other spells	1
+						;Use			2
+						;Drop			3
+						;Save			4
+						;Sound test		5
 
+	inc a			;We are not there yet, so increase the menu item nr.
+	ld (menu_pos),a		;And put it back.
+	ld de,menu_arrow
+	ld a,(de)
+	add $08
+	ld (de),a
+	call move_arrow
+	ret
+move_arrow:						;This part is just updating the arrow sprite's positions, and nothing more. Almost the
+	di	;move_arrow				;Get rid of interrupts for now, so the data loading is good.
+	xor a
+	ld d,a
+		out (Port_VDPAddress), a	;0000 0000
+	ld a, $7F
+	out (Port_VDPAddress), a	;0111 1111 THIS IS THE SAT'S ADDRESS.
+	ld bc, $4000 | Port_VDPData	;Set up some SAT VDP access here.
+	ld e,b
+	ld hl,menu_arrow			;Positions in RAM that we just updated.
+	outi						;V-Pos.
+	outi						;Sprite terminator byte.
+	inc a
+	out (Port_VDPAddress), a
+	dec a
+	out (Port_VDPAddress), a
+	outi						;H-Pos.
+	outi						;Tile Nr.
+;-------------------Sprite is loaded into VRAM.---------------------------	
+;This below is not needed I think.
+	;xor a
+	;ld (arrow_pos),a			;This is the very first element of the menu, so let's point it to that.
+	;ld hl,arrow_base			;Load source.
+	;ld de,menu_arrow			;Destination.
+	;ld bc,$0004					;Amount of bytes to copy.
+	;ldir						;Do a small copy from ROM to RAM to init the menu arrow coord.
+	ei							;Turn on interrupts.
 	ret
 .BANK 1 SLOT 1
 .ORG $0000
@@ -14235,7 +14340,7 @@ _DATA_2007C_:	;THIS MIGHT BE SOME SPRITE COORDINATES, AND SPRITE MAPS, AS THE PL
 ;	ld hl, $873B
 ;	sbc hl, de
 ;	ret c
-;	ex de, hl
+;	ex de, hl			
 ;	ld e, (hl)
 ;	inc hl
 ;	ld d, (hl)
@@ -14841,11 +14946,32 @@ titlePal:
 .BANK 31
 .ORG $0000
 
-; Data from 7C000 to 7FFFF (16384 bytes)
+				; Data from 7C000 to 7FFFF (16384 bytes)
+	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
 _DATA_7C000_CHAR_BIO_TEXT:	;This got tiles of letters, and other data that is not decipherable yet.
 .incbin "HOTL_mod_DATA_7C000_.inc"
 ;The above is a reduced file, that does not contain the character BIO tilemaps, and other things that are not going to get used anyway.
 ;Some code will come here, that could be relocated from the main fixed bank, since they are not used too much.
+ClearHUD:			;This is just the code to clear VRAM, but instead this clears up the HUD part, for now this is running on all frames. Of course, once I have a working HUD, this will be no problem.
+
+  push af
+  push hl
+	ld hl,$3C00		;Beginning of the HUD tilemap.
+	di
+    call VRAMToHL
+    ; Output 16KB of zeroes
+    ld hl, $01FE ;; $4000    ; Counter for 16KB of VRAM	;I only need this amount to be cleared.
+  -:ld a,$FE        ; Value to write;This was a zero, but I rather have $FF here.
+    out ($be),a ; Output to VRAM address, which is auto-incremented after each write
+    dec hl
+    ld a,h
+    or l
+	jp nz,-
+	ei
+  pop hl
+  pop af
+  ret
+
 _LABEL_51E_FADEOUT:	;If this is commented out, the screen at the character BIO will just glitch out before changing to another one. If this works, then the screen will fade out, so it looks nice.
 
 	ld d, $00
@@ -15196,6 +15322,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (_RAM_DEEC_RAIST_STFFCHRG), hl	;GIVE 100 CHARGES TO RAISTLIN'S STAFF.
 	add hl, hl
 	ld (_RAM_DEEA_GMOON_STAFF_CHRG), hl	;GIVE 200 CHARGES TO GOLDMOON'S STAFF.
+
 	ret
 	;Luckily this code does not use anything that's not relocateable.
 
@@ -15215,6 +15342,7 @@ _LABEL_7ECF_DRAW_NORMAL_HUD_NODEBUG:
 	ld (hl), $00
 	ldir
 	call _LABEL_2C1A_FRAMESET_COPY
+
 	ret
 _LABEL_5819_MARKDEAD_PERMADEAD:	;When you leave the level\screen, the dead characters are marked permanently, so you can't revive them.
 	ld b, $08	;Player numbers.
@@ -15269,4 +15397,50 @@ program_reset:
 	ld hl, _DATA_AB_		;THE FIRST PART OF THIS DATA IS BLACK PALETTE ENTRIES.
 	call _LABEL_4CF_LOAD2PALS	;LOAD THE PALETTES.
 	jp _LABEL_200_ENTRY		;GO BACK TO THE BEGINNING OF THE CODE AFTER INIT.
-
+PREPSCRN_4_MSG_withSprite:
+;This is the standard routine, but with added sprite display.
+	ld a, (_RAM_DE34_SCRN_SCROLL)
+	and $F0	
+	ld (_RAM_DE34_SCRN_SCROLL), a
+	ld a, $FF
+	ld (_RAM_DEE5_MENUORGAME), a
+	ld a, (_RAM_DE9F_TIMER)
+	ld (_RAM_DEA0_TIMER_TEMP), a
+	xor a
+	ld (_RAM_DE9F_TIMER), a	;
+	ld (_RAM_DE9E_), a	
+	call menu_sprite	;This will reset the sprites as well, so only the arrow will be shown.
+	;call _LABEL_BB7_CLR_SCREEN	;THIS DOES SOME TILEMAP THINGS, I'LL CHECK THIS NOW.
+	;disabled on 24.09.17
+	;ld hl, $2960
+	;di
+	;call _LABEL_4BB_VDP_RAM_WRITESETUP
+	;ei
+	;ld bc, $2000 | Port_VDPData
+-:;C;HANGED!
+	;xor a
+	;out (c), a
+	;djnz -
+	call _LABEL_6B42_DRW_SOLID_CLR_SCRN
+	ld hl, (_RAM_DE62_)
+	ld (_RAM_DE64_), hl
+	xor a
+	ld (_RAM_C04E_ACTIVE_MENUITEM),a;(_RAM_C04F_LAST_ENTERED_MENU), a
+	ld a, $1F
+	ld (_RAM_FFFF_), a		;The fonts are in the last bank.
+	ld b, $60	;96, maybe tiles or something. Yes, this is some original, unaltered tiles loading.
+	ld hl, $2180		;This is a video RAM address, where to load stuff. This correlates where the 
+	;engine loads graphics.
+	ld de, _DATA_7C000_CHAR_BIO_TEXT
+	ld c, $17	;This controls what color should be used for the background from the overall palette.
+	call _LABEL_6AAE_MNU_DELSCRN_TXTCOLOR
+	;So this is basically:
+	;How many tiles.
+	;To where.
+	;And then what.
+	;Todo:
+	;Set the backgroung color via registers and such. This piece of code is a bit long for my taste, but it's okay. I should check where the bad drawing comes from.
+	;Also: remove the other colors from the letters and such, and make that arrow move.
+	ld hl, $010C
+	ld (_RAM_DE62_), hl
+	ret
