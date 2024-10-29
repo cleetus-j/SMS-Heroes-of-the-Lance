@@ -8605,6 +8605,11 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 	ld a,(_RAM_DE90_GAMEPAD) ;This is the second button. This is how we exit from this altogether.
 	bit 5,a
 	jp nz, back
+	ld a,(_RAM_DE90_GAMEPAD) ;This is the first button. This is the action button.
+	;; I'm not sure we will need the old AB button checking.
+	bit 4,a
+	jp nz, button1
+	
 	ld a, (_RAM_DE90_GAMEPAD)
 	bit 2, a			;This is the DOWN button.
 	;; Works with nz only, I probably would need to invert this, but not strictly necessary.
@@ -8621,6 +8626,13 @@ down:
 	jp cont
 back:	
 	jp _LABEL_6A6C_AFTERMSG_SCR_LOADLVLBCK ;This would exit from the menu, and go back gracefully or something.
+button1:
+				;This is the action button, that will handle individual menus.
+	;; push af
+	;; push hl
+	;; push de
+	;; push bc
+	jp main_menu_selection
 cont:	
  	ld a, (_RAM_DE94_GAMEPAD)
  	and a
@@ -9500,7 +9512,7 @@ _LABEL_62B1_SCOREMENU_CONT_LOOP:	;THIS LOOKS LIKE RUNNING ONE MAIN, THEN CHECKIN
 	;This can be used for something else for sure.
 
 ;	disabled 24.09.08	
-_LABEL_62C5_:	;This is some take map drawing? It sure looks like it.
+_LABEL_62C5_TAKE_MENU:	;This is some take map drawing? It sure looks like it.
 		call _LABEL_6046_WAIT4GAMEPAD
 		call _LABEL_6B42_DRW_SOLID_CLR_SCRN
 		ld   hl, _DATA_677E_TAKEMENU_TXT
@@ -12855,7 +12867,7 @@ arrow_up:
 arrow_down:
 	ld a,(menu_pos)	;Get the current arrow position.
 	and a
-	cp	$05
+	cp	$03
 	jr z, -				;If we are at the maximum, we don't need to go lower. Go back.
 						;Clerical		0
 						;Other spells	1
@@ -12900,6 +12912,43 @@ move_arrow:						;This part is just updating the arrow sprite's positions, and n
 	;ldir						;Do a small copy from ROM to RAM to init the menu arrow coord.
 	ei							;Turn on interrupts.
 	ret
+
+main_menu_selection:		;This should be the ingame menu selection handling.
+	ld a,(menu_pos)
+	ld H,0
+	ld l,a
+	add hl,hl
+	ld de,menu_elements_addresses
+	add hl,de
+
+	ld a,(HL)
+	inc HL
+	ld h,(HL)
+	ld l,a
+	jp (hl)
+	;; The menu shall consist the below:
+	;; Items	0
+	;; Use		1
+	;; Pickup	2
+	;; Drop		3
+menu_elements_addresses:	;This is a jump table of course for the various menu items.
+;; 	;; .dw	menu_items
+	.dw	menu_use
+ 	.dw	menu_pickup
+ 	.dw	menu_drop
+menu_spells:			;As the name suggests, I'll daisy-chain stuff here.
+
+	ret
+menu_use:			;I see no need to change this, the original is good enough.
+	jp _LABEL_6114_USE_MENU
+	ret
+menu_pickup:
+	jp _LABEL_62C5_TAKE_MENU		;This is the take menu.
+	ret
+menu_drop:
+	jp _LABEL_6106_DROP_MENU
+	ret
+	
 .BANK 1 SLOT 1
 .ORG $0000
 
@@ -14948,10 +14997,15 @@ titlePal:
 
 				; Data from 7C000 to 7FFFF (16384 bytes)
 	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
+	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
+	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
 _DATA_7C000_CHAR_BIO_TEXT:	;This got tiles of letters, and other data that is not decipherable yet.
 .incbin "HOTL_mod_DATA_7C000_.inc"
 ;The above is a reduced file, that does not contain the character BIO tilemaps, and other things that are not going to get used anyway.
-;Some code will come here, that could be relocated from the main fixed bank, since they are not used too much.
+				;Some code will come here, that could be relocated from the main fixed bank, since they are not used too much.
+	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
+	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
+	;; DO NOT MOVE THIS, THE TEXT WILL BE BROKEN IN THE MENU!!!
 ClearHUD:			;This is just the code to clear VRAM, but instead this clears up the HUD part, for now this is running on all frames. Of course, once I have a working HUD, this will be no problem.
 
   push af
@@ -14966,12 +15020,11 @@ ClearHUD:			;This is just the code to clear VRAM, but instead this clears up the
     dec hl
     ld a,h
     or l
-	jp nz,-
-	ei
-  pop hl
+    jp nz,-
+    ei
+    pop hl
   pop af
   ret
-
 _LABEL_51E_FADEOUT:	;If this is commented out, the screen at the character BIO will just glitch out before changing to another one. If this works, then the screen will fade out, so it looks nice.
 
 	ld d, $00
