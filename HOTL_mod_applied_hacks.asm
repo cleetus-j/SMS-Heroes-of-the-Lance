@@ -493,7 +493,9 @@ lastbank	db
 .enum $DF00
 menu_arrow dsb 4	;This is a small array, to store the arrow used for the menu.
 arrow_pos	db		;As the name implies.
-menu_pos	db	
+menu_pos	db		;This is the menu position that we will use. This tells in what menu are we in.This is for the mauin menu of course.
+submenu_pos	db		;When we are in a submenu, this is the position for it.
+submenu	db			;Are we in a submenu or not?
 .ende
 ;.emptyfill $FF
 .enum $FFFF export
@@ -8548,52 +8550,23 @@ _LABEL_5C0C_PREPSCRN_4_MSG:
 ;todo:	the screen color, and other things are not really nice, i mean that color is definetly not something good to look at.
 _LABEL_5C65_ENTER_INGAME_MENU:	;This is the entry point for the ingame menu, at least the draw part for now.
 ;This has to be reprogrammed extensively, as there's a bug somewhere which prevents text to be drawn properly. Many menus
-;are simply not needed anymore.
+				;are simply not needed anymore.
+	xor a
+	ld (submenu),a		;Set up that we are not in a submenu. ADDED on 01/11/24
 	ld hl, $3888	;This is a screen coordinate, where the text was going to.
 	ld de, _DATA_A871_MENUTXT ;Tilemap is my guess.
 	call _LABEL_35A6_RANDOM	  ;Draw stuff.
 	;Disabling the above will not draw any text on the empty screen.
+	;; This is the place that should have the new code here to draw the menu text.
 	ld hl, $3888	;Why is this loaded two times? You do need it though. Strange.
 	ld de, $016C
 	ld b, $0B
 	ld c, $97
 	ld ix, _RAM_C000_RAM_START	;Loads tilemap data here.
 	call _LABEL_6AE6_MENU_TXTDRAW		;Draw the text.
-	;; ld a, (_RAM_C04E_ACTIVE_MENUITEM);(_RAM_C04F_LAST_ENTERED_MENU)		;Menu position we last entered.
-	;; ld (_RAM_C040_SELECTED_MENUITEMINRAM_PAL), a	;Copy it to the active menupoint ram value, so the ga
-	;; me remembers where it came from.
-	;; ld iy, _DATA_6CAD_PALETTES	;We do some palette loading as well, i'm not sure how many bytes in that array is actially used. There are some text near it, the name of the Companions, but I can't be sure yet.
 _LABEL_5C89_:		;We use some fellthrough stuff.
-	 ;; ld a, (_RAM_C040_SELECTED_MENUITEMINRAM_PAL)
-	 ;; push iy
-	 ;; pop hl
-	 ;; add a, a
-	 ;; add a, a
-	 ;; ld e, a
-	 ;; ld d, $00
-	 ;; add hl, de
-	 ;; ld e, (hl)
- ;; inc hl
-	 ;; ld d, (hl)
-	 ;; inc hl
-	 ;; ld c, (hl)
-	 ;; inc hl
-	 ;; ld b, (hl)
-	 ;; push bc
-	 ;; ld l, e
-	 ;; ld h, d
-	 ;; ld de, $018C
-	 ;; ld b, $15
-	 ;; ld c, $37
-	 ;; ld ix, _RAM_C000_RAM_START
-	 ;; push iy
-	 ;; call _LABEL_6AE6_MENU_TXTDRAW	;I may be say this is getting the menu item number, and draws the white txt as well. The 'MAIN MENU' txt is also recolored to yellow. I don't know if this is intended.
-	 ;; pop iy
-	 ;; pop bc
-	 ;; ld a, (_RAM_DE90_GAMEPAD)
-	 ;; bit 2, a			;This is the DOWN button.
-	 ;; jp z, _LABEL_5CB2_PROCESSMNU_SELECT		;Jump if we've pushed it, and the menu selector has t
-	;; o go w
+
+	;; Removed many code that won't really be used. The new menu code has been already started.
 _LABEL_5CB2_PROCESSMNU_SELECT:
 	push bc
 	push iy
@@ -8602,26 +8575,38 @@ _LABEL_5CB2_PROCESSMNU_SELECT:
 	pop iy
 	pop bc
 	;; Added on 25/10/2024 Gamepad reading, and some sprite that marks where are we in the menu exactly.
+	;; ----------------------------------
 	ld a,(_RAM_DE90_GAMEPAD) ;This is the second button. This is how we exit from this altogether.
 	bit 5,a
-	jp nz, back
+	jp nz, back		;This can stay as is.
+	;; ----------------------------------
 	ld a,(_RAM_DE90_GAMEPAD) ;This is the first button. This is the action button.
 	;; I'm not sure we will need the old AB button checking.
 	bit 4,a
 	jp nz, button1
-	
+	;; ----------------------------------
 	ld a, (_RAM_DE90_GAMEPAD)
 	bit 2, a			;This is the DOWN button.
 	;; Works with nz only, I probably would need to invert this, but not strictly necessary.
 	jp nz, down
+	;; ----------------------------------
 	ld a, (_RAM_DE90_GAMEPAD)
 	bit 3, a			;This is the UP button.
 	jp nz, up		;Jump if we've pushed it, and the menu selector has to go w
+	;; ----------------------------------
 	jp cont			;Nothing was pushed, skip the code below.
+	;; What needs to be added here, is to handle submenus, as of now, this only works with the main menu.
 up:
+	ld a,(submenu)
+	and a
+	jp nz, submenu_up			;If we are in the not in the submenu, then skip to the other part.
+	;; TODO: Write the other submenu code, and make the program get the menu size for each one.
 	call arrow_up
 	jp cont
 down:
+	ld a,(submenu)
+	and a
+	jp nz,submenu_down
 	call arrow_down
 	jp cont
 back:	
@@ -8632,7 +8617,19 @@ button1:
 	;; push hl
 	;; push de
 	;; push bc
-	jp main_menu_selection
+	ld a,(submenu)
+	and a
+	jp z, main_menu_selection ;If you are not in the submenu, use the main menu's selection part.
+;; Here comes the submenu button 1 selection code.
+
+	
+	jp cont
+submenu_up:				;This is the submenu up.
+
+	jp cont
+submenu_down:
+	
+	jp cont				;This is submenu down.
 cont:	
  	ld a, (_RAM_DE94_GAMEPAD)
  	and a
@@ -12845,8 +12842,8 @@ menu_sprite:
 	pop hl						;Restore regs.
 -:	;We will use this point a lot to go back where we came from.
 	ret
-	arrow_base:					;This is the basic Arrow position, that will be shown on the options screen.
-	.db $17,$D0,$10,$00
+arrow_base:					;This is the basic Arrow position, that will be shown on the options screen.
+.db $17,$D0,$10,$00
 	;$17-Vertical Sprite Coordinate.
 	;$D0-End of Sprite list, marks for the VDP that there are no more sprites to draw.
 	;$10-Horizontal Sprite position.
@@ -12869,12 +12866,13 @@ arrow_down:
 	and a
 	cp	$03
 	jr z, -				;If we are at the maximum, we don't need to go lower. Go back.
-						;Clerical		0
+				;Clerical		0
+	;; Spells will be concatenated into one list.
 						;Other spells	1
 						;Use			2
 						;Drop			3
-						;Save			4
-						;Sound test		5
+						;Save			4 I'm not sure I could easily implement this.
+						;Sound test		5 Definetly needed, but not yet.
 
 	inc a			;We are not there yet, so increase the menu item nr.
 	ld (menu_pos),a		;And put it back.
@@ -12914,6 +12912,7 @@ move_arrow:						;This part is just updating the arrow sprite's positions, and n
 	ret
 
 main_menu_selection:		;This should be the ingame menu selection handling.
+	;; There's a small table with the addresses of the other menus. We calculate the final address in said table, then jump to it. It's easy to expand it, and much shorter than how the original code handled this I think.
 	ld a,(menu_pos)
 	ld H,0
 	ld l,a
@@ -12937,18 +12936,25 @@ menu_elements_addresses:	;This is a jump table of course for the various menu it
  	.dw	menu_pickup
  	.dw	menu_drop
 menu_spells:			;As the name suggests, I'll daisy-chain stuff here.
+	call set_submenu
 
 	ret
 menu_use:			;I see no need to change this, the original is good enough.
+	call set_submenu
 	jp _LABEL_6114_USE_MENU
 	ret
 menu_pickup:
+	call set_submenu
 	jp _LABEL_62C5_TAKE_MENU		;This is the take menu.
 	ret
 menu_drop:
+	call set_submenu
 	jp _LABEL_6106_DROP_MENU
 	ret
-	
+set_submenu:			;This is to know that we are no in the main menu.
+	ld a,1
+	ld (submenu),a
+	ret
 .BANK 1 SLOT 1
 .ORG $0000
 
